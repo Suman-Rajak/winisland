@@ -4,9 +4,9 @@ using Microsoft.UI.Dispatching;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Hosting;
-using Microsoft.UI.Xaml.Media.Imaging;
+using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
-using Windows.Storage.Streams;
+using Windows.UI;
 using WinIsland.Interop;
 using WinIsland.Services;
 using WinRT.Interop;
@@ -49,7 +49,12 @@ public sealed partial class IslandWindow : Window
     private long _insideSince;
     private long _outsideSince;
     private int _tick;
-    private string? _artworkKey;
+    private string? _artworkTrack;
+    private bool _artworkFromThumbnail;
+    private Artwork? _artwork;
+    private Color _tint = ColorMath.NeutralTint;
+    private bool _compactBarsRunning = true;
+    private bool _expandedBarsRunning = true;
 
     private IntPtr _monitor;
     private Native.POINT _origin;
@@ -67,6 +72,7 @@ public sealed partial class IslandWindow : Window
         _compositor = stageVisual.Compositor;
         _pill = CreatePillGeometry();
         stageVisual.Clip = _compositor.CreateGeometricClip(_pill);
+        CreateSheen();
 
         foreach (var layer in new UIElement[] { CompactLayer, ExpandedEmptyLayer, ExpandedMediaLayer })
         {
@@ -101,6 +107,7 @@ public sealed partial class IslandWindow : Window
         UpdatePlacement();
         _visible = true;
         UpdateVisibility();
+        EnsureTopmost();
         ApplyState();
         _timer.Start();
         _ = _media.StartAsync();
@@ -141,8 +148,8 @@ public sealed partial class IslandWindow : Window
         Native.SetDwmInt(_hwnd, Native.DWMWA_WINDOW_CORNER_PREFERENCE, Native.DWMWCP_DONOTROUND);
         Native.SetDwmInt(_hwnd, Native.DWMWA_BORDER_COLOR, Native.DWMWA_COLOR_NONE);
 
-        Native.SetWindowPos(_hwnd, Native.HWND_TOPMOST, 0, 0, 0, 0,
-            Native.SWP_NOMOVE | Native.SWP_NOSIZE | Native.SWP_NOACTIVATE | Native.SWP_FRAMECHANGED);
+        Native.SetWindowPos(_hwnd, IntPtr.Zero, 0, 0, 0, 0,
+            Native.SWP_NOMOVE | Native.SWP_NOSIZE | Native.SWP_NOZORDER | Native.SWP_NOACTIVATE | Native.SWP_FRAMECHANGED);
     }
 
     private CompositionRoundedRectangleGeometry CreatePillGeometry()
@@ -159,6 +166,35 @@ public sealed partial class IslandWindow : Window
         pill.StartAnimation(nameof(pill.Offset), centre);
 
         return pill;
+    }
+
+    /// <summary>
+    /// The "glass" part: a highlight fading down from the top edge and a thin rim that is brighter
+    /// at the top, like light catching the lip of a glass. Both follow the animated pill geometry.
+    /// </summary>
+    private void CreateSheen()
+    {
+        var highlight = _compositor.CreateLinearGradientBrush();
+        highlight.StartPoint = new Vector2(0, 0);
+        highlight.EndPoint = new Vector2(0, 1);
+        highlight.ColorStops.Add(_compositor.CreateColorGradientStop(0f, Color.FromArgb(40, 255, 255, 255)));
+        highlight.ColorStops.Add(_compositor.CreateColorGradientStop(0.55f, Color.FromArgb(0, 255, 255, 255)));
+
+        var rim = _compositor.CreateLinearGradientBrush();
+        rim.StartPoint = new Vector2(0, 0);
+        rim.EndPoint = new Vector2(0, 1);
+        rim.ColorStops.Add(_compositor.CreateColorGradientStop(0f, Color.FromArgb(110, 255, 255, 255)));
+        rim.ColorStops.Add(_compositor.CreateColorGradientStop(1f, Color.FromArgb(28, 255, 255, 255)));
+
+        var shape = _compositor.CreateSpriteShape(_pill);
+        shape.FillBrush = highlight;
+        shape.StrokeBrush = rim;
+        shape.StrokeThickness = 2f; // half of it falls outside the pill clip, leaving a 1 px rim
+
+        var sheen = _compositor.CreateShapeVisual();
+        sheen.Size = new Vector2(StageWidth, StageHeight);
+        sheen.Shapes.Add(shape);
+        ElementCompositionPreview.SetElementChildVisual(SheenHost, sheen);
     }
 
     // ---------------------------------------------------------------- placement & visibility
@@ -191,7 +227,7 @@ public sealed partial class IslandWindow : Window
         _monitor = monitor;
         _origin = origin;
         _scale = scale;
-        Native.SetWindowPos(_hwnd, Native.HWND_TOPMOST, origin.X, origin.Y, width, height, Native.SWP_NOACTIVATE);
+        Native.SetWindowPos(_hwnd, IntPtr.Zero, origin.X, origin.Y, width, height, Native.SWP_NOZORDER | Native.SWP_NOACTIVATE);
     }
 
     private void UpdateVisibility()
@@ -206,8 +242,7 @@ public sealed partial class IslandWindow : Window
         if (visible)
         {
             AppWindow.Show(activateWindow: false);
-            Native.SetWindowPos(_hwnd, Native.HWND_TOPMOST, 0, 0, 0, 0,
-                Native.SWP_NOMOVE | Native.SWP_NOSIZE | Native.SWP_NOACTIVATE);
+            EnsureTopmost();
         }
         else
         {
@@ -216,21 +251,54 @@ public sealed partial class IslandWindow : Window
     }
 
     /// <summary>
-    /// WinUI's presenter drops topmost when it reacts to our frame-style change, and some apps
-    /// grab topmost themselves, so keep reclaiming it.
+    /// WinUI's presenter can lose topmost when it reacts to our frame-style change, and it filters out
+    /// raw SetWindowPos(HWND_TOPMOST) calls that disagree with its own state. So reclaim topmost
+    /// through the presenter, by toggling IsAlwaysOnTop so it re-applies it.
     /// </summary>
     private void EnsureTopmost()
     {
-        if (_visible && (Native.GetExStyle(_hwnd) & Native.WS_EX_TOPMOST) == 0)
+        if (!_visible || (Native.GetExStyle(_hwnd) & Native.WS_EX_TOPMOST) != 0)
         {
-            Native.SetWindowPos(_hwnd, Native.HWND_TOPMOST, 0, 0, 0, 0,
-                Native.SWP_NOMOVE | Native.SWP_NOSIZE | Native.SWP_NOACTIVATE);
+            return;
+        }
+
+        if (AppWindow.Presenter is OverlappedPresenter presenter)
+        {
+            presenter.IsAlwaysOnTop = false;
+            presenter.IsAlwaysOnTop = true;
+        }
+
+        if ((Native.GetExStyle(_hwnd) & Native.WS_EX_TOPMOST) == 0 && !_loggedTopmostFailure)
+        {
+            _loggedTopmostFailure = true;
+            Log.Info("Could not reclaim topmost");
         }
     }
+
+    private bool _loggedTopmostFailure;
 
     // ---------------------------------------------------------------- pointer & state
 
     private void OnTick(DispatcherQueueTimer sender, object args)
+    {
+        // Exceptions thrown from a timer tick vanish silently; log the first of each kind.
+        try
+        {
+            Tick();
+        }
+        catch (Exception ex) when (s_loggedTickErrors.Add(ex.GetType().FullName + ex.StackTrace))
+        {
+            Log.Error("Island tick failed", ex);
+        }
+        catch
+        {
+            // Already logged this one.
+        }
+    }
+
+    private static readonly HashSet<string> s_loggedTickErrors = [];
+
+    private void Tick()
     {
         if (++_tick % SlowTickEvery == 0)
         {
@@ -397,8 +465,18 @@ public sealed partial class IslandWindow : Window
     private void UpdateBars()
     {
         bool playing = _media.Current?.IsPlaying == true;
-        AnimateBars(CompactBars.Children, playing && _state == IslandState.Compact);
-        AnimateBars(ExpandedBars.Children, playing && _state == IslandState.Expanded);
+        SetBarsRunning(CompactBars.Children, ref _compactBarsRunning, playing && _state == IslandState.Compact);
+        SetBarsRunning(ExpandedBars.Children, ref _expandedBarsRunning, playing && _state == IslandState.Expanded);
+    }
+
+    /// <summary>Only (re)start bar animations when they actually change; restarting makes them jump.</summary>
+    private void SetBarsRunning(IList<UIElement> bars, ref bool running, bool run)
+    {
+        if (running != run)
+        {
+            running = run;
+            AnimateBars(bars, run);
+        }
     }
 
     private void AnimateBars(IList<UIElement> bars, bool running)
@@ -447,47 +525,66 @@ public sealed partial class IslandWindow : Window
         var media = _media.Current;
         if (media is not null)
         {
-            TitleText.Text = media.Title;
-            ArtistText.Text = media.Artist;
-            SourceText.Text = media.AppName;
+            TitleText.Text = media.DisplayTitle;
+            ArtistText.Text = media.DisplaySubtitle;
+            SourceText.Text = media.Title.Length > 0 ? media.AppName : string.Empty;
             PlayPauseIcon.Glyph = media.IsPlaying ? "" : "";
         }
 
         UpdateState();
         UpdateBars();
         UpdateProgress();
+        ApplyTheme();
 
-        var key = media?.ArtworkKey;
-        if (key != _artworkKey)
+        // Reload when the track changes, or when the app starts publishing a thumbnail for a track we
+        // only had a fallback (or nothing) for. Apps often republish the same track with and without one.
+        var track = media?.TrackKey;
+        bool hasThumbnail = media?.Thumbnail is not null;
+        if (track == _artworkTrack && !(hasThumbnail && !_artworkFromThumbnail))
         {
-            _artworkKey = key;
-            var artwork = await LoadArtworkAsync(media?.Thumbnail);
-            if (_artworkKey == key)
-            {
-                CompactArt.ImageSource = artwork;
-                ExpandedArt.ImageSource = artwork;
-            }
+            return;
         }
+
+        _artworkTrack = track;
+        _artworkFromThumbnail = hasThumbnail;
+        var artwork = media is null ? null : await ArtworkService.LoadAsync(media);
+        if (_artworkTrack != track)
+        {
+            return; // the track changed while we were loading
+        }
+
+        _artwork = artwork;
+        CompactArt.ImageSource = artwork?.Cover;
+        ExpandedArt.ImageSource = artwork?.Cover;
+        await CrossfadeGlowAsync(artwork);
+        ApplyTheme();
     }
 
-    private static async Task<BitmapImage?> LoadArtworkAsync(IRandomAccessStreamReference? thumbnail)
+    private async Task CrossfadeGlowAsync(Artwork? artwork)
     {
-        if (thumbnail is null)
+        if (GlowLayer.Opacity > 0)
         {
-            return null;
+            GlowLayer.Opacity = 0;
+            await Task.Delay(300);
         }
 
-        try
+        GlowBrush.ImageSource = artwork?.Glow;
+    }
+
+    /// <summary>Glass picks up the music's colours while something is playing; otherwise it's neutral.</summary>
+    private void ApplyTheme()
+    {
+        bool colourful = _artwork is not null && _media.Current?.IsPlaying == true;
+
+        GlowLayer.Opacity = colourful ? 0.9 : 0;
+        ((SolidColorBrush)Stage.Resources["AccentBrush"]).Color =
+            colourful ? _artwork!.Accent : Color.FromArgb(255, 255, 255, 255);
+
+        var tint = colourful ? _artwork!.Tint : ColorMath.NeutralTint;
+        if (tint != _tint)
         {
-            using var stream = await thumbnail.OpenReadAsync();
-            var bitmap = new BitmapImage { DecodePixelWidth = 128 };
-            await bitmap.SetSourceAsync(stream);
-            return bitmap;
-        }
-        catch (Exception ex)
-        {
-            Log.Error("Loading artwork failed", ex);
-            return null;
+            _tint = tint;
+            Stage.Background = new SolidColorBrush(tint); // a new brush, so BackgroundTransition animates it
         }
     }
 

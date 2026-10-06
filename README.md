@@ -9,7 +9,9 @@ A Dynamic Island for Windows: a pill at the top of the screen that expands on ho
 - Transparent, always-on-top pill at the top centre of the primary monitor (sits below the taskbar if it's docked at the top).
 - Spring animations between **idle**, **compact** and **expanded**; hover to expand.
 - Clicks pass straight through everywhere except the pill, and clicking it never steals focus.
-- Now playing for any app that publishes media info (Spotify, YouTube in Chrome/Edge, Media Player…): artwork, title, progress, play/pause/next/previous.
+- Now playing for any app that publishes media info (Spotify, Amazon Music, YouTube in Chrome/Edge, Media Player…): artwork, title, progress, play/pause/next/previous.
+- Glass look: a slightly see-through tint with a top highlight and bright rim. While music plays, the glass, level bars and progress bar take their colours from the artwork.
+- Artwork comes from the playing app; when the app doesn't provide any (Amazon Music doesn't), it's looked up by artist + title in the iTunes Search API. That sends the artist and title to Apple — switch it off with `ArtworkService.OnlineLookupEnabled` (a setting is coming).
 - Hides itself while a fullscreen app or game is in front.
 - Tray icon (right-click) to hide the island or quit.
 

@@ -7,11 +7,19 @@
 
     <!--
         Stage fills the (transparent) window. Its composition visual is clipped to an animated
-        rounded rectangle in code, so the black background *is* the pill, and every layer below
-        is revealed by the pill as it grows.
+        rounded rectangle in code, so the background *is* the pill, and every layer below is
+        revealed by the pill as it grows.
+
+        The glass is built from layers, back to front: a slightly see-through tint (Stage's
+        background, matched to the artwork while music plays), a soft colour wash made from the
+        artwork (GlowLayer), then a top highlight and bright rim drawn in code (SheenHost).
     -->
-    <Grid x:Name="Stage" Background="Black">
+    <Grid x:Name="Stage" Background="#EB1C1C1F">
+        <Grid.BackgroundTransition>
+            <BrushTransition Duration="0:0:0.5" />
+        </Grid.BackgroundTransition>
         <Grid.Resources>
+            <SolidColorBrush x:Key="AccentBrush" Color="White" />
             <Style x:Key="IslandButtonStyle" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
                 <Setter Property="Width" Value="44" />
                 <Setter Property="Height" Value="44" />
@@ -25,10 +33,21 @@
                 <Setter Property="UseSystemFocusVisuals" Value="False" />
             </Style>
             <Style x:Key="BarStyle" TargetType="Rectangle">
-                <Setter Property="Fill" Value="White" />
+                <Setter Property="Fill" Value="{StaticResource AccentBrush}" />
                 <Setter Property="VerticalAlignment" Value="Center" />
             </Style>
         </Grid.Resources>
+
+        <Rectangle x:Name="GlowLayer" Opacity="0" IsHitTestVisible="False">
+            <Rectangle.Fill>
+                <ImageBrush x:Name="GlowBrush" Stretch="Fill" />
+            </Rectangle.Fill>
+            <Rectangle.OpacityTransition>
+                <ScalarTransition Duration="0:0:0.4" />
+            </Rectangle.OpacityTransition>
+        </Rectangle>
+
+        <Canvas x:Name="SheenHost" IsHitTestVisible="False" />
 
         <!-- Compact: something is playing -->
         <Grid x:Name="CompactLayer"
@@ -117,7 +136,7 @@
                 </Grid.ColumnDefinitions>
                 <TextBlock x:Name="ElapsedText" FontSize="11" Foreground="#99FFFFFF" VerticalAlignment="Center" />
                 <ProgressBar x:Name="Progress" Grid.Column="1" Minimum="0" Maximum="1"
-                             Foreground="White" Background="#33FFFFFF" VerticalAlignment="Center" />
+                             Foreground="{StaticResource AccentBrush}" Background="#33FFFFFF" VerticalAlignment="Center" />
                 <TextBlock x:Name="RemainingText" Grid.Column="2" FontSize="11" Foreground="#99FFFFFF"
                            VerticalAlignment="Center" />
             </Grid>
