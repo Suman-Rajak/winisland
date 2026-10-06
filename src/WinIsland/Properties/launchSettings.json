@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "WinIsland": {
+      "commandName": "Project"
+    },
+    "WinIsland (pinned expanded, demo media)": {
+      "commandName": "Project",
+      "commandLineArgs": "--pin=expanded --demo-media"
+    }
+  }
+}
