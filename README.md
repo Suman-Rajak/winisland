@@ -2,7 +2,7 @@
 
 A Dynamic Island for Windows: a pill at the top of the screen that expands on hover and shows what's going on.
 
-**Status: Phase 1** — island shell + now playing.
+**Status: Phase 1** — island shell, now playing and settings.
 
 ## What works
 
@@ -11,9 +11,25 @@ A Dynamic Island for Windows: a pill at the top of the screen that expands on ho
 - Clicks pass straight through everywhere except the pill, and clicking it never steals focus.
 - Now playing for any app that publishes media info (Spotify, Amazon Music, YouTube in Chrome/Edge, Media Player…): artwork, title, progress, play/pause/next/previous.
 - Glass look: a slightly see-through tint with a top highlight and bright rim. While music plays, the glass, level bars and progress bar take their colours from the artwork.
-- Artwork comes from the playing app; when the app doesn't provide any (Amazon Music doesn't), it's looked up by artist + title in the iTunes Search API. That sends the artist and title to Apple — switch it off with `ArtworkService.OnlineLookupEnabled` (a setting is coming).
+- Artwork comes from the playing app; when the app doesn't provide any (Amazon Music doesn't), it's looked up by artist + title in the iTunes catalogue (your country's store, then the US store) and then MusicBrainz / Cover Art Archive. Only results whose artist *and* title match are used; if nothing matches, the island gets a colour generated from the song instead. The lookup sends the artist and title to Apple and MusicBrainz, and can be switched off in Settings.
+- Some apps publish odd metadata. Amazon Music never shares artwork or track length, and sometimes reports one value as both title and artist for a whole song — sometimes it's the artist ("Sayfalse"), sometimes the song ("Pooja & Patola"). The island asks the catalogue which it is (when online lookups are allowed); if it's an artist, or it can't tell, it shows "Now playing" rather than passing the artist off as the song.
 - Hides itself while a fullscreen app or game is in front.
-- Tray icon (right-click) to hide the island or quit.
+- Tray icon: click for Settings, right-click to hide the island or quit. Launching WinIsland again while it's running also opens Settings.
+
+## Settings
+
+Changes apply immediately and are saved to `%LOCALAPPDATA%\WinIsland\settings.json`.
+
+| Setting | What it does |
+|---|---|
+| Start with Windows | Adds WinIsland to your sign-in apps (per-user Run key) |
+| Display | Which screen the island sits on |
+| Distance from top | Gap above the island; 0 hugs the top edge |
+| Hide when idle | Fades the island out when nothing is playing; point at the top of the screen to bring it back |
+| Animation speed | Relaxed, Normal or Snappy |
+| Glass transparency | How much of what's behind shows through (0–30%) |
+| Match the music's colours | Tint the glass from the album art while music plays |
+| Find missing album art online | iTunes / MusicBrainz lookup for apps that don't share artwork (sends artist + title to them) |
 
 ## Run it
 
@@ -39,8 +55,16 @@ Errors are logged to `%LOCALAPPDATA%\WinIsland\log.txt`.
 ```
 src/WinIsland/
   IslandWindow.xaml(.cs)      the island: window setup, hover/click-through, animations, content
+  SettingsWindow.xaml(.cs)    settings UI
+  AppSettings.cs              settings model + JSON persistence
+  StartupRegistration.cs      "Start with Windows"
   Services/MediaService.cs    Windows media sessions (now playing + controls)
+  Services/ArtworkService.cs  artwork decoding, colour palette, generated fallback colours
+  Services/MusicCatalog.cs    online lookups: artwork, and which of title/artist a value is (iTunes, MusicBrainz)
+  Services/TrackQuery.cs      title/artist clean-up and matching
+  Services/ColorMath.cs
   Services/FullscreenDetector.cs
   Interop/Native.cs           Win32 / DWM calls
+  Interop/Displays.cs         monitor enumeration
   TrayIconController.cs       notification-area icon
 ```

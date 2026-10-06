@@ -17,10 +17,11 @@ internal sealed record MediaSnapshot(
     TimeSpan Duration,
     DateTimeOffset PositionUpdatedAt)
 {
-    /// <summary>Some apps (Amazon Music, for one) publish an artist but no title, at least while paused.</summary>
-    public string DisplayTitle => Title.Length > 0 ? Title : Artist;
-
-    public string DisplaySubtitle => Title.Length > 0 ? Artist : AppName;
+    /// <summary>
+    /// Some apps publish an artist but no real title (Amazon Music does, sometimes for a whole
+    /// track). Then say so instead of passing the artist off as the song.
+    /// </summary>
+    public string DisplayTitle => Title.Length > 0 ? Title : "Now playing";
 
     public string TrackKey => $"{AppName}|{Title}|{Artist}";
 
@@ -51,10 +52,14 @@ internal sealed partial class MediaService
     private readonly DispatcherQueue _dispatcher;
     private readonly bool _demo;
     private DispatcherQueueTimer? _pollTimer;
+    private DispatcherQueueTimer? _retryTimer;
     private GlobalSystemMediaTransportControlsSessionManager? _manager;
     private GlobalSystemMediaTransportControlsSession? _session;
     private int _refreshQueued;
     private int _failures;
+
+    // Values already sent to the catalogue to identify, so each is only asked about once.
+    private readonly HashSet<string> _identifying = new(StringComparer.OrdinalIgnoreCase);
 
     public MediaService(DispatcherQueue dispatcher, bool demo)
     {
@@ -146,8 +151,21 @@ internal sealed partial class MediaService
                 var playback = session.GetPlaybackInfo();
                 var timeline = session.GetTimelineProperties();
 
-                string title = properties?.Title?.Trim() ?? string.Empty;
+                string title = ExplicitTag().Replace(properties?.Title ?? string.Empty, string.Empty).Trim();
                 string artist = properties?.Artist?.Trim() ?? string.Empty;
+
+                // Amazon Music's metadata needs repair surprisingly often. It sometimes reports one
+                // value as both title and artist for a whole track (sometimes it's the artist,
+                // "Sayfalse"; sometimes the song, "Pooja & Patola"), and sometimes no artist at all.
+                if (title.Length > 0 && TrackQuery.Normalize(title) == TrackQuery.Normalize(artist))
+                {
+                    (title, artist) = Identified(artist) ?? (string.Empty, artist);
+                }
+                else if (title.Length > 0 && artist.Length == 0 && Identified(title) is { Title.Length: > 0 } song)
+                {
+                    artist = song.Artist;
+                }
+
                 if (title.Length > 0 || artist.Length > 0)
                 {
                     snapshot = new MediaSnapshot(
@@ -172,13 +190,57 @@ internal sealed partial class MediaService
 
                 if (_failures <= MaxConsecutiveFailures)
                 {
-                    return; // keep the last good snapshot; the poll timer retries
+                    // Keep the last good snapshot, but retry soon rather than waiting for the next
+                    // poll, so a track change can't leave the previous title up for long.
+                    RetrySoon();
+                    return;
                 }
             }
         }
 
         Current = snapshot;
         Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// What the music catalogue says this value is (see <see cref="MusicCatalog.IdentifyAsync"/>), or
+    /// null while it hasn't answered yet. Asks in the background (if online lookups are allowed) and
+    /// refreshes when the answer arrives, so the island first shows the raw metadata, then the fix.
+    /// </summary>
+    private (string Title, string Artist)? Identified(string value)
+    {
+        if (MusicCatalog.TryGetIdentified(value, out var known))
+        {
+            return known;
+        }
+
+        if (AppSettings.Current.FindArtworkOnline && _identifying.Add(value))
+        {
+            _ = IdentifyThenRefreshAsync(value);
+        }
+
+        return null;
+    }
+
+    private async Task IdentifyThenRefreshAsync(string value)
+    {
+        await MusicCatalog.IdentifyAsync(value);
+        QueueRefresh();
+    }
+
+    private void RetrySoon()
+    {
+        _retryTimer ??= CreateRetryTimer();
+        _retryTimer.Start();
+    }
+
+    private DispatcherQueueTimer CreateRetryTimer()
+    {
+        var timer = _dispatcher.CreateTimer();
+        timer.Interval = TimeSpan.FromMilliseconds(500);
+        timer.IsRepeating = false;
+        timer.Tick += (_, _) => QueueRefresh();
+        return timer;
     }
 
     /// <summary>Prefer whatever is actually playing; Windows' "current" session can be a paused app.</summary>
@@ -288,4 +350,8 @@ internal sealed partial class MediaService
 
     [GeneratedRegex("(?<=[a-z])([A-Z])")]
     private static partial Regex CamelCaseBoundary();
+
+    /// <summary>"[Explicit]" / "(Clean)" tags, which only crowd the title.</summary>
+    [GeneratedRegex(@"\s*[\[\(](explicit|clean)[\]\)]", RegexOptions.IgnoreCase)]
+    private static partial Regex ExplicitTag();
 }

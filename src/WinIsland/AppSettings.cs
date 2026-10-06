@@ -1,0 +1,128 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
+namespace WinIsland;
+
+internal enum AnimationSpeed
+{
+    Relaxed,
+    Normal,
+    Snappy,
+}
+
+/// <summary>
+/// User settings, stored as JSON in %LOCALAPPDATA%\WinIsland\settings.json.
+/// Change properties on the UI thread, then call <see cref="Save"/>: it raises <see cref="Changed"/>
+/// straight away and writes the file shortly after, so dragging a slider doesn't hammer the disk.
+/// </summary>
+internal sealed class AppSettings
+{
+    private static readonly string s_path = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WinIsland", "settings.json");
+
+    private static readonly JsonSerializerOptions s_json = new()
+    {
+        WriteIndented = true,
+        Converters = { new JsonStringEnumConverter() },
+    };
+
+    private readonly Timer _writeTimer;
+    private string? _pendingJson;
+
+    public AppSettings()
+    {
+        _writeTimer = new Timer(_ => WritePending());
+    }
+
+    public static AppSettings Current { get; } = Load();
+
+    /// <summary>Which display the island sits on (e.g. <c>\\.\DISPLAY2</c>); null follows the main display.</summary>
+    public string? Display { get; set; }
+
+    /// <summary>Gap between the top of the screen (or a top-docked taskbar) and the island, in pixels at 100% scale.</summary>
+    public double DistanceFromTop { get; set; } = 8;
+
+    /// <summary>Fade the island out when there's nothing to show; hovering the top of the screen brings it back.</summary>
+    public bool HideWhenIdle { get; set; }
+
+    public AnimationSpeed AnimationSpeed { get; set; } = AnimationSpeed.Normal;
+
+    /// <summary>0 = solid glass, 0.3 = very see-through.</summary>
+    public double GlassTransparency { get; set; } = 0.08;
+
+    /// <summary>Tint the glass with the artwork's colours while music plays.</summary>
+    public bool MatchMusicColors { get; set; } = true;
+
+    /// <summary>Look up artwork online (iTunes, MusicBrainz) when the music app provides none. Sends artist + title to them.</summary>
+    public bool FindArtworkOnline { get; set; } = true;
+
+    [JsonIgnore]
+    public double GlassOpacity => 1 - Math.Clamp(GlassTransparency, 0, 0.3);
+
+    /// <summary>Multiplier for animation durations.</summary>
+    [JsonIgnore]
+    public double AnimationScale => AnimationSpeed switch
+    {
+        AnimationSpeed.Relaxed => 1.4,
+        AnimationSpeed.Snappy => 0.75,
+        _ => 1.0,
+    };
+
+    public event EventHandler? Changed;
+
+    public void Save()
+    {
+        Changed?.Invoke(this, EventArgs.Empty);
+        Interlocked.Exchange(ref _pendingJson, JsonSerializer.Serialize(this, s_json));
+        _writeTimer.Change(TimeSpan.FromMilliseconds(400), Timeout.InfiniteTimeSpan);
+    }
+
+    public void ResetToDefaults()
+    {
+        var defaults = new AppSettings();
+        Display = defaults.Display;
+        DistanceFromTop = defaults.DistanceFromTop;
+        HideWhenIdle = defaults.HideWhenIdle;
+        AnimationSpeed = defaults.AnimationSpeed;
+        GlassTransparency = defaults.GlassTransparency;
+        MatchMusicColors = defaults.MatchMusicColors;
+        FindArtworkOnline = defaults.FindArtworkOnline;
+        Save();
+    }
+
+    private static AppSettings Load()
+    {
+        try
+        {
+            if (File.Exists(s_path))
+            {
+                return JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(s_path), s_json) ?? new AppSettings();
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Settings file unreadable; using defaults", ex);
+        }
+
+        return new AppSettings();
+    }
+
+    private void WritePending()
+    {
+        var json = Interlocked.Exchange(ref _pendingJson, null);
+        if (json is null)
+        {
+            return;
+        }
+
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(s_path)!);
+            File.WriteAllText(s_path, json);
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Saving settings failed", ex);
+        }
+    }
+}

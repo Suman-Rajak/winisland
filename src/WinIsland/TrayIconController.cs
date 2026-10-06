@@ -5,12 +5,15 @@ using Microsoft.UI.Xaml.Controls;
 
 namespace WinIsland;
 
-/// <summary>The notification-area icon: the only way to hide or quit an always-on-top, taskbar-less window.</summary>
+/// <summary>
+/// The notification-area icon: click for settings, right-click to hide or quit. It's the only way in
+/// to an always-on-top, taskbar-less window.
+/// </summary>
 internal sealed class TrayIconController : IDisposable
 {
     private readonly TaskbarIcon _icon;
 
-    public TrayIconController(IslandWindow island, Action quit)
+    public TrayIconController(IslandWindow island, Action openSettings, Action quit)
     {
         var toggleItem = new MenuFlyoutItem { Text = "Hide island" };
         toggleItem.Command = new RelayCommand(() =>
@@ -20,6 +23,7 @@ internal sealed class TrayIconController : IDisposable
         });
 
         var menu = new MenuFlyout();
+        menu.Items.Add(new MenuFlyoutItem { Text = "Settings", Command = new RelayCommand(openSettings) });
         menu.Items.Add(toggleItem);
         menu.Items.Add(new MenuFlyoutSeparator());
         menu.Items.Add(new MenuFlyoutItem { Text = "Quit WinIsland", Command = new RelayCommand(quit) });
@@ -30,6 +34,8 @@ internal sealed class TrayIconController : IDisposable
             Icon = new System.Drawing.Icon(Path.Combine(AppContext.BaseDirectory, "Assets", "island.ico")),
             ContextMenuMode = ContextMenuMode.PopupMenu,
             ContextFlyout = menu,
+            LeftClickCommand = new RelayCommand(openSettings),
+            NoLeftClickDelay = true,
         };
 
         // Efficiency mode would throttle the process and make the island's animations stutter.

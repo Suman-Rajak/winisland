@@ -5,7 +5,8 @@ namespace WinIsland.Services;
 /// <summary>Colour helpers for turning artwork into the island's glass tint.</summary>
 internal static class ColorMath
 {
-    public static readonly Color NeutralTint = Color.FromArgb(0xEB, 0x1C, 0x1C, 0x1F);
+    /// <summary>Opaque; how see-through the glass is comes from the "glass transparency" setting.</summary>
+    public static readonly Color NeutralTint = Color.FromArgb(0xFF, 0x1C, 0x1C, 0x1F);
 
     /// <summary>
     /// Picks the artwork's most vivid colour (falling back to its average for greyscale art) and
@@ -68,7 +69,7 @@ internal static class ColorMath
         return (h / 6, s, l);
     }
 
-    private static Color FromHsl(double h, double s, double l, byte alpha = 255)
+    public static Color FromHsl(double h, double s, double l, byte alpha = 255)
     {
         static double Channel(double p, double q, double t)
         {

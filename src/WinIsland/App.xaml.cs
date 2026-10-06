@@ -5,9 +5,11 @@ namespace WinIsland;
 public partial class App : Application
 {
     private static Mutex? s_instanceMutex;
+    private static EventWaitHandle? s_showSettingsSignal;
 
     private IslandWindow? _island;
     private TrayIconController? _tray;
+    private SettingsWindow? _settings;
 
     public App()
     {
@@ -17,21 +19,40 @@ public partial class App : Application
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
+        // Launching WinIsland again while it's running opens Settings in the running copy.
+        s_showSettingsSignal = new EventWaitHandle(false, EventResetMode.AutoReset, @"Local\WinIsland.ShowSettings");
         s_instanceMutex = new Mutex(initiallyOwned: true, @"Local\WinIsland.SingleInstance", out bool isFirstInstance);
         if (!isFirstInstance)
         {
+            s_showSettingsSignal.Set();
             Exit();
             return;
         }
 
+        var dispatcher = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
+        ThreadPool.RegisterWaitForSingleObject(s_showSettingsSignal,
+            (_, _) => dispatcher.TryEnqueue(OpenSettings), null, Timeout.Infinite, executeOnlyOnce: false);
+
         _island = new IslandWindow(IslandOptions.FromCommandLine(Environment.GetCommandLineArgs()));
-        _tray = new TrayIconController(_island, Quit);
+        _tray = new TrayIconController(_island, OpenSettings, Quit);
         _island.Start();
+    }
+
+    private void OpenSettings()
+    {
+        if (_settings is null)
+        {
+            _settings = new SettingsWindow();
+            _settings.Closed += (_, _) => _settings = null;
+        }
+
+        _settings.Activate();
     }
 
     private void Quit()
     {
         _tray?.Dispose();
+        _settings?.Close();
         _island?.Close();
         Exit();
     }

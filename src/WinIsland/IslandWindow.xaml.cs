@@ -35,8 +35,10 @@ public sealed partial class IslandWindow : Window
     private static readonly PillShape ExpandedMediaShape = new(420, 172, 38);
 
     private readonly IslandOptions _options;
+    private readonly AppSettings _settings = AppSettings.Current;
     private readonly IntPtr _hwnd;
     private readonly Compositor _compositor;
+    private readonly Visual _stageVisual;
     private readonly CompositionRoundedRectangleGeometry _pill;
     private readonly MediaService _media;
     private readonly DispatcherQueueTimer _timer;
@@ -55,9 +57,12 @@ public sealed partial class IslandWindow : Window
     private Color _tint = ColorMath.NeutralTint;
     private bool _compactBarsRunning = true;
     private bool _expandedBarsRunning = true;
+    private bool _idleHidden;
+    private bool _findArtworkOnline;
 
     private IntPtr _monitor;
     private Native.POINT _origin;
+    private int _hitTop;
     private double _scale = 1;
 
     internal IslandWindow(IslandOptions options)
@@ -68,10 +73,10 @@ public sealed partial class IslandWindow : Window
         _hwnd = WindowNative.GetWindowHandle(this);
         ConfigureWindow();
 
-        var stageVisual = ElementCompositionPreview.GetElementVisual(Stage);
-        _compositor = stageVisual.Compositor;
+        _stageVisual = ElementCompositionPreview.GetElementVisual(Stage);
+        _compositor = _stageVisual.Compositor;
         _pill = CreatePillGeometry();
-        stageVisual.Clip = _compositor.CreateGeometricClip(_pill);
+        _stageVisual.Clip = _compositor.CreateGeometricClip(_pill);
         CreateSheen();
 
         foreach (var layer in new UIElement[] { CompactLayer, ExpandedEmptyLayer, ExpandedMediaLayer })
@@ -87,6 +92,25 @@ public sealed partial class IslandWindow : Window
         _timer = DispatcherQueue.CreateTimer();
         _timer.Interval = TimeSpan.FromMilliseconds(PointerTickMs);
         _timer.Tick += OnTick;
+
+        _findArtworkOnline = _settings.FindArtworkOnline;
+        _settings.Changed += OnSettingsChanged;
+    }
+
+    private void OnSettingsChanged(object? sender, EventArgs e)
+    {
+        _monitor = IntPtr.Zero; // force UpdatePlacement to re-apply display and distance
+        UpdatePlacement();
+        UpdateVisibility();
+        ApplyTheme();
+        ApplyIdleFade();
+
+        if (_settings.FindArtworkOnline != _findArtworkOnline)
+        {
+            _findArtworkOnline = _settings.FindArtworkOnline;
+            _artworkTrack = null; // re-fetch (or drop) looked-up artwork
+            OnMediaChanged(this, EventArgs.Empty);
+        }
     }
 
     /// <summary>Set from the tray menu.</summary>
@@ -108,6 +132,7 @@ public sealed partial class IslandWindow : Window
         _visible = true;
         UpdateVisibility();
         EnsureTopmost();
+        ApplyTheme();
         ApplyState();
         _timer.Start();
         _ = _media.StartAsync();
@@ -201,31 +226,32 @@ public sealed partial class IslandWindow : Window
 
     private void UpdatePlacement()
     {
-        var monitor = Native.MonitorFromPoint(default, Native.MONITOR_DEFAULTTOPRIMARY);
-        if (!Native.TryGetMonitorInfo(monitor, out var info))
+        if (Displays.FindOrPrimary(_settings.Display) is not { } display)
         {
             return;
         }
 
-        Native.GetDpiForMonitor(monitor, Native.MDT_EFFECTIVE_DPI, out uint dpi, out _);
+        Native.GetDpiForMonitor(display.Handle, Native.MDT_EFFECTIVE_DPI, out uint dpi, out _);
         double scale = dpi / 96.0;
         int width = (int)Math.Ceiling(StageWidth * scale);
         int height = (int)Math.Ceiling(StageHeight * scale);
 
-        // Centre on the screen, but sit below the taskbar if it's docked at the top.
+        // Centre on the screen, below the taskbar if it's docked at the top. The pill sits TopGap
+        // inside the window, so a smaller distance pushes the (invisible) top of the window off-screen.
         var origin = new Native.POINT
         {
-            X = info.rcMonitor.Left + (info.rcMonitor.Width - width) / 2,
-            Y = info.rcWork.Top,
+            X = display.Bounds.Left + (display.Bounds.Width - width) / 2,
+            Y = display.WorkArea.Top + (int)Math.Round((_settings.DistanceFromTop - TopGap) * scale),
         };
 
-        if (monitor == _monitor && origin.X == _origin.X && origin.Y == _origin.Y && scale == _scale)
+        if (display.Handle == _monitor && origin.X == _origin.X && origin.Y == _origin.Y && scale == _scale)
         {
             return;
         }
 
-        _monitor = monitor;
+        _monitor = display.Handle;
         _origin = origin;
+        _hitTop = display.WorkArea.Top;
         _scale = scale;
         Native.SetWindowPos(_hwnd, IntPtr.Zero, origin.X, origin.Y, width, height, Native.SWP_NOZORDER | Native.SWP_NOACTIVATE);
     }
@@ -383,7 +409,7 @@ public sealed partial class IslandWindow : Window
         return new Native.RECT
         {
             Left = _origin.X + (int)(left * _scale),
-            Top = _origin.Y,
+            Top = _hitTop,
             Right = _origin.X + (int)(right * _scale),
             Bottom = _origin.Y + (int)(bottom * _scale),
         };
@@ -413,6 +439,7 @@ public sealed partial class IslandWindow : Window
         SetLayerVisible(ExpandedMediaLayer, expanded && _shownWithMedia);
 
         UpdateBars();
+        ApplyIdleFade();
         if (expanded)
         {
             UpdateClock();
@@ -420,11 +447,30 @@ public sealed partial class IslandWindow : Window
         }
     }
 
+    /// <summary>"Hide when idle": fade the whole island out, but keep hover working so it can come back.</summary>
+    private void ApplyIdleFade()
+    {
+        bool hide = _settings.HideWhenIdle && _state == IslandState.Idle && _options.PinnedState is null;
+        if (hide == _idleHidden)
+        {
+            return;
+        }
+
+        _idleHidden = hide;
+        var fade = _compositor.CreateScalarKeyFrameAnimation();
+        fade.InsertKeyFrame(1f, hide ? 0f : 1f);
+        fade.Duration = Scaled(hide ? 300 : 120);
+        _stageVisual.StartAnimation(nameof(_stageVisual.Opacity), fade);
+    }
+
+    /// <summary>A duration adjusted for the "animation speed" setting.</summary>
+    private TimeSpan Scaled(double milliseconds) => TimeSpan.FromMilliseconds(milliseconds * _settings.AnimationScale);
+
     private void AnimatePill(PillShape shape, bool expanding)
     {
         // Growing is a little bouncy, like the iPhone's island; shrinking settles faster.
         float damping = expanding ? 0.68f : 0.85f;
-        var period = TimeSpan.FromMilliseconds(expanding ? 55 : 45);
+        var period = Scaled(expanding ? 55 : 45);
 
         StartSpring(nameof(_pill.Size), new Vector2(shape.Width, shape.Height), damping, period);
         StartSpring(nameof(_pill.CornerRadius), new Vector2(shape.Radius), damping, period);
@@ -447,16 +493,16 @@ public sealed partial class IslandWindow : Window
 
         var fade = _compositor.CreateScalarKeyFrameAnimation();
         fade.InsertKeyFrame(1f, show ? 1f : 0f);
-        fade.Duration = TimeSpan.FromMilliseconds(show ? 220 : 110);
+        fade.Duration = Scaled(show ? 220 : 110);
         if (show)
         {
-            fade.DelayTime = TimeSpan.FromMilliseconds(60); // let the pill start growing first
+            fade.DelayTime = Scaled(60); // let the pill start growing first
         }
 
         var scale = _compositor.CreateSpringVector3Animation();
         scale.FinalValue = show ? Vector3.One : new Vector3(0.92f, 0.92f, 1f);
         scale.DampingRatio = 0.8f;
-        scale.Period = TimeSpan.FromMilliseconds(50);
+        scale.Period = Scaled(50);
 
         visual.StartAnimation(nameof(visual.Opacity), fade);
         visual.StartAnimation(nameof(visual.Scale), scale);
@@ -526,8 +572,8 @@ public sealed partial class IslandWindow : Window
         if (media is not null)
         {
             TitleText.Text = media.DisplayTitle;
-            ArtistText.Text = media.DisplaySubtitle;
-            SourceText.Text = media.Title.Length > 0 ? media.AppName : string.Empty;
+            ArtistText.Text = media.Artist;
+            SourceText.Text = media.AppName;
             PlayPauseIcon.Glyph = media.IsPlaying ? "" : "";
         }
 
@@ -571,11 +617,12 @@ public sealed partial class IslandWindow : Window
         GlowBrush.ImageSource = artwork?.Glow;
     }
 
-    /// <summary>Glass picks up the music's colours while something is playing; otherwise it's neutral.</summary>
+    /// <summary>Glass picks up the music's colours while something is playing (if enabled); otherwise it's neutral.</summary>
     private void ApplyTheme()
     {
-        bool colourful = _artwork is not null && _media.Current?.IsPlaying == true;
+        bool colourful = _settings.MatchMusicColors && _artwork is not null && _media.Current?.IsPlaying == true;
 
+        Backdrop.Opacity = _settings.GlassOpacity;
         GlowLayer.Opacity = colourful ? 0.9 : 0;
         ((SolidColorBrush)Stage.Resources["AccentBrush"]).Color =
             colourful ? _artwork!.Accent : Color.FromArgb(255, 255, 255, 255);
@@ -584,7 +631,7 @@ public sealed partial class IslandWindow : Window
         if (tint != _tint)
         {
             _tint = tint;
-            Stage.Background = new SolidColorBrush(tint); // a new brush, so BackgroundTransition animates it
+            Backdrop.Background = new SolidColorBrush(tint); // a new brush, so BackgroundTransition animates it
         }
     }
 

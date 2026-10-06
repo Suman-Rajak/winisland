@@ -1,5 +1,4 @@
 using System.Runtime.InteropServices.WindowsRuntime;
-using System.Text.Json;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Windows.Graphics.Imaging;
 using Windows.Storage.Streams;
@@ -7,11 +6,11 @@ using Windows.UI;
 
 namespace WinIsland.Services;
 
-/// <param name="Cover">The artwork itself, at most 256 px.</param>
+/// <param name="Cover">The artwork itself, at most 256 px; null when no artwork could be found.</param>
 /// <param name="Glow">A tiny, darkened version of the artwork; stretched behind the island it becomes a soft colour wash.</param>
 /// <param name="Tint">Dark base colour for the island's glass.</param>
 /// <param name="Accent">Light colour for level bars and progress.</param>
-internal sealed record Artwork(WriteableBitmap Cover, WriteableBitmap Glow, Color Tint, Color Accent);
+internal sealed record Artwork(WriteableBitmap? Cover, WriteableBitmap Glow, Color Tint, Color Accent);
 
 /// <summary>Loads artwork for the current track and derives the island's colours from it. Call on the UI thread.</summary>
 internal static class ArtworkService
@@ -19,44 +18,26 @@ internal static class ArtworkService
     private const int CoverSize = 256;
     private const int GlowSize = 6;
 
-    private static readonly HttpClient s_http = new() { Timeout = TimeSpan.FromSeconds(5) };
-    private static readonly Dictionary<string, byte[]?> s_lookupCache = new(StringComparer.OrdinalIgnoreCase);
-
     /// <summary>
-    /// When the playing app doesn't publish artwork (Amazon Music doesn't), look the track up in the
-    /// iTunes Search API. This sends the artist and title to Apple; it will become a setting.
+    /// The track's artwork from the app, or from an online catalogue (if allowed). When there is
+    /// none anywhere, colours generated from the title, so the glass still gets a colour per song.
     /// </summary>
-    public static bool OnlineLookupEnabled { get; set; } = true;
-
-    public static async Task<Artwork?> LoadAsync(MediaSnapshot media)
+    public static async Task<Artwork> LoadAsync(MediaSnapshot media)
     {
         try
         {
             using var stream = await OpenAsync(media);
-            if (stream is null)
+            if (stream is not null)
             {
-                return null;
+                return await DecodeArtworkAsync(stream);
             }
-
-            var decoder = await BitmapDecoder.CreateAsync(stream);
-
-            uint width = decoder.OrientedPixelWidth, height = decoder.OrientedPixelHeight;
-            double scale = Math.Min(1.0, CoverSize / (double)Math.Max(width, height));
-            var (coverWidth, coverHeight) = ((int)Math.Max(1, width * scale), (int)Math.Max(1, height * scale));
-            var cover = ToBitmap(await DecodeAsync(decoder, coverWidth, coverHeight), coverWidth, coverHeight);
-
-            var glowPixels = await DecodeAsync(decoder, GlowSize, GlowSize);
-            var (tint, accent) = ColorMath.Palette(glowPixels);
-            ColorMath.DarkenForBackdrop(glowPixels);
-            var glow = ToBitmap(glowPixels, GlowSize, GlowSize);
-
-            return new Artwork(cover, glow, tint, accent);
         }
         catch (Exception ex)
         {
             Log.Error("Loading artwork failed", ex);
-            return null;
         }
+
+        return Generated(media);
     }
 
     private static async Task<IRandomAccessStream?> OpenAsync(MediaSnapshot media)
@@ -73,57 +54,58 @@ internal static class ArtworkService
             }
         }
 
-        if (!OnlineLookupEnabled || media.Title.Length == 0)
+        if (!AppSettings.Current.FindArtworkOnline || media.Title.Length == 0)
         {
-            return null; // artist alone would find some random album
+            return null;
         }
 
-        var bytes = await LookupAsync(media.Artist, media.Title);
+        var bytes = await MusicCatalog.FindArtworkAsync(media.Artist, media.Title);
         return bytes is null ? null : new MemoryStream(bytes).AsRandomAccessStream();
     }
 
-    private static async Task<byte[]?> LookupAsync(string artist, string title)
+    private static async Task<Artwork> DecodeArtworkAsync(IRandomAccessStream stream)
     {
-        string key = $"{artist}|{title}";
-        if (s_lookupCache.TryGetValue(key, out var cached))
+        var decoder = await BitmapDecoder.CreateAsync(stream);
+
+        uint width = decoder.OrientedPixelWidth, height = decoder.OrientedPixelHeight;
+        double scale = Math.Min(1.0, CoverSize / (double)Math.Max(width, height));
+        var (coverWidth, coverHeight) = ((int)Math.Max(1, width * scale), (int)Math.Max(1, height * scale));
+        var cover = ToBitmap(await DecodeAsync(decoder, coverWidth, coverHeight), coverWidth, coverHeight);
+
+        var glowPixels = await DecodeAsync(decoder, GlowSize, GlowSize);
+        return WithGlow(cover, glowPixels);
+    }
+
+    /// <summary>A diagonal two-hue gradient whose hue comes from the track, so each song keeps its own colour.</summary>
+    private static Artwork Generated(MediaSnapshot media)
+    {
+        uint hash = 2166136261; // FNV-1a: stable across runs, unlike string.GetHashCode
+        foreach (char c in media.TrackKey)
         {
-            return cached;
+            hash = (hash ^ c) * 16777619;
         }
 
-        byte[]? result = null;
-        try
+        double hue = (hash % 360) / 360.0;
+        var pixels = new byte[GlowSize * GlowSize * 4];
+        for (int y = 0; y < GlowSize; y++)
         {
-            string term = Uri.EscapeDataString($"{artist} {title}");
-            using var json = JsonDocument.Parse(await s_http.GetStringAsync(
-                $"https://itunes.apple.com/search?media=music&entity=song&limit=5&term={term}"));
-
-            // Prefer a result by the same (first) artist; otherwise trust the search ranking.
-            string firstArtist = artist.Split(',', '&')[0].Trim();
-            JsonElement? best = null;
-            foreach (var hit in json.RootElement.GetProperty("results").EnumerateArray())
+            for (int x = 0; x < GlowSize; x++)
             {
-                best ??= hit;
-                if (firstArtist.Length > 0 &&
-                    hit.TryGetProperty("artistName", out var name) &&
-                    name.GetString()?.Contains(firstArtist, StringComparison.OrdinalIgnoreCase) == true)
-                {
-                    best = hit;
-                    break;
-                }
-            }
-
-            if (best?.TryGetProperty("artworkUrl100", out var url) == true && url.GetString() is { } artworkUrl)
-            {
-                result = await s_http.GetByteArrayAsync(artworkUrl.Replace("100x100bb", "600x600bb"));
+                double t = (x + y) / (2.0 * (GlowSize - 1));
+                var c = ColorMath.FromHsl((hue + 0.12 * t) % 1.0, 0.65, 0.45);
+                int i = (y * GlowSize + x) * 4;
+                (pixels[i], pixels[i + 1], pixels[i + 2], pixels[i + 3]) = (c.B, c.G, c.R, 255);
             }
         }
-        catch (Exception ex)
-        {
-            Log.Error("Artwork lookup failed", ex);
-        }
 
-        s_lookupCache[key] = result;
-        return result;
+        return WithGlow(cover: null, pixels);
+    }
+
+    private static Artwork WithGlow(WriteableBitmap? cover, byte[] glowPixels)
+    {
+        var (tint, accent) = ColorMath.Palette(glowPixels);
+        ColorMath.DarkenForBackdrop(glowPixels);
+        return new Artwork(cover, ToBitmap(glowPixels, GlowSize, GlowSize), tint, accent);
     }
 
     private static async Task<byte[]> DecodeAsync(BitmapDecoder decoder, int width, int height)
