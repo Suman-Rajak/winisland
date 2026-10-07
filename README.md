@@ -2,7 +2,7 @@
 
 A Dynamic Island for Windows: a pill at the top of the screen that expands on hover and shows what's going on.
 
-**Status: Phase 2** — live activities: now playing, volume, brightness, battery, Bluetooth, mic/camera. Clipboard, file shelf and notifications are next.
+**Status: Phase 2** — live activities: now playing, volume, brightness, battery, Bluetooth, mic/camera, clipboard history. File shelf and notifications are next.
 
 ## What works
 
@@ -17,6 +17,8 @@ A Dynamic Island for Windows: a pill at the top of the screen that expands on ho
 - Battery: "Charging" when you plug in, "Fully charged" when it gets to 100%, and warnings at 20% and 10% (once each per discharge). Unplugging is silent; PCs without a battery never show it.
 - Bluetooth: paired devices connecting ("OnePlus Nord Buds 3 · 80%", with the battery when the device reports it) and disconnecting, with an icon for headphones, speakers, phones, mice and so on. Short drops and quick reconnects are ignored; mice and keyboards (which nap when idle) only announce reconnecting after a long absence and never announce disconnecting.
 - Microphone and camera: while any app uses them, a dot sits in a small bubble beside the island (orange for the mic, green for the camera), and the island stays visible even with "hide when idle". When an app starts using one, the island says which ("Discord · Microphone"); point at the bubble to see it again. Read from Windows' capability consent store, the same place its own privacy indicator looks.
+- Tabs: the expanded island has a small tab row: music (or the clock) and the clipboard. Every hover starts on the first tab.
+- Clipboard history: the last 20 things you copied (text, links, images, files), newest first; click one to copy it again, × to forget it. Kept in memory only (gone when WinIsland quits), and anything password managers mark as private is skipped, using the same markers as Windows' own clipboard history.
 - Hides itself while a fullscreen app or game is in front.
 - Tray icon: click for Settings, right-click to hide the island or quit. Launching WinIsland again while it's running also opens Settings.
 
@@ -37,6 +39,7 @@ Changes apply immediately and are saved to `%LOCALAPPDATA%\WinIsland\settings.js
 | Battery and charging | Show plugging in, full charge and low-battery warnings |
 | Bluetooth devices | Show devices connecting and disconnecting |
 | Microphone and camera in use | Dot beside the island while an app uses them, and which app |
+| Clipboard history | The clipboard tab; off also forgets everything in it |
 | Find missing album art online | iTunes / MusicBrainz lookup for apps that don't share artwork (sends artist + title to them) |
 
 ## Run it
@@ -59,6 +62,8 @@ Then run `src/WinIsland/bin/x64/Debug/net10.0-windows10.0.26100.0/WinIsland.exe`
 | `--demo-battery` | Keep "Charging" up (at 64%) |
 | `--demo-bluetooth` | Keep a connected pair of earbuds up (at 80%) |
 | `--demo-privacy` | Pretend Discord just started using the microphone |
+| `--demo-clipboard` | Add a few made-up clipboard entries |
+| `--tab=N` | With `--pin=expanded`, open tab N (0 = first) |
 
 Errors are logged to `%LOCALAPPDATA%\WinIsland\log.txt`.
 
@@ -76,6 +81,7 @@ src/WinIsland/
     BatteryActivity.cs        charging / full / low battery (+ BatteryView, BatteryIcon)
     BluetoothActivity.cs      devices connecting / disconnecting (+ BluetoothView)
     PrivacyActivity.cs        "Discord · Microphone" notice (+ PrivacyView); the dot bubble lives in IslandWindow
+    ClipboardActivity.cs      clipboard history tab (+ ClipboardView, ClipboardEntry)
   SettingsWindow.xaml(.cs)    settings UI
   AppSettings.cs              settings model + JSON persistence
   StartupRegistration.cs      "Start with Windows"
@@ -87,7 +93,8 @@ src/WinIsland/
   Services/VolumeMonitor.cs   default speakers' volume/mute (Core Audio)
   Services/BrightnessMonitor.cs  built-in screen brightness (WMI)
   Services/BluetoothMonitor.cs   paired Bluetooth devices' connections, type and battery
-  Services/PrivacyMonitor.cs     which apps are using the mic/camera (consent store + change notifications)
+  Services/PrivacyMonitor.cs     which apps are using the mic/camera (consent store, re-read every 1.5 s)
+  Services/ClipboardWatcher.cs   clipboard change listener; reads copies, skips private ones
   Services/FullscreenDetector.cs
   Interop/Native.cs           Win32 / DWM calls
   Interop/CoreAudio.cs        Core Audio COM interfaces

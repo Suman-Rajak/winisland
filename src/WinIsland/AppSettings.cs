@@ -68,6 +68,9 @@ internal sealed class AppSettings
     /// <summary>Show a dot while an app uses the microphone or camera, and say which app.</summary>
     public bool ShowPrivacy { get; set; } = true;
 
+    /// <summary>Keep the last things you copied (in memory only) in a clipboard tab on the expanded island.</summary>
+    public bool ClipboardHistory { get; set; } = true;
+
     [JsonIgnore]
     public double GlassOpacity => 1 - Math.Clamp(GlassTransparency, 0, 0.3);
 
@@ -103,6 +106,7 @@ internal sealed class AppSettings
         ShowBattery = defaults.ShowBattery;
         ShowBluetooth = defaults.ShowBluetooth;
         ShowPrivacy = defaults.ShowPrivacy;
+        ClipboardHistory = defaults.ClipboardHistory;
         Save();
     }
 

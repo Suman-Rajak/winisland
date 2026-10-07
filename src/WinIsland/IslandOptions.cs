@@ -15,13 +15,17 @@ internal enum IslandState
 ///   --demo-battery                keep "Charging" up (at 64%)
 ///   --demo-bluetooth              keep a connected pair of earbuds up (at 80%)
 ///   --demo-privacy                pretend Discord just started using the microphone
+///   --demo-clipboard              add a few made-up clipboard entries
+///   --tab=N                       with --pin=expanded, open tab N (0 = first)
 /// </summary>
-internal sealed record IslandOptions(IslandState? PinnedState, bool DemoMedia, bool DemoLevel, bool DemoBattery, bool DemoBluetooth, bool DemoPrivacy)
+internal sealed record IslandOptions(IslandState? PinnedState, bool DemoMedia, bool DemoLevel, bool DemoBattery, bool DemoBluetooth,
+    bool DemoPrivacy, bool DemoClipboard, int Tab)
 {
     public static IslandOptions FromCommandLine(string[] args)
     {
         IslandState? pinned = null;
-        bool demo = false, demoLevel = false, demoBattery = false, demoBluetooth = false, demoPrivacy = false;
+        bool demo = false, demoLevel = false, demoBattery = false, demoBluetooth = false, demoPrivacy = false, demoClipboard = false;
+        int tab = 0;
 
         foreach (var arg in args.Skip(1))
         {
@@ -50,8 +54,16 @@ internal sealed record IslandOptions(IslandState? PinnedState, bool DemoMedia, b
             {
                 demoPrivacy = true;
             }
+            else if (arg.Equals("--demo-clipboard", StringComparison.OrdinalIgnoreCase))
+            {
+                demoClipboard = true;
+            }
+            else if (arg.StartsWith("--tab=", StringComparison.OrdinalIgnoreCase) && int.TryParse(arg["--tab=".Length..], out int n))
+            {
+                tab = n;
+            }
         }
 
-        return new IslandOptions(pinned, demo, demoLevel, demoBattery, demoBluetooth, demoPrivacy);
+        return new IslandOptions(pinned, demo, demoLevel, demoBattery, demoBluetooth, demoPrivacy, demoClipboard, tab);
     }
 }

@@ -15,9 +15,10 @@ internal sealed record GlassTheme(ImageSource Glow, Color Tint, Color Accent);
 
 /// <summary>
 /// Something the island can show: music, the clock, a volume change… The island shows the
-/// highest-priority activity that wants the compact pill, and on hover the highest-priority one
-/// with an expanded view. Activities own their views and raise <see cref="Changed"/> (on the UI
-/// thread) whenever any of the properties below change.
+/// highest-priority activity that wants the compact pill. On hover it expands into tabs: the first
+/// shows the highest-priority activity with an expanded view, and activities with <see cref="IsTab"/>
+/// get their own. Activities own their views and raise <see cref="Changed"/> (on the UI thread)
+/// whenever any of the properties below change.
 /// </summary>
 internal abstract class IslandActivity
 {
@@ -44,6 +45,15 @@ internal abstract class IslandActivity
 
     /// <summary>Glass colours while this activity is live; null leaves the glass neutral.</summary>
     public virtual GlassTheme? Theme => null;
+
+    /// <summary>Icon for this activity's tab in the expanded island (Segoe Fluent Icons glyph).</summary>
+    public virtual string Glyph => ""; // Home
+
+    /// <summary>
+    /// Has a tab of its own in the expanded island (the clipboard), rather than competing by priority
+    /// for the first tab (music, else the clock).
+    /// </summary>
+    public virtual bool IsTab => false;
 
     public event EventHandler? Changed;
 

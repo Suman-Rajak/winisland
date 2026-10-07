@@ -36,6 +36,8 @@ internal sealed class MediaActivity : IslandActivity
 
     public override int Priority => 50;
 
+    public override string Glyph => ""; // Audio (music note)
+
     private bool IsPlaying => _media.Current?.IsPlaying == true;
 
     public override bool WantsCompact => IsPlaying;

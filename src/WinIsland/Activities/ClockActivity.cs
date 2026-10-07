@@ -20,6 +20,8 @@ internal sealed class ClockActivity : IslandActivity
 
     public override int Priority => 0;
 
+    public override string Glyph => ""; // Clock
+
     public override bool HasExpanded => true;
 
     public override PillShape ExpandedShape => new(300, 92, 30);

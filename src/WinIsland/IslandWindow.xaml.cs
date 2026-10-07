@@ -24,7 +24,8 @@ public sealed partial class IslandWindow : Window
     // The window is a fixed-size transparent stage; only the pill inside it is visible and clickable.
     // Resizing the window itself during animations would jitter, so the pill animates inside it instead.
     private const float StageWidth = 480;
-    private const float StageHeight = 200;
+    private const float StageHeight = 270; // the tallest pill (clipboard + tabs) plus room for its bounce
+    private const float TabBarHeight = 34;
     private const float TopGap = 8;
 
     private const int PointerTickMs = 30;
@@ -52,6 +53,9 @@ public sealed partial class IslandWindow : Window
 
     private IslandState _state = IslandState.Idle;
     private IslandActivity? _shown;
+    private List<IslandActivity> _tabs = [];
+    private int _selectedTab;
+    private string _tabBarSignature = string.Empty;
     private bool _wantExpanded;
     private bool _visible;
     private bool _userHidden;
@@ -100,6 +104,7 @@ public sealed partial class IslandWindow : Window
         var battery = new BatteryActivity(DispatcherQueue);
         var bluetooth = new BluetoothActivity(DispatcherQueue);
         _privacy = new PrivacyActivity(DispatcherQueue);
+        var clipboard = new ClipboardActivity(DispatcherQueue);
         _activities =
         [
             new ClockActivity(DispatcherQueue),
@@ -109,6 +114,7 @@ public sealed partial class IslandWindow : Window
             battery,
             bluetooth,
             _privacy,
+            clipboard,
         ];
         foreach (var activity in _activities)
         {
@@ -116,6 +122,10 @@ public sealed partial class IslandWindow : Window
             AddLayer(activity.ExpandedView, activity.ExpandedShape);
             activity.Changed += (_, _) => OnActivityChanged();
         }
+
+        ElementCompositionPreview.GetElementVisual(TabBar).Opacity = 0;
+        TabBar.IsHitTestVisible = false;
+        _layerVisible[TabBar] = false;
 
         if (options.DemoLevel)
         {
@@ -133,6 +143,11 @@ public sealed partial class IslandWindow : Window
         {
             _privacy.Demo();
         }
+        if (options.DemoClipboard)
+        {
+            clipboard.Demo();
+        }
+        _selectedTab = options.Tab; // only sticks with --pin=expanded; hovering starts on the first tab
 
         _timer = DispatcherQueue.CreateTimer();
         _timer.Interval = TimeSpan.FromMilliseconds(PointerTickMs);
@@ -459,26 +474,44 @@ public sealed partial class IslandWindow : Window
     }
 
     /// <summary>
-    /// Picks what to show: on hover, the highest-priority activity with an expanded view; otherwise the
-    /// highest-priority one that wants the compact pill; otherwise nothing (the idle pill).
+    /// Picks what to show. On hover, the expanded island's selected tab: the first tab is the
+    /// highest-priority activity with an expanded view (music, else the clock), then one per tab
+    /// activity (the clipboard). Otherwise the highest-priority activity that wants the compact pill,
+    /// otherwise nothing (the idle pill).
     /// </summary>
     private void UpdateState()
     {
         var compact = _activities.Where(a => a.WantsCompact).MaxBy(a => a.Priority);
-        var expanded = _activities.Where(a => a.HasExpanded).MaxBy(a => a.Priority);
+
+        var tabs = new List<IslandActivity>();
+        if (_activities.Where(a => a.HasExpanded && !a.IsTab).MaxBy(a => a.Priority) is { } home)
+        {
+            tabs.Add(home);
+        }
+        tabs.AddRange(_activities.Where(a => a.IsTab && a.HasExpanded));
 
         var state = _options.PinnedState
-            ?? (_wantExpanded && expanded is not null ? IslandState.Expanded
+            ?? (_wantExpanded && tabs.Count > 0 ? IslandState.Expanded
                 : compact is not null ? IslandState.Compact
                 : IslandState.Idle);
+
+        // Every hover starts on the first tab.
+        if (state != IslandState.Expanded)
+        {
+            _selectedTab = 0;
+        }
+        _selectedTab = Math.Clamp(_selectedTab, 0, Math.Max(0, tabs.Count - 1));
+
         var shown = state switch
         {
-            IslandState.Expanded => expanded,
+            IslandState.Expanded => tabs.ElementAtOrDefault(_selectedTab),
             IslandState.Compact => compact,
             _ => null,
         };
 
-        if (state == _state && shown == _shown)
+        bool tabsChanged = !tabs.SequenceEqual(_tabs);
+        _tabs = tabs;
+        if (state == _state && shown == _shown && !tabsChanged)
         {
             return;
         }
@@ -488,9 +521,13 @@ public sealed partial class IslandWindow : Window
         ApplyState();
     }
 
+    private bool ShowTabs => _state == IslandState.Expanded && _tabs.Count > 1;
+
+    /// <summary>The expanded pill is the tab's view, plus the tab row above it when there's more than one tab.</summary>
     private PillShape CurrentShape() => _state switch
     {
-        IslandState.Expanded when _shown is not null => _shown.ExpandedShape,
+        IslandState.Expanded when _shown is not null =>
+            ShowTabs ? _shown.ExpandedShape with { Height = _shown.ExpandedShape.Height + TabBarHeight } : _shown.ExpandedShape,
         IslandState.Compact when _shown is not null => _shown.CompactShape,
         _ => IdleShape,
     };
@@ -545,6 +582,13 @@ public sealed partial class IslandWindow : Window
     {
         AnimatePill(CurrentShape(), expanding: _state == IslandState.Expanded);
 
+        if (_state == IslandState.Expanded && _shown?.ExpandedView is { } expandedView)
+        {
+            expandedView.Margin = new Thickness(0, TopGap + (ShowTabs ? TabBarHeight : 0), 0, 0);
+        }
+        UpdateTabBar();
+        SetLayerVisible(TabBar, ShowTabs);
+
         foreach (var activity in _activities)
         {
             bool compact = _state == IslandState.Compact && activity == _shown;
@@ -557,6 +601,44 @@ public sealed partial class IslandWindow : Window
         UpdateBubble();
         ApplyIdleFade();
         ApplyTheme();
+    }
+
+    /// <summary>One small icon button per tab, the selected one highlighted. Rebuilt only when tabs or selection change.</summary>
+    private void UpdateTabBar()
+    {
+        string signature = string.Join(",", _tabs.Select(t => t.Name)) + "|" + _selectedTab;
+        if (signature == _tabBarSignature)
+        {
+            return;
+        }
+
+        _tabBarSignature = signature;
+        TabBar.Children.Clear();
+        for (int i = 0; i < _tabs.Count; i++)
+        {
+            int index = i;
+            var button = new Microsoft.UI.Xaml.Controls.Button
+            {
+                Style = (Style)Application.Current.Resources["IslandButtonStyle"],
+                Width = 40,
+                Height = 26,
+                CornerRadius = new CornerRadius(13),
+                Background = new SolidColorBrush(i == _selectedTab ? Color.FromArgb(0x33, 255, 255, 255) : Color.FromArgb(0, 0, 0, 0)),
+                Content = new Microsoft.UI.Xaml.Controls.FontIcon
+                {
+                    Glyph = _tabs[i].Glyph,
+                    FontSize = 13,
+                    Foreground = new SolidColorBrush(i == _selectedTab ? Color.FromArgb(255, 255, 255, 255) : Color.FromArgb(0x99, 255, 255, 255)),
+                },
+            };
+            Microsoft.UI.Xaml.Controls.ToolTipService.SetToolTip(button, _tabs[i].Name);
+            button.Click += (_, _) =>
+            {
+                _selectedTab = index;
+                UpdateState();
+            };
+            TabBar.Children.Add(button);
+        }
     }
 
     /// <summary>
@@ -656,7 +738,8 @@ public sealed partial class IslandWindow : Window
         _layerVisible[layer] = show;
         layer.IsHitTestVisible = show;
         var visual = ElementCompositionPreview.GetElementVisual(layer);
-        visual.CenterPoint = new Vector3((float)layer.Width / 2, 0, 0);
+        double width = double.IsNaN(layer.Width) ? layer.ActualWidth : layer.Width; // the tab row sizes itself
+        visual.CenterPoint = new Vector3((float)width / 2, 0, 0);
 
         var fade = _compositor.CreateScalarKeyFrameAnimation();
         fade.InsertKeyFrame(1f, show ? 1f : 0f);

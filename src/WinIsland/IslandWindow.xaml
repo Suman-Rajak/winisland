@@ -37,6 +37,10 @@
 
             <!-- Every activity's compact and expanded views, stacked; only the one being shown is visible. -->
             <Grid x:Name="ContentHost" />
+
+            <!-- Tabs across the top of the expanded island (music/clock, clipboard…); filled in code. -->
+            <StackPanel x:Name="TabBar" Orientation="Horizontal" Spacing="4" Margin="0,14,0,0"
+                        HorizontalAlignment="Center" VerticalAlignment="Top" />
         </Grid>
 
         <!--

@@ -216,6 +216,20 @@
                         <ToggleSwitch x:Name="PrivacyToggle" Grid.Column="1" OnContent="" OffContent="" MinWidth="0" Toggled="OnPrivacyToggled" />
                     </Grid>
                 </Border>
+                <Border Style="{StaticResource CardStyle}">
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Clipboard history" Style="{StaticResource CardTitleStyle}" />
+                            <TextBlock Text="A tab with the last 20 things you copied; click one to copy it again. Kept in memory only, so it's gone when WinIsland quits. Things password managers mark as private are never kept."
+                                       Style="{StaticResource CardDescriptionStyle}" />
+                        </StackPanel>
+                        <ToggleSwitch x:Name="ClipboardToggle" Grid.Column="1" OnContent="" OffContent="" MinWidth="0" Toggled="OnClipboardToggled" />
+                    </Grid>
+                </Border>
 
                 <!-- Music -->
                 <TextBlock Text="Music" Style="{StaticResource SectionHeaderStyle}" />

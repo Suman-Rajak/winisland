@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="WinIsland.Activities.ClipboardView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:WinIsland.Activities">
+
+    <!-- Newest first; click a row to copy it again, × to forget it. -->
+    <Grid Padding="10,0,10,10">
+        <ListView x:Name="List" ItemsSource="{x:Bind Entries}" SelectionMode="None" IsItemClickEnabled="True"
+                  ItemClick="OnItemClick" IsTabStop="False">
+            <ListView.ItemContainerStyle>
+                <Style TargetType="ListViewItem" BasedOn="{StaticResource DefaultListViewItemStyle}">
+                    <Setter Property="MinHeight" Value="34" />
+                    <Setter Property="Height" Value="34" />
+                    <Setter Property="Padding" Value="8,0,4,0" />
+                    <Setter Property="Margin" Value="0,1" />
+                    <Setter Property="CornerRadius" Value="8" />
+                    <Setter Property="IsTabStop" Value="False" />
+                    <Setter Property="UseSystemFocusVisuals" Value="False" />
+                </Style>
+            </ListView.ItemContainerStyle>
+            <ListView.ItemTemplate>
+                <DataTemplate x:DataType="local:ClipboardEntry">
+                    <Grid ColumnSpacing="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="32" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <FontIcon Glyph="{x:Bind Glyph}" FontSize="14" Foreground="#B3FFFFFF"
+                                  Visibility="{x:Bind GlyphVisibility}" />
+                        <Border Width="32" Height="22" CornerRadius="4" Visibility="{x:Bind ThumbnailVisibility}">
+                            <Border.Background>
+                                <ImageBrush ImageSource="{x:Bind Thumbnail}" Stretch="UniformToFill" />
+                            </Border.Background>
+                        </Border>
+
+                        <TextBlock Grid.Column="1" Text="{x:Bind Preview}" FontSize="13" Foreground="White"
+                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxLines="1" />
+
+                        <TextBlock Grid.Column="2" Text="{x:Bind Age, Mode=OneWay}" FontSize="11" Foreground="#80FFFFFF"
+                                   VerticalAlignment="Center" />
+
+                        <Button Grid.Column="3" Style="{StaticResource IslandButtonStyle}" Width="26" Height="26" CornerRadius="13"
+                                Click="OnRemoveClick" Tag="{x:Bind}" ToolTipService.ToolTip="Forget">
+                            <FontIcon Glyph="&#xE711;" FontSize="10" Foreground="#99FFFFFF" />
+                        </Button>
+                    </Grid>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+
+        <StackPanel x:Name="EmptyState" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="4">
+            <FontIcon Glyph="&#xE77F;" FontSize="22" Foreground="#66FFFFFF" />
+            <TextBlock Text="Nothing copied yet" FontSize="13" Foreground="#99FFFFFF" HorizontalAlignment="Center" />
+        </StackPanel>
+    </Grid>
+</UserControl>
