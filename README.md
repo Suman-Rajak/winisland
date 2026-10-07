@@ -2,7 +2,7 @@
 
 A Dynamic Island for Windows: a pill at the top of the screen that expands on hover and shows what's going on.
 
-**Status: Phase 2** — live activities: now playing, volume and brightness. Battery, Bluetooth, mic/camera, clipboard, file shelf and notifications are next.
+**Status: Phase 2** — live activities: now playing, volume, brightness, battery. Bluetooth, mic/camera, clipboard, file shelf and notifications are next.
 
 ## What works
 
@@ -14,6 +14,7 @@ A Dynamic Island for Windows: a pill at the top of the screen that expands on ho
 - Artwork comes from the playing app; when the app doesn't provide any (Amazon Music doesn't), it's looked up by artist + title in the iTunes catalogue (your country's store, then the US store) and then MusicBrainz / Cover Art Archive. Only results whose artist *and* title match are used; if nothing matches, the island gets a colour generated from the song instead. The lookup sends the artist and title to Apple and MusicBrainz, and can be switched off in Settings.
 - Some apps publish odd metadata. Amazon Music never shares artwork or track length, and sometimes reports one value as both title and artist for a whole song — sometimes it's the artist ("Sayfalse"), sometimes the song ("Pooja & Patola"). The island asks the catalogue which it is (when online lookups are allowed); if it's an artist, or it can't tell, it shows "Now playing" rather than passing the artist off as the song.
 - Volume and brightness changes show briefly as a level bar (volume also when you switch speakers or plug in headphones), keeping the music's colours if something's playing. Brightness works on laptop screens; desktop monitors don't report it. Windows' own volume pop-up still appears too.
+- Battery: "Charging" when you plug in, "Fully charged" when it gets to 100%, and warnings at 20% and 10% (once each per discharge). Unplugging is silent; PCs without a battery never show it.
 - Hides itself while a fullscreen app or game is in front.
 - Tray icon: click for Settings, right-click to hide the island or quit. Launching WinIsland again while it's running also opens Settings.
 
@@ -31,6 +32,7 @@ Changes apply immediately and are saved to `%LOCALAPPDATA%\WinIsland\settings.js
 | Glass transparency | How much of what's behind shows through (0–30%) |
 | Match the music's colours | Tint the glass from the album art while music plays |
 | Volume and brightness | Briefly show level changes on the island |
+| Battery and charging | Show plugging in, full charge and low-battery warnings |
 | Find missing album art online | iTunes / MusicBrainz lookup for apps that don't share artwork (sends artist + title to them) |
 
 ## Run it
@@ -50,6 +52,7 @@ Then run `src/WinIsland/bin/x64/Debug/net10.0-windows10.0.26100.0/WinIsland.exe`
 | `--pin=idle\|compact\|expanded` | Lock the island in one state (no hover needed) |
 | `--demo-media` | Show a fake track instead of the real media session |
 | `--demo-level` | Keep the volume indicator up (at 45%) |
+| `--demo-battery` | Keep "Charging" up (at 64%) |
 
 Errors are logged to `%LOCALAPPDATA%\WinIsland\log.txt`.
 
@@ -62,7 +65,9 @@ src/WinIsland/
     IslandActivity.cs         the base class (and how the island chooses between activities)
     MediaActivity.cs          now playing (+ MediaCompactView, MediaExpandedView)
     ClockActivity.cs          expanded fallback when nothing else is going on
-    LevelActivity.cs          short-lived level indicators: VolumeActivity, BrightnessActivity (+ LevelView)
+    TransientActivity.cs      base for short-lived notices that take over the pill for a moment
+    LevelActivity.cs          level indicators: VolumeActivity, BrightnessActivity (+ LevelView)
+    BatteryActivity.cs        charging / full / low battery (+ BatteryView)
   SettingsWindow.xaml(.cs)    settings UI
   AppSettings.cs              settings model + JSON persistence
   StartupRegistration.cs      "Start with Windows"

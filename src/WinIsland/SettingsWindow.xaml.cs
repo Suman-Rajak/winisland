@@ -88,6 +88,7 @@ public sealed partial class SettingsWindow : Window
             MusicColorsToggle.IsOn = _settings.MatchMusicColors;
 
             LevelsToggle.IsOn = _settings.ShowLevelIndicators;
+            BatteryToggle.IsOn = _settings.ShowBattery;
             ArtworkToggle.IsOn = _settings.FindArtworkOnline;
         }
         finally
@@ -161,6 +162,9 @@ public sealed partial class SettingsWindow : Window
 
     private void OnLevelsToggled(object sender, RoutedEventArgs e) =>
         Update(s => s.ShowLevelIndicators = LevelsToggle.IsOn);
+
+    private void OnBatteryToggled(object sender, RoutedEventArgs e) =>
+        Update(s => s.ShowBattery = BatteryToggle.IsOn);
 
     private void OnArtworkToggled(object sender, RoutedEventArgs e) =>
         Update(s => s.FindArtworkOnline = ArtworkToggle.IsOn);

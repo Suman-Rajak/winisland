@@ -59,6 +59,9 @@ internal sealed class AppSettings
     /// <summary>Briefly show volume and brightness changes on the island.</summary>
     public bool ShowLevelIndicators { get; set; } = true;
 
+    /// <summary>Show "Charging", "Fully charged" and low-battery warnings.</summary>
+    public bool ShowBattery { get; set; } = true;
+
     [JsonIgnore]
     public double GlassOpacity => 1 - Math.Clamp(GlassTransparency, 0, 0.3);
 
@@ -91,6 +94,7 @@ internal sealed class AppSettings
         MatchMusicColors = defaults.MatchMusicColors;
         FindArtworkOnline = defaults.FindArtworkOnline;
         ShowLevelIndicators = defaults.ShowLevelIndicators;
+        ShowBattery = defaults.ShowBattery;
         Save();
     }
 

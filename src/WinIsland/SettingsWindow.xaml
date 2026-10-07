@@ -174,6 +174,20 @@
                         <ToggleSwitch x:Name="LevelsToggle" Grid.Column="1" OnContent="" OffContent="" MinWidth="0" Toggled="OnLevelsToggled" />
                     </Grid>
                 </Border>
+                <Border Style="{StaticResource CardStyle}">
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Battery and charging" Style="{StaticResource CardTitleStyle}" />
+                            <TextBlock Text="Show when you plug in, when the battery is full, and when it's running low."
+                                       Style="{StaticResource CardDescriptionStyle}" />
+                        </StackPanel>
+                        <ToggleSwitch x:Name="BatteryToggle" Grid.Column="1" OnContent="" OffContent="" MinWidth="0" Toggled="OnBatteryToggled" />
+                    </Grid>
+                </Border>
 
                 <!-- Music -->
                 <TextBlock Text="Music" Style="{StaticResource SectionHeaderStyle}" />

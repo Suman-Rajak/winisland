@@ -79,12 +79,14 @@ public sealed partial class IslandWindow : Window
         CreateSheen();
 
         var volume = new VolumeActivity(DispatcherQueue);
+        var battery = new BatteryActivity(DispatcherQueue);
         _activities =
         [
             new ClockActivity(DispatcherQueue),
             new MediaActivity(DispatcherQueue, options.DemoMedia),
             volume,
             new BrightnessActivity(DispatcherQueue),
+            battery,
         ];
         foreach (var activity in _activities)
         {
@@ -96,6 +98,10 @@ public sealed partial class IslandWindow : Window
         if (options.DemoLevel)
         {
             volume.Pin(0.45);
+        }
+        if (options.DemoBattery)
+        {
+            battery.Pin(64);
         }
 
         _timer = DispatcherQueue.CreateTimer();
