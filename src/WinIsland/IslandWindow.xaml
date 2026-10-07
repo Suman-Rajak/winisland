@@ -5,36 +5,52 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Title="WinIsland">
 
-    <!--
-        Stage fills the (transparent) window. Its composition visual is clipped to an animated
-        rounded rectangle in code, so the background *is* the pill, and every layer below is
-        revealed by the pill as it grows.
+    <!-- The island is always dark, whatever the Windows theme; the settings window follows Windows. -->
+    <Grid RequestedTheme="Dark">
 
-        The glass is built from layers, back to front: Backdrop holds the tint (matched to the
-        artwork while music plays) and a soft colour wash made from the artwork (GlowLayer); its
-        opacity is the "glass transparency" setting. Then a top highlight and bright rim drawn in
-        code (SheenHost), then the activities' views (ContentHost).
+        <!--
+            Stage fills the (transparent) window. Its composition visual is clipped to an animated
+            rounded rectangle in code, so the background *is* the pill, and every layer below is
+            revealed by the pill as it grows.
 
-        The island is always dark, whatever the Windows theme; the settings window follows Windows.
-    -->
-    <Grid x:Name="Stage" RequestedTheme="Dark">
-        <Grid x:Name="Backdrop" Background="#FF1C1C1F" Opacity="0.92" IsHitTestVisible="False">
-            <Grid.BackgroundTransition>
-                <BrushTransition Duration="0:0:0.5" />
-            </Grid.BackgroundTransition>
-            <Rectangle x:Name="GlowLayer" Opacity="0">
-                <Rectangle.Fill>
-                    <ImageBrush x:Name="GlowBrush" Stretch="Fill" />
-                </Rectangle.Fill>
-                <Rectangle.OpacityTransition>
-                    <ScalarTransition Duration="0:0:0.4" />
-                </Rectangle.OpacityTransition>
-            </Rectangle>
+            The glass is built from layers, back to front: Backdrop holds the tint (matched to the
+            artwork while music plays) and a soft colour wash made from the artwork (GlowLayer); its
+            opacity is the "glass transparency" setting. Then a top highlight and bright rim drawn in
+            code (SheenHost), then the activities' views (ContentHost).
+        -->
+        <Grid x:Name="Stage">
+            <Grid x:Name="Backdrop" Background="#FF1C1C1F" Opacity="0.92" IsHitTestVisible="False">
+                <Grid.BackgroundTransition>
+                    <BrushTransition Duration="0:0:0.5" />
+                </Grid.BackgroundTransition>
+                <Rectangle x:Name="GlowLayer" Opacity="0">
+                    <Rectangle.Fill>
+                        <ImageBrush x:Name="GlowBrush" Stretch="Fill" />
+                    </Rectangle.Fill>
+                    <Rectangle.OpacityTransition>
+                        <ScalarTransition Duration="0:0:0.4" />
+                    </Rectangle.OpacityTransition>
+                </Rectangle>
+            </Grid>
+
+            <Canvas x:Name="SheenHost" IsHitTestVisible="False" />
+
+            <!-- Every activity's compact and expanded views, stacked; only the one being shown is visible. -->
+            <Grid x:Name="ContentHost" />
         </Grid>
 
-        <Canvas x:Name="SheenHost" IsHitTestVisible="False" />
-
-        <!-- Every activity's compact and expanded views, stacked; only the one being shown is visible. -->
-        <Grid x:Name="ContentHost" />
+        <!--
+            The microphone/camera bubble: a small separate capsule just right of the pill (outside its
+            clip), like iPhone's split island. Laid out at the centre; a composition expression slides
+            it to follow the pill's edge as the pill changes size.
+        -->
+        <Border x:Name="PrivacyBubble" Height="32" Padding="12,0" Margin="0,8,0,0" CornerRadius="16"
+                HorizontalAlignment="Center" VerticalAlignment="Top"
+                Background="#FF1C1C1F" BorderBrush="#33FFFFFF" BorderThickness="1" IsHitTestVisible="False">
+            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                <Ellipse x:Name="MicrophoneDot" Width="8" Height="8" Fill="#FFFF9F0A" />
+                <Ellipse x:Name="CameraDot" Width="8" Height="8" Fill="#FF30D158" />
+            </StackPanel>
+        </Border>
     </Grid>
 </Window>

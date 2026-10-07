@@ -14,13 +14,14 @@ internal enum IslandState
 ///   --demo-level                  keep the volume indicator up (at 45%)
 ///   --demo-battery                keep "Charging" up (at 64%)
 ///   --demo-bluetooth              keep a connected pair of earbuds up (at 80%)
+///   --demo-privacy                pretend Discord just started using the microphone
 /// </summary>
-internal sealed record IslandOptions(IslandState? PinnedState, bool DemoMedia, bool DemoLevel, bool DemoBattery, bool DemoBluetooth)
+internal sealed record IslandOptions(IslandState? PinnedState, bool DemoMedia, bool DemoLevel, bool DemoBattery, bool DemoBluetooth, bool DemoPrivacy)
 {
     public static IslandOptions FromCommandLine(string[] args)
     {
         IslandState? pinned = null;
-        bool demo = false, demoLevel = false, demoBattery = false, demoBluetooth = false;
+        bool demo = false, demoLevel = false, demoBattery = false, demoBluetooth = false, demoPrivacy = false;
 
         foreach (var arg in args.Skip(1))
         {
@@ -45,8 +46,12 @@ internal sealed record IslandOptions(IslandState? PinnedState, bool DemoMedia, b
             {
                 demoBluetooth = true;
             }
+            else if (arg.Equals("--demo-privacy", StringComparison.OrdinalIgnoreCase))
+            {
+                demoPrivacy = true;
+            }
         }
 
-        return new IslandOptions(pinned, demo, demoLevel, demoBattery, demoBluetooth);
+        return new IslandOptions(pinned, demo, demoLevel, demoBattery, demoBluetooth, demoPrivacy);
     }
 }

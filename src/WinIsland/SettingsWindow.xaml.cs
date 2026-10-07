@@ -90,6 +90,7 @@ public sealed partial class SettingsWindow : Window
             LevelsToggle.IsOn = _settings.ShowLevelIndicators;
             BatteryToggle.IsOn = _settings.ShowBattery;
             BluetoothToggle.IsOn = _settings.ShowBluetooth;
+            PrivacyToggle.IsOn = _settings.ShowPrivacy;
             ArtworkToggle.IsOn = _settings.FindArtworkOnline;
         }
         finally
@@ -169,6 +170,9 @@ public sealed partial class SettingsWindow : Window
 
     private void OnBluetoothToggled(object sender, RoutedEventArgs e) =>
         Update(s => s.ShowBluetooth = BluetoothToggle.IsOn);
+
+    private void OnPrivacyToggled(object sender, RoutedEventArgs e) =>
+        Update(s => s.ShowPrivacy = PrivacyToggle.IsOn);
 
     private void OnArtworkToggled(object sender, RoutedEventArgs e) =>
         Update(s => s.FindArtworkOnline = ArtworkToggle.IsOn);

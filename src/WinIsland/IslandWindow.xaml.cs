@@ -34,6 +34,9 @@ public sealed partial class IslandWindow : Window
 
     private static readonly PillShape IdleShape = new(124, 32, 16);
 
+    private const float BubbleGap = 6;     // between the pill and the mic/camera bubble
+    private const float BubbleHeight = 32;
+
     private readonly IslandOptions _options;
     private readonly AppSettings _settings = AppSettings.Current;
     private readonly IntPtr _hwnd;
@@ -42,6 +45,9 @@ public sealed partial class IslandWindow : Window
     private readonly CompositionRoundedRectangleGeometry _pill;
     private readonly DispatcherQueueTimer _timer;
     private readonly List<IslandActivity> _activities;
+    private readonly PrivacyActivity _privacy;
+    private readonly Visual _bubbleVisual;
+    private readonly ExpressionAnimation _bubbleFollow;
     private readonly Dictionary<FrameworkElement, bool> _layerVisible = [];
 
     private IslandState _state = IslandState.Idle;
@@ -50,6 +56,9 @@ public sealed partial class IslandWindow : Window
     private bool _visible;
     private bool _userHidden;
     private bool _idleHidden;
+    private bool _bubbleShown;
+    private float _bubbleWidth;
+    private bool _pointerOnBubble;
     private long _insideSince;
     private long _outsideSince;
     private int _tick;
@@ -78,9 +87,19 @@ public sealed partial class IslandWindow : Window
         _stageVisual.Clip = _compositor.CreateGeometricClip(_pill);
         CreateSheen();
 
+        // The mic/camera bubble slides along with the pill's right edge as the pill changes size.
+        ElementCompositionPreview.SetIsTranslationEnabled(PrivacyBubble, true);
+        _bubbleVisual = ElementCompositionPreview.GetElementVisual(PrivacyBubble);
+        _bubbleVisual.Opacity = 0;
+        _bubbleFollow = _compositor.CreateExpressionAnimation("Vector3(pill.Size.X / 2 + gap + half, 0, 0)");
+        _bubbleFollow.SetReferenceParameter("pill", _pill);
+        _bubbleFollow.SetScalarParameter("gap", BubbleGap);
+        _bubbleFollow.SetScalarParameter("half", 0);
+
         var volume = new VolumeActivity(DispatcherQueue);
         var battery = new BatteryActivity(DispatcherQueue);
         var bluetooth = new BluetoothActivity(DispatcherQueue);
+        _privacy = new PrivacyActivity(DispatcherQueue);
         _activities =
         [
             new ClockActivity(DispatcherQueue),
@@ -89,6 +108,7 @@ public sealed partial class IslandWindow : Window
             new BrightnessActivity(DispatcherQueue),
             battery,
             bluetooth,
+            _privacy,
         ];
         foreach (var activity in _activities)
         {
@@ -108,6 +128,10 @@ public sealed partial class IslandWindow : Window
         if (options.DemoBluetooth)
         {
             bluetooth.Pin("OnePlus Nord Buds 3", 80);
+        }
+        if (options.DemoPrivacy)
+        {
+            _privacy.Demo();
         }
 
         _timer = DispatcherQueue.CreateTimer();
@@ -161,6 +185,8 @@ public sealed partial class IslandWindow : Window
     private void OnActivityChanged()
     {
         UpdateState();
+        UpdateBubble();
+        ApplyIdleFade();
         ApplyTheme();
     }
 
@@ -170,6 +196,7 @@ public sealed partial class IslandWindow : Window
         UpdatePlacement();
         UpdateVisibility();
         UpdateState();
+        UpdateBubble();
         ApplyTheme();
         ApplyIdleFade();
     }
@@ -397,7 +424,16 @@ public sealed partial class IslandWindow : Window
 
         Native.GetCursorPos(out var cursor);
         bool inside = HitRect(CurrentShape()).Contains(cursor);
-        SetClickThrough(!inside);
+
+        // Pointing at the mic/camera bubble says again who's using them.
+        bool onBubble = _bubbleShown && BubbleRect().Contains(cursor);
+        if (onBubble && !_pointerOnBubble)
+        {
+            _privacy.Remind();
+        }
+        _pointerOnBubble = onBubble;
+
+        SetClickThrough(!(inside || onBubble));
 
         long now = Environment.TickCount64;
         if (inside)
@@ -477,6 +513,20 @@ public sealed partial class IslandWindow : Window
         };
     }
 
+    /// <summary>Screen rectangle (physical pixels) of the mic/camera bubble, beside the pill's target shape.</summary>
+    private Native.RECT BubbleRect()
+    {
+        const float pad = 4;
+        float left = (StageWidth + CurrentShape().Width) / 2 + BubbleGap - pad;
+        return new Native.RECT
+        {
+            Left = _origin.X + (int)(left * _scale),
+            Top = _hitTop,
+            Right = _origin.X + (int)((left + _bubbleWidth + pad * 2) * _scale),
+            Bottom = _origin.Y + (int)((TopGap + BubbleHeight + pad) * _scale),
+        };
+    }
+
     private void SetClickThrough(bool clickThrough)
     {
         // Read the real style rather than caching it: WinUI occasionally rewrites the extended styles.
@@ -504,14 +554,63 @@ public sealed partial class IslandWindow : Window
             activity.OnShown(compact, expanded);
         }
 
+        UpdateBubble();
         ApplyIdleFade();
         ApplyTheme();
     }
 
-    /// <summary>"Hide when idle": fade the whole island out, but keep hover working so it can come back.</summary>
+    /// <summary>
+    /// Shows the mic/camera bubble beside the pill while either is in use (hidden while expanded: the
+    /// pill is too tall to sit beside). Grows out of the pill's edge.
+    /// </summary>
+    private void UpdateBubble()
+    {
+        bool mic = _privacy.MicrophoneInUse, camera = _privacy.CameraInUse;
+        bool show = (mic || camera) && _state != IslandState.Expanded;
+
+        if (mic || camera)
+        {
+            MicrophoneDot.Visibility = mic ? Visibility.Visible : Visibility.Collapsed;
+            CameraDot.Visibility = camera ? Visibility.Visible : Visibility.Collapsed;
+
+            // Padding 12 each side, 8 per dot, 6 between dots.
+            float width = 24 + (mic ? 8 : 0) + (camera ? 8 : 0) + (mic && camera ? 6 : 0);
+            if (width != _bubbleWidth)
+            {
+                _bubbleWidth = width;
+                _bubbleFollow.SetScalarParameter("half", width / 2);
+                _bubbleVisual.StartAnimation("Translation", _bubbleFollow);
+            }
+        }
+
+        if (show == _bubbleShown)
+        {
+            return;
+        }
+
+        _bubbleShown = show;
+        _bubbleVisual.CenterPoint = new Vector3(0, BubbleHeight / 2, 0);
+
+        var fade = _compositor.CreateScalarKeyFrameAnimation();
+        fade.InsertKeyFrame(1f, show ? 1f : 0f);
+        fade.Duration = Scaled(show ? 220 : 120);
+
+        var scale = _compositor.CreateSpringVector3Animation();
+        scale.FinalValue = show ? Vector3.One : new Vector3(0.5f, 0.5f, 1f);
+        scale.DampingRatio = 0.65f;
+        scale.Period = Scaled(50);
+
+        _bubbleVisual.StartAnimation(nameof(_bubbleVisual.Opacity), fade);
+        _bubbleVisual.StartAnimation(nameof(_bubbleVisual.Scale), scale);
+    }
+
+    /// <summary>
+    /// "Hide when idle": fade the whole island out, but keep hover working so it can come back.
+    /// Not while the mic or camera is in use: then the island stays, with its dot beside it.
+    /// </summary>
     private void ApplyIdleFade()
     {
-        bool hide = _settings.HideWhenIdle && _state == IslandState.Idle && _options.PinnedState is null;
+        bool hide = _settings.HideWhenIdle && _state == IslandState.Idle && _options.PinnedState is null && !_bubbleShown;
         if (hide == _idleHidden)
         {
             return;
@@ -599,6 +698,10 @@ public sealed partial class IslandWindow : Window
             _tint = tint;
             Backdrop.Background = new SolidColorBrush(tint); // a new brush, so BackgroundTransition animates it
         }
+
+        // The bubble is the same glass as the pill.
+        PrivacyBubble.Background = new SolidColorBrush(
+            Color.FromArgb((byte)Math.Round(255 * _settings.GlassOpacity), tint.R, tint.G, tint.B));
 
         var glow = theme?.Glow;
         if (ReferenceEquals(glow, _glow))

@@ -202,6 +202,20 @@
                         <ToggleSwitch x:Name="BluetoothToggle" Grid.Column="1" OnContent="" OffContent="" MinWidth="0" Toggled="OnBluetoothToggled" />
                     </Grid>
                 </Border>
+                <Border Style="{StaticResource CardStyle}">
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Microphone and camera in use" Style="{StaticResource CardTitleStyle}" />
+                            <TextBlock Text="A dot beside the island while an app uses your microphone (orange) or camera (green). Point at it to see which app."
+                                       Style="{StaticResource CardDescriptionStyle}" />
+                        </StackPanel>
+                        <ToggleSwitch x:Name="PrivacyToggle" Grid.Column="1" OnContent="" OffContent="" MinWidth="0" Toggled="OnPrivacyToggled" />
+                    </Grid>
+                </Border>
 
                 <!-- Music -->
                 <TextBlock Text="Music" Style="{StaticResource SectionHeaderStyle}" />

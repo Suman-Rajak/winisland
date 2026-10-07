@@ -65,6 +65,9 @@ internal sealed class AppSettings
     /// <summary>Show Bluetooth devices connecting and disconnecting.</summary>
     public bool ShowBluetooth { get; set; } = true;
 
+    /// <summary>Show a dot while an app uses the microphone or camera, and say which app.</summary>
+    public bool ShowPrivacy { get; set; } = true;
+
     [JsonIgnore]
     public double GlassOpacity => 1 - Math.Clamp(GlassTransparency, 0, 0.3);
 
@@ -99,6 +102,7 @@ internal sealed class AppSettings
         ShowLevelIndicators = defaults.ShowLevelIndicators;
         ShowBattery = defaults.ShowBattery;
         ShowBluetooth = defaults.ShowBluetooth;
+        ShowPrivacy = defaults.ShowPrivacy;
         Save();
     }
 
