@@ -80,6 +80,7 @@ public sealed partial class IslandWindow : Window
 
         var volume = new VolumeActivity(DispatcherQueue);
         var battery = new BatteryActivity(DispatcherQueue);
+        var bluetooth = new BluetoothActivity(DispatcherQueue);
         _activities =
         [
             new ClockActivity(DispatcherQueue),
@@ -87,6 +88,7 @@ public sealed partial class IslandWindow : Window
             volume,
             new BrightnessActivity(DispatcherQueue),
             battery,
+            bluetooth,
         ];
         foreach (var activity in _activities)
         {
@@ -102,6 +104,10 @@ public sealed partial class IslandWindow : Window
         if (options.DemoBattery)
         {
             battery.Pin(64);
+        }
+        if (options.DemoBluetooth)
+        {
+            bluetooth.Pin("OnePlus Nord Buds 3", 80);
         }
 
         _timer = DispatcherQueue.CreateTimer();

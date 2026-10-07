@@ -3,7 +3,10 @@ using WinIsland.Services;
 
 namespace WinIsland.Activities;
 
-/// <summary>Shows the volume when it changes, or when the speakers change (headphones plugged in).</summary>
+/// <summary>
+/// Shows the volume when you change it. Switching speakers (headphones connecting) doesn't count:
+/// the Bluetooth notice says what happened, and the volume would cover it.
+/// </summary>
 internal sealed class VolumeActivity : LevelActivity
 {
     private readonly VolumeMonitor _monitor;

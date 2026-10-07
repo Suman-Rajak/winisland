@@ -62,6 +62,9 @@ internal sealed class AppSettings
     /// <summary>Show "Charging", "Fully charged" and low-battery warnings.</summary>
     public bool ShowBattery { get; set; } = true;
 
+    /// <summary>Show Bluetooth devices connecting and disconnecting.</summary>
+    public bool ShowBluetooth { get; set; } = true;
+
     [JsonIgnore]
     public double GlassOpacity => 1 - Math.Clamp(GlassTransparency, 0, 0.3);
 
@@ -95,6 +98,7 @@ internal sealed class AppSettings
         FindArtworkOnline = defaults.FindArtworkOnline;
         ShowLevelIndicators = defaults.ShowLevelIndicators;
         ShowBattery = defaults.ShowBattery;
+        ShowBluetooth = defaults.ShowBluetooth;
         Save();
     }
 

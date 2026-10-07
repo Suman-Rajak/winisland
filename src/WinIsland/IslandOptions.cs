@@ -13,13 +13,14 @@ internal enum IslandState
 ///   --demo-media                  show a fake track instead of the real media session
 ///   --demo-level                  keep the volume indicator up (at 45%)
 ///   --demo-battery                keep "Charging" up (at 64%)
+///   --demo-bluetooth              keep a connected pair of earbuds up (at 80%)
 /// </summary>
-internal sealed record IslandOptions(IslandState? PinnedState, bool DemoMedia, bool DemoLevel, bool DemoBattery)
+internal sealed record IslandOptions(IslandState? PinnedState, bool DemoMedia, bool DemoLevel, bool DemoBattery, bool DemoBluetooth)
 {
     public static IslandOptions FromCommandLine(string[] args)
     {
         IslandState? pinned = null;
-        bool demo = false, demoLevel = false, demoBattery = false;
+        bool demo = false, demoLevel = false, demoBattery = false, demoBluetooth = false;
 
         foreach (var arg in args.Skip(1))
         {
@@ -40,8 +41,12 @@ internal sealed record IslandOptions(IslandState? PinnedState, bool DemoMedia, b
             {
                 demoBattery = true;
             }
+            else if (arg.Equals("--demo-bluetooth", StringComparison.OrdinalIgnoreCase))
+            {
+                demoBluetooth = true;
+            }
         }
 
-        return new IslandOptions(pinned, demo, demoLevel, demoBattery);
+        return new IslandOptions(pinned, demo, demoLevel, demoBattery, demoBluetooth);
     }
 }

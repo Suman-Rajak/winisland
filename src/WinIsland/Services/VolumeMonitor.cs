@@ -6,21 +6,28 @@ using static WinIsland.Interop.CoreAudio;
 namespace WinIsland.Services;
 
 /// <summary>
-/// Watches the default speakers' volume and mute, and follows the default device when it changes
-/// (headphones plugged in, say). <see cref="Changed"/> is raised on the UI thread.
+/// Watches the default speakers' volume and mute, quietly following the default device when it changes
+/// (headphones connected, say). <see cref="Changed"/> is raised on the UI thread.
 /// </summary>
 internal sealed class VolumeMonitor : IAudioEndpointVolumeCallback, IMMNotificationClient
 {
+    /// <summary>
+    /// Newly connected devices set their own volume for a moment (Bluetooth headsets sync theirs), which
+    /// isn't you changing the volume, so changes this soon after a switch aren't reported.
+    /// </summary>
+    private static readonly TimeSpan SettleAfterSwitch = TimeSpan.FromSeconds(4);
+
     private readonly DispatcherQueue _dispatcher;
     private IMMDeviceEnumerator? _enumerator;
     private IAudioEndpointVolume? _volume;
+    private long _switchedAtTicks; // DateTime.UtcNow ticks; written and read on different threads
 
     public VolumeMonitor(DispatcherQueue dispatcher)
     {
         _dispatcher = dispatcher;
     }
 
-    /// <summary>Level (0 to 1) and mute. Not raised for the initial state, only for changes.</summary>
+    /// <summary>Level (0 to 1) and mute, when the volume is changed. Not raised for the initial state or device switches.</summary>
     public event Action<float, bool>? Changed;
 
     /// <summary>Call on the UI thread.</summary>
@@ -58,10 +65,18 @@ internal sealed class VolumeMonitor : IAudioEndpointVolumeCallback, IMMNotificat
         }
     }
 
+    private bool Settling =>
+        DateTime.UtcNow - new DateTime(Interlocked.Read(ref _switchedAtTicks), DateTimeKind.Utc) < SettleAfterSwitch;
+
     // Both callbacks arrive on Core Audio's own threads.
 
     int IAudioEndpointVolumeCallback.OnNotify(IntPtr notifyData)
     {
+        if (Settling)
+        {
+            return 0;
+        }
+
         var data = Marshal.PtrToStructure<AudioVolumeNotificationData>(notifyData);
         _dispatcher.TryEnqueue(() => Changed?.Invoke(data.MasterVolume, data.Muted != 0));
         return 0;
@@ -69,20 +84,19 @@ internal sealed class VolumeMonitor : IAudioEndpointVolumeCallback, IMMNotificat
 
     int IMMNotificationClient.OnDefaultDeviceChanged(EDataFlow flow, ERole role, string? defaultDeviceId)
     {
-        if (flow == EDataFlow.Render && role == ERole.Multimedia)
+        if (flow != EDataFlow.Render)
         {
-            // Show the new device's level, so switching to headphones shows how loud they'll be.
+            return 0;
+        }
+
+        Interlocked.Exchange(ref _switchedAtTicks, DateTime.UtcNow.Ticks);
+        if (role == ERole.Multimedia)
+        {
             _dispatcher.TryEnqueue(() =>
             {
                 try
                 {
                     AttachToDefaultDevice();
-                    if (_volume is not null &&
-                        _volume.GetMasterVolumeLevelScalar(out float level) == 0 &&
-                        _volume.GetMute(out bool muted) == 0)
-                    {
-                        Changed?.Invoke(level, muted);
-                    }
                 }
                 catch (Exception ex)
                 {

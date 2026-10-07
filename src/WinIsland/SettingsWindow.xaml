@@ -188,6 +188,20 @@
                         <ToggleSwitch x:Name="BatteryToggle" Grid.Column="1" OnContent="" OffContent="" MinWidth="0" Toggled="OnBatteryToggled" />
                     </Grid>
                 </Border>
+                <Border Style="{StaticResource CardStyle}">
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Bluetooth devices" Style="{StaticResource CardTitleStyle}" />
+                            <TextBlock Text="Show headphones, speakers and other devices connecting and disconnecting, with their battery when they report it."
+                                       Style="{StaticResource CardDescriptionStyle}" />
+                        </StackPanel>
+                        <ToggleSwitch x:Name="BluetoothToggle" Grid.Column="1" OnContent="" OffContent="" MinWidth="0" Toggled="OnBluetoothToggled" />
+                    </Grid>
+                </Border>
 
                 <!-- Music -->
                 <TextBlock Text="Music" Style="{StaticResource SectionHeaderStyle}" />
