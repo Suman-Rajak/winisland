@@ -47,6 +47,7 @@ public sealed partial class IslandWindow : Window
     private readonly DispatcherQueueTimer _timer;
     private readonly List<IslandActivity> _activities;
     private readonly PrivacyActivity _privacy;
+    private readonly ShelfActivity _shelf;
     private readonly Visual _bubbleVisual;
     private readonly ExpressionAnimation _bubbleFollow;
     private readonly Dictionary<FrameworkElement, bool> _layerVisible = [];
@@ -56,6 +57,7 @@ public sealed partial class IslandWindow : Window
     private List<IslandActivity> _tabs = [];
     private int _selectedTab;
     private string _tabBarSignature = string.Empty;
+    private bool _dragOpensShelf; // files are being dragged over the island
     private bool _wantExpanded;
     private bool _visible;
     private bool _userHidden;
@@ -105,6 +107,7 @@ public sealed partial class IslandWindow : Window
         var bluetooth = new BluetoothActivity(DispatcherQueue);
         _privacy = new PrivacyActivity(DispatcherQueue);
         var clipboard = new ClipboardActivity(DispatcherQueue);
+        _shelf = new ShelfActivity();
         _activities =
         [
             new ClockActivity(DispatcherQueue),
@@ -115,6 +118,7 @@ public sealed partial class IslandWindow : Window
             bluetooth,
             _privacy,
             clipboard,
+            _shelf,
         ];
         foreach (var activity in _activities)
         {
@@ -146,6 +150,10 @@ public sealed partial class IslandWindow : Window
         if (options.DemoClipboard)
         {
             clipboard.Demo();
+        }
+        if (options.DemoShelf)
+        {
+            _ = _shelf.DemoAsync();
         }
         _selectedTab = options.Tab; // only sticks with --pin=expanded; hovering starts on the first tab
 
@@ -495,10 +503,14 @@ public sealed partial class IslandWindow : Window
                 : compact is not null ? IslandState.Compact
                 : IslandState.Idle);
 
-        // Every hover starts on the first tab.
+        // Every hover starts on the first tab, except a drag of files, which opens the shelf.
         if (state != IslandState.Expanded)
         {
             _selectedTab = 0;
+        }
+        else if (_dragOpensShelf && tabs.IndexOf(_shelf) is int shelfTab and >= 0)
+        {
+            _selectedTab = shelfTab;
         }
         _selectedTab = Math.Clamp(_selectedTab, 0, Math.Max(0, tabs.Count - 1));
 
@@ -522,6 +534,66 @@ public sealed partial class IslandWindow : Window
     }
 
     private bool ShowTabs => _state == IslandState.Expanded && _tabs.Count > 1;
+
+    // ---------------------------------------------------------------- dropping files on the shelf
+
+    /// <summary>
+    /// Files dragged onto the island: accept them for the shelf, and open the shelf tab (the island
+    /// expands as usual while the pointer is over it; <see cref="UpdateState"/> picks the tab).
+    /// Accepted as a copy, so the app they came from never deletes or moves anything.
+    /// </summary>
+    private void OnStageDragOver(object sender, DragEventArgs e)
+    {
+        if (!_shelf.HasExpanded || !e.DataView.Contains(Windows.ApplicationModel.DataTransfer.StandardDataFormats.StorageItems))
+        {
+            e.AcceptedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.None;
+            return;
+        }
+
+        e.AcceptedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Copy;
+        e.DragUIOverride.Caption = "Add to shelf";
+
+        if (!_dragOpensShelf)
+        {
+            _dragOpensShelf = true;
+            _shelf.SetDragOver(true);
+            if (_state == IslandState.Expanded)
+            {
+                UpdateState(); // already open on another tab: switch
+            }
+        }
+    }
+
+    private void OnStageDragLeave(object sender, DragEventArgs e) => EndDrag();
+
+    private async void OnStageDrop(object sender, DragEventArgs e)
+    {
+        EndDrag();
+        if (!e.DataView.Contains(Windows.ApplicationModel.DataTransfer.StandardDataFormats.StorageItems))
+        {
+            return;
+        }
+
+        var deferral = e.GetDeferral();
+        try
+        {
+            await _shelf.AddAsync(await e.DataView.GetStorageItemsAsync());
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Dropping onto the shelf failed", ex);
+        }
+        finally
+        {
+            deferral.Complete();
+        }
+    }
+
+    private void EndDrag()
+    {
+        _dragOpensShelf = false;
+        _shelf.SetDragOver(false);
+    }
 
     /// <summary>The expanded pill is the tab's view, plus the tab row above it when there's more than one tab.</summary>
     private PillShape CurrentShape() => _state switch

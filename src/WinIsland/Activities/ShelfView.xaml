@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="WinIsland.Activities.ShelfView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:WinIsland.Activities">
+
+    <!-- Tiles: click to open, drag out to use (always a copy), × to take off the shelf. -->
+    <Grid Padding="12,0,12,10">
+        <GridView x:Name="Tiles" ItemsSource="{x:Bind Items}" SelectionMode="None" IsItemClickEnabled="True"
+                  ItemClick="OnItemClick" CanDragItems="True" DragItemsStarting="OnDragItemsStarting"
+                  IsTabStop="False" HorizontalAlignment="Center">
+            <GridView.ItemContainerStyle>
+                <Style TargetType="GridViewItem" BasedOn="{StaticResource DefaultGridViewItemStyle}">
+                    <Setter Property="Margin" Value="2" />
+                    <Setter Property="Padding" Value="0" />
+                    <Setter Property="CornerRadius" Value="10" />
+                    <Setter Property="IsTabStop" Value="False" />
+                    <Setter Property="UseSystemFocusVisuals" Value="False" />
+                </Style>
+            </GridView.ItemContainerStyle>
+            <GridView.ItemTemplate>
+                <DataTemplate x:DataType="local:ShelfItem">
+                    <Grid Width="74" Height="80" ToolTipService.ToolTip="{x:Bind Path}">
+                        <StackPanel VerticalAlignment="Center" Spacing="4">
+                            <Image Source="{x:Bind Thumbnail}" Width="36" Height="36" Stretch="Uniform" />
+                            <TextBlock Text="{x:Bind Name}" FontSize="11" Foreground="#E6FFFFFF" TextAlignment="Center"
+                                       TextTrimming="CharacterEllipsis" TextWrapping="Wrap" MaxLines="2" Margin="4,0" />
+                        </StackPanel>
+                        <Button Style="{StaticResource IslandButtonStyle}" Width="20" Height="20" CornerRadius="10"
+                                HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,2,2,0"
+                                Click="OnRemoveClick" Tag="{x:Bind}" ToolTipService.ToolTip="Take off the shelf">
+                            <FontIcon Glyph="&#xE711;" FontSize="8" Foreground="#99FFFFFF" />
+                        </Button>
+                    </Grid>
+                </DataTemplate>
+            </GridView.ItemTemplate>
+        </GridView>
+
+        <!-- Shown when the shelf is empty, and as a highlight while files are dragged over it. -->
+        <Grid x:Name="DropZone" IsHitTestVisible="False">
+            <Rectangle x:Name="DropOutline" RadiusX="14" RadiusY="14" Stroke="#40FFFFFF" StrokeThickness="1.5"
+                       StrokeDashArray="4,3" />
+            <StackPanel x:Name="EmptyText" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="4">
+                <FontIcon Glyph="&#xE896;" FontSize="22" Foreground="#80FFFFFF" />
+                <TextBlock Text="Drop files here" FontSize="13" Foreground="#CCFFFFFF" HorizontalAlignment="Center" />
+                <TextBlock Text="They stay where they are; the shelf just keeps them handy" FontSize="11"
+                           Foreground="#80FFFFFF" HorizontalAlignment="Center" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</UserControl>

@@ -71,6 +71,9 @@ internal sealed class AppSettings
     /// <summary>Keep the last things you copied (in memory only) in a clipboard tab on the expanded island.</summary>
     public bool ClipboardHistory { get; set; } = true;
 
+    /// <summary>A file shelf tab: drop files on the island to keep them handy, drag them out later.</summary>
+    public bool FileShelf { get; set; } = true;
+
     [JsonIgnore]
     public double GlassOpacity => 1 - Math.Clamp(GlassTransparency, 0, 0.3);
 
@@ -107,6 +110,7 @@ internal sealed class AppSettings
         ShowBluetooth = defaults.ShowBluetooth;
         ShowPrivacy = defaults.ShowPrivacy;
         ClipboardHistory = defaults.ClipboardHistory;
+        FileShelf = defaults.FileShelf;
         Save();
     }
 

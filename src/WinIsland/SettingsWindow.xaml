@@ -230,6 +230,20 @@
                         <ToggleSwitch x:Name="ClipboardToggle" Grid.Column="1" OnContent="" OffContent="" MinWidth="0" Toggled="OnClipboardToggled" />
                     </Grid>
                 </Border>
+                <Border Style="{StaticResource CardStyle}">
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="File shelf" Style="{StaticResource CardTitleStyle}" />
+                            <TextBlock Text="A tab where you can park files: drag them onto the island, then drag them out wherever you need them. Your files stay where they are."
+                                       Style="{StaticResource CardDescriptionStyle}" />
+                        </StackPanel>
+                        <ToggleSwitch x:Name="ShelfToggle" Grid.Column="1" OnContent="" OffContent="" MinWidth="0" Toggled="OnShelfToggled" />
+                    </Grid>
+                </Border>
 
                 <!-- Music -->
                 <TextBlock Text="Music" Style="{StaticResource SectionHeaderStyle}" />

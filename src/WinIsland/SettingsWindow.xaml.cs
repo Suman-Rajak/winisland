@@ -92,6 +92,7 @@ public sealed partial class SettingsWindow : Window
             BluetoothToggle.IsOn = _settings.ShowBluetooth;
             PrivacyToggle.IsOn = _settings.ShowPrivacy;
             ClipboardToggle.IsOn = _settings.ClipboardHistory;
+            ShelfToggle.IsOn = _settings.FileShelf;
             ArtworkToggle.IsOn = _settings.FindArtworkOnline;
         }
         finally
@@ -177,6 +178,9 @@ public sealed partial class SettingsWindow : Window
 
     private void OnClipboardToggled(object sender, RoutedEventArgs e) =>
         Update(s => s.ClipboardHistory = ClipboardToggle.IsOn);
+
+    private void OnShelfToggled(object sender, RoutedEventArgs e) =>
+        Update(s => s.FileShelf = ShelfToggle.IsOn);
 
     private void OnArtworkToggled(object sender, RoutedEventArgs e) =>
         Update(s => s.FindArtworkOnline = ArtworkToggle.IsOn);

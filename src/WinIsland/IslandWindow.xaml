@@ -18,7 +18,9 @@
             opacity is the "glass transparency" setting. Then a top highlight and bright rim drawn in
             code (SheenHost), then the activities' views (ContentHost).
         -->
-        <Grid x:Name="Stage">
+        <!-- Dropping files on the island puts them on the shelf (Background makes it a drop target). -->
+        <Grid x:Name="Stage" Background="Transparent" AllowDrop="True"
+              DragOver="OnStageDragOver" DragLeave="OnStageDragLeave" Drop="OnStageDrop">
             <Grid x:Name="Backdrop" Background="#FF1C1C1F" Opacity="0.92" IsHitTestVisible="False">
                 <Grid.BackgroundTransition>
                     <BrushTransition Duration="0:0:0.5" />
