@@ -5,8 +5,8 @@ using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Hosting;
 using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Shapes;
 using Windows.UI;
+using WinIsland.Activities;
 using WinIsland.Interop;
 using WinIsland.Services;
 using WinRT.Interop;
@@ -14,6 +14,11 @@ using WinUIEx;
 
 namespace WinIsland;
 
+/// <summary>
+/// The island itself: a transparent, topmost window with an animated pill in it. What the pill shows
+/// comes from <see cref="IslandActivity"/> objects; this class decides which one to show and handles
+/// the window, hover, animation and glass.
+/// </summary>
 public sealed partial class IslandWindow : Window
 {
     // The window is a fixed-size transparent stage; only the pill inside it is visible and clickable.
@@ -27,12 +32,7 @@ public sealed partial class IslandWindow : Window
     private const int ExpandDelayMs = 90;
     private const int CollapseDelayMs = 280;
 
-    private readonly record struct PillShape(float Width, float Height, float Radius);
-
     private static readonly PillShape IdleShape = new(124, 32, 16);
-    private static readonly PillShape CompactShape = new(250, 34, 17);
-    private static readonly PillShape ExpandedEmptyShape = new(300, 92, 30);
-    private static readonly PillShape ExpandedMediaShape = new(420, 172, 38);
 
     private readonly IslandOptions _options;
     private readonly AppSettings _settings = AppSettings.Current;
@@ -40,25 +40,24 @@ public sealed partial class IslandWindow : Window
     private readonly Compositor _compositor;
     private readonly Visual _stageVisual;
     private readonly CompositionRoundedRectangleGeometry _pill;
-    private readonly MediaService _media;
     private readonly DispatcherQueueTimer _timer;
+    private readonly List<IslandActivity> _activities;
+    private readonly Dictionary<FrameworkElement, bool> _layerVisible = [];
 
     private IslandState _state = IslandState.Idle;
-    private bool _shownWithMedia;
+    private IslandActivity? _shown;
     private bool _wantExpanded;
     private bool _visible;
     private bool _userHidden;
+    private bool _idleHidden;
     private long _insideSince;
     private long _outsideSince;
     private int _tick;
-    private string? _artworkTrack;
-    private bool _artworkFromThumbnail;
-    private Artwork? _artwork;
+
     private Color _tint = ColorMath.NeutralTint;
-    private bool _compactBarsRunning = true;
-    private bool _expandedBarsRunning = true;
-    private bool _idleHidden;
-    private bool _findArtworkOnline;
+    private ImageSource? _glow;
+    private int _glowVersion;
+    private bool _glowFading;
 
     private IntPtr _monitor;
     private Native.POINT _origin;
@@ -79,38 +78,31 @@ public sealed partial class IslandWindow : Window
         _stageVisual.Clip = _compositor.CreateGeometricClip(_pill);
         CreateSheen();
 
-        foreach (var layer in new UIElement[] { CompactLayer, ExpandedEmptyLayer, ExpandedMediaLayer })
+        var volume = new VolumeActivity(DispatcherQueue);
+        _activities =
+        [
+            new ClockActivity(DispatcherQueue),
+            new MediaActivity(DispatcherQueue, options.DemoMedia),
+            volume,
+            new BrightnessActivity(DispatcherQueue),
+        ];
+        foreach (var activity in _activities)
         {
-            var visual = ElementCompositionPreview.GetElementVisual(layer);
-            visual.Opacity = 0;
-            layer.IsHitTestVisible = false;
+            AddLayer(activity.CompactView, activity.CompactShape);
+            AddLayer(activity.ExpandedView, activity.ExpandedShape);
+            activity.Changed += (_, _) => OnActivityChanged();
         }
 
-        _media = new MediaService(DispatcherQueue, options.DemoMedia);
-        _media.Changed += OnMediaChanged;
+        if (options.DemoLevel)
+        {
+            volume.Pin(0.45);
+        }
 
         _timer = DispatcherQueue.CreateTimer();
         _timer.Interval = TimeSpan.FromMilliseconds(PointerTickMs);
         _timer.Tick += OnTick;
 
-        _findArtworkOnline = _settings.FindArtworkOnline;
         _settings.Changed += OnSettingsChanged;
-    }
-
-    private void OnSettingsChanged(object? sender, EventArgs e)
-    {
-        _monitor = IntPtr.Zero; // force UpdatePlacement to re-apply display and distance
-        UpdatePlacement();
-        UpdateVisibility();
-        ApplyTheme();
-        ApplyIdleFade();
-
-        if (_settings.FindArtworkOnline != _findArtworkOnline)
-        {
-            _findArtworkOnline = _settings.FindArtworkOnline;
-            _artworkTrack = null; // re-fetch (or drop) looked-up artwork
-            OnMediaChanged(this, EventArgs.Empty);
-        }
     }
 
     /// <summary>Set from the tray menu.</summary>
@@ -132,11 +124,45 @@ public sealed partial class IslandWindow : Window
         _visible = true;
         UpdateVisibility();
         EnsureTopmost();
-        ApplyTheme();
+        UpdateState();
         ApplyState();
         _timer.Start();
-        _ = _media.StartAsync();
+
+        foreach (var activity in _activities)
+        {
+            _ = StartActivityAsync(activity);
+        }
     }
+
+    private static async Task StartActivityAsync(IslandActivity activity)
+    {
+        try
+        {
+            await activity.StartAsync();
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"{activity.Name} failed to start", ex);
+        }
+    }
+
+    private void OnActivityChanged()
+    {
+        UpdateState();
+        ApplyTheme();
+    }
+
+    private void OnSettingsChanged(object? sender, EventArgs e)
+    {
+        _monitor = IntPtr.Zero; // force UpdatePlacement to re-apply display and distance
+        UpdatePlacement();
+        UpdateVisibility();
+        UpdateState();
+        ApplyTheme();
+        ApplyIdleFade();
+    }
+
+    // ---------------------------------------------------------------- window setup
 
     private void ConfigureWindow()
     {
@@ -220,6 +246,25 @@ public sealed partial class IslandWindow : Window
         sheen.Size = new Vector2(StageWidth, StageHeight);
         sheen.Shapes.Add(shape);
         ElementCompositionPreview.SetElementChildVisual(SheenHost, sheen);
+    }
+
+    /// <summary>Adds an activity's view to the stage, sized to its pill and hidden.</summary>
+    private void AddLayer(FrameworkElement? view, PillShape shape)
+    {
+        if (view is null)
+        {
+            return;
+        }
+
+        view.Width = shape.Width;
+        view.Height = shape.Height;
+        view.HorizontalAlignment = HorizontalAlignment.Center;
+        view.VerticalAlignment = VerticalAlignment.Top;
+        view.Margin = new Thickness(0, TopGap, 0, 0);
+        view.IsHitTestVisible = false;
+        ElementCompositionPreview.GetElementVisual(view).Opacity = 0;
+        ContentHost.Children.Add(view);
+        _layerVisible[view] = false;
     }
 
     // ---------------------------------------------------------------- placement & visibility
@@ -328,7 +373,9 @@ public sealed partial class IslandWindow : Window
     {
         if (++_tick % SlowTickEvery == 0)
         {
-            OnSlowTick();
+            UpdatePlacement();
+            UpdateVisibility();
+            EnsureTopmost();
         }
 
         if (!_visible)
@@ -352,48 +399,51 @@ public sealed partial class IslandWindow : Window
             if (_outsideSince == 0) _outsideSince = now;
         }
 
-        _wantExpanded = _state == IslandState.Expanded
+        bool wantExpanded = _state == IslandState.Expanded
             ? inside || now - _outsideSince < CollapseDelayMs
             : inside && now - _insideSince >= ExpandDelayMs;
 
-        UpdateState();
-    }
-
-    private void OnSlowTick()
-    {
-        UpdatePlacement();
-        UpdateVisibility();
-        EnsureTopmost();
-
-        if (_state == IslandState.Expanded)
+        if (wantExpanded != _wantExpanded)
         {
-            UpdateClock();
-            UpdateProgress();
+            _wantExpanded = wantExpanded;
+            UpdateState();
         }
     }
 
+    /// <summary>
+    /// Picks what to show: on hover, the highest-priority activity with an expanded view; otherwise the
+    /// highest-priority one that wants the compact pill; otherwise nothing (the idle pill).
+    /// </summary>
     private void UpdateState()
     {
-        var media = _media.Current;
-        var state = _options.PinnedState
-            ?? (_wantExpanded ? IslandState.Expanded
-                : media?.IsPlaying == true ? IslandState.Compact
-                : IslandState.Idle);
+        var compact = _activities.Where(a => a.WantsCompact).MaxBy(a => a.Priority);
+        var expanded = _activities.Where(a => a.HasExpanded).MaxBy(a => a.Priority);
 
-        if (state == _state && (media is not null) == _shownWithMedia)
+        var state = _options.PinnedState
+            ?? (_wantExpanded && expanded is not null ? IslandState.Expanded
+                : compact is not null ? IslandState.Compact
+                : IslandState.Idle);
+        var shown = state switch
+        {
+            IslandState.Expanded => expanded,
+            IslandState.Compact => compact,
+            _ => null,
+        };
+
+        if (state == _state && shown == _shown)
         {
             return;
         }
 
         _state = state;
-        _shownWithMedia = media is not null;
+        _shown = shown;
         ApplyState();
     }
 
     private PillShape CurrentShape() => _state switch
     {
-        IslandState.Expanded => _shownWithMedia ? ExpandedMediaShape : ExpandedEmptyShape,
-        IslandState.Compact => CompactShape,
+        IslandState.Expanded when _shown is not null => _shown.ExpandedShape,
+        IslandState.Compact when _shown is not null => _shown.CompactShape,
         _ => IdleShape,
     };
 
@@ -431,20 +481,19 @@ public sealed partial class IslandWindow : Window
 
     private void ApplyState()
     {
-        bool expanded = _state == IslandState.Expanded;
-        AnimatePill(CurrentShape(), expanded);
+        AnimatePill(CurrentShape(), expanding: _state == IslandState.Expanded);
 
-        SetLayerVisible(CompactLayer, _state == IslandState.Compact);
-        SetLayerVisible(ExpandedEmptyLayer, expanded && !_shownWithMedia);
-        SetLayerVisible(ExpandedMediaLayer, expanded && _shownWithMedia);
-
-        UpdateBars();
-        ApplyIdleFade();
-        if (expanded)
+        foreach (var activity in _activities)
         {
-            UpdateClock();
-            UpdateProgress();
+            bool compact = _state == IslandState.Compact && activity == _shown;
+            bool expanded = _state == IslandState.Expanded && activity == _shown;
+            SetLayerVisible(activity.CompactView, compact);
+            SetLayerVisible(activity.ExpandedView, expanded);
+            activity.OnShown(compact, expanded);
         }
+
+        ApplyIdleFade();
+        ApplyTheme();
     }
 
     /// <summary>"Hide when idle": fade the whole island out, but keep hover working so it can come back.</summary>
@@ -485,8 +534,15 @@ public sealed partial class IslandWindow : Window
         _pill.StartAnimation(property, spring);
     }
 
-    private void SetLayerVisible(FrameworkElement layer, bool show)
+    private void SetLayerVisible(FrameworkElement? layer, bool show)
     {
+        // Re-running the fade on a layer that's already showing would restart it and flicker.
+        if (layer is null || _layerVisible[layer] == show)
+        {
+            return;
+        }
+
+        _layerVisible[layer] = show;
         layer.IsHitTestVisible = show;
         var visual = ElementCompositionPreview.GetElementVisual(layer);
         visual.CenterPoint = new Vector3((float)layer.Width / 2, 0, 0);
@@ -496,7 +552,7 @@ public sealed partial class IslandWindow : Window
         fade.Duration = Scaled(show ? 220 : 110);
         if (show)
         {
-            fade.DelayTime = Scaled(60); // let the pill start growing first
+            fade.DelayTime = Scaled(60); // let the pill start changing shape first
         }
 
         var scale = _compositor.CreateSpringVector3Animation();
@@ -508,162 +564,56 @@ public sealed partial class IslandWindow : Window
         visual.StartAnimation(nameof(visual.Scale), scale);
     }
 
-    private void UpdateBars()
+    // ---------------------------------------------------------------- glass
+
+    /// <summary>
+    /// Colours the glass from the activity being shown or, failing that, from whichever live activity
+    /// has colours (so music keeps its colours while the volume indicator is up). Neutral otherwise,
+    /// or when "match the music's colours" is off.
+    /// </summary>
+    private async void ApplyTheme()
     {
-        bool playing = _media.Current?.IsPlaying == true;
-        SetBarsRunning(CompactBars.Children, ref _compactBarsRunning, playing && _state == IslandState.Compact);
-        SetBarsRunning(ExpandedBars.Children, ref _expandedBarsRunning, playing && _state == IslandState.Expanded);
-    }
-
-    /// <summary>Only (re)start bar animations when they actually change; restarting makes them jump.</summary>
-    private void SetBarsRunning(IList<UIElement> bars, ref bool running, bool run)
-    {
-        if (running != run)
-        {
-            running = run;
-            AnimateBars(bars, run);
-        }
-    }
-
-    private void AnimateBars(IList<UIElement> bars, bool running)
-    {
-        // Each bar loops a different pattern and speed, so together they look like a live level meter.
-        // These run on the compositor thread, but they still keep it awake, so only animate visible bars.
-        float[][] patterns =
-        [
-            [0.35f, 1.0f, 0.55f, 0.85f, 0.35f],
-            [0.6f, 0.3f, 0.95f, 0.45f, 0.6f],
-            [0.4f, 0.8f, 0.35f, 1.0f, 0.4f],
-            [0.7f, 0.4f, 0.75f, 0.3f, 0.7f],
-        ];
-
-        for (int i = 0; i < bars.Count; i++)
-        {
-            var bar = (Rectangle)bars[i];
-            var visual = ElementCompositionPreview.GetElementVisual(bar);
-            visual.CenterPoint = new Vector3((float)bar.Width / 2, (float)bar.Height / 2, 0);
-
-            var animation = _compositor.CreateScalarKeyFrameAnimation();
-            if (running)
-            {
-                var pattern = patterns[i % patterns.Length];
-                for (int k = 0; k < pattern.Length; k++)
-                {
-                    animation.InsertKeyFrame(k / (float)(pattern.Length - 1), pattern[k]);
-                }
-                animation.Duration = TimeSpan.FromMilliseconds(900 + i * 170);
-                animation.IterationBehavior = AnimationIterationBehavior.Forever;
-            }
-            else
-            {
-                animation.InsertKeyFrame(1f, 0.3f);
-                animation.Duration = TimeSpan.FromMilliseconds(200);
-            }
-
-            visual.StartAnimation("Scale.Y", animation);
-        }
-    }
-
-    // ---------------------------------------------------------------- content
-
-    private async void OnMediaChanged(object? sender, EventArgs e)
-    {
-        var media = _media.Current;
-        if (media is not null)
-        {
-            TitleText.Text = media.DisplayTitle;
-            ArtistText.Text = media.Artist;
-            SourceText.Text = media.AppName;
-            PlayPauseIcon.Glyph = media.IsPlaying ? "" : "";
-        }
-
-        UpdateState();
-        UpdateBars();
-        UpdateProgress();
-        ApplyTheme();
-
-        // Reload when the track changes, or when the app starts publishing a thumbnail for a track we
-        // only had a fallback (or nothing) for. Apps often republish the same track with and without one.
-        var track = media?.TrackKey;
-        bool hasThumbnail = media?.Thumbnail is not null;
-        if (track == _artworkTrack && !(hasThumbnail && !_artworkFromThumbnail))
-        {
-            return;
-        }
-
-        _artworkTrack = track;
-        _artworkFromThumbnail = hasThumbnail;
-        var artwork = media is null ? null : await ArtworkService.LoadAsync(media);
-        if (_artworkTrack != track)
-        {
-            return; // the track changed while we were loading
-        }
-
-        _artwork = artwork;
-        CompactArt.ImageSource = artwork?.Cover;
-        ExpandedArt.ImageSource = artwork?.Cover;
-        await CrossfadeGlowAsync(artwork);
-        ApplyTheme();
-    }
-
-    private async Task CrossfadeGlowAsync(Artwork? artwork)
-    {
-        if (GlowLayer.Opacity > 0)
-        {
-            GlowLayer.Opacity = 0;
-            await Task.Delay(300);
-        }
-
-        GlowBrush.ImageSource = artwork?.Glow;
-    }
-
-    /// <summary>Glass picks up the music's colours while something is playing (if enabled); otherwise it's neutral.</summary>
-    private void ApplyTheme()
-    {
-        bool colourful = _settings.MatchMusicColors && _artwork is not null && _media.Current?.IsPlaying == true;
+        var theme = !_settings.MatchMusicColors ? null
+            : _shown?.Theme
+              ?? _activities.Where(a => a.WantsCompact && a.Theme is not null).MaxBy(a => a.Priority)?.Theme;
 
         Backdrop.Opacity = _settings.GlassOpacity;
-        GlowLayer.Opacity = colourful ? 0.9 : 0;
-        ((SolidColorBrush)Stage.Resources["AccentBrush"]).Color =
-            colourful ? _artwork!.Accent : Color.FromArgb(255, 255, 255, 255);
+        ((SolidColorBrush)Application.Current.Resources["IslandAccentBrush"]).Color =
+            theme?.Accent ?? Color.FromArgb(255, 255, 255, 255);
 
-        var tint = colourful ? _artwork!.Tint : ColorMath.NeutralTint;
+        var tint = theme?.Tint ?? ColorMath.NeutralTint;
         if (tint != _tint)
         {
             _tint = tint;
             Backdrop.Background = new SolidColorBrush(tint); // a new brush, so BackgroundTransition animates it
         }
-    }
 
-    private void UpdateClock()
-    {
-        var now = DateTime.Now;
-        ClockText.Text = now.ToString("t");
-        DateText.Text = now.ToString("dddd, d MMMM");
-    }
-
-    private void UpdateProgress()
-    {
-        var media = _media.Current;
-        if (media is null || media.Duration <= TimeSpan.Zero)
+        var glow = theme?.Glow;
+        if (ReferenceEquals(glow, _glow))
         {
-            ProgressRow.Visibility = Visibility.Collapsed;
+            if (!_glowFading)
+            {
+                GlowLayer.Opacity = glow is null ? 0 : 0.9;
+            }
             return;
         }
 
-        var position = media.EstimatePosition(DateTimeOffset.Now);
-        ProgressRow.Visibility = Visibility.Visible;
-        Progress.Value = position / media.Duration;
-        ElapsedText.Text = FormatTime(position);
-        RemainingText.Text = "-" + FormatTime(media.Duration - position);
+        // Crossfade: fade the old colour wash out before swapping in the new one.
+        _glow = glow;
+        int version = ++_glowVersion;
+        if (GlowLayer.Opacity > 0)
+        {
+            _glowFading = true;
+            GlowLayer.Opacity = 0;
+            await Task.Delay(300);
+            if (version != _glowVersion)
+            {
+                return; // a newer change took over
+            }
+        }
+
+        _glowFading = false;
+        GlowBrush.ImageSource = glow;
+        GlowLayer.Opacity = glow is null ? 0 : 0.9;
     }
-
-    private static string FormatTime(TimeSpan t) =>
-        t.TotalHours >= 1 ? t.ToString(@"h\:mm\:ss") : t.ToString(@"m\:ss");
-
-    private void OnPreviousClick(object sender, RoutedEventArgs e) => _ = _media.PreviousAsync();
-
-    private void OnPlayPauseClick(object sender, RoutedEventArgs e) => _ = _media.TogglePlayPauseAsync();
-
-    private void OnNextClick(object sender, RoutedEventArgs e) => _ = _media.NextAsync();
 }

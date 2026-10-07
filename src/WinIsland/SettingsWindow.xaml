@@ -158,6 +158,23 @@
                     </Grid>
                 </Border>
 
+                <!-- What the island shows -->
+                <TextBlock Text="Show on the island" Style="{StaticResource SectionHeaderStyle}" />
+                <Border Style="{StaticResource CardStyle}">
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Volume and brightness" Style="{StaticResource CardTitleStyle}" />
+                            <TextBlock Text="Briefly show the level when you change it, or when you switch speakers."
+                                       Style="{StaticResource CardDescriptionStyle}" />
+                        </StackPanel>
+                        <ToggleSwitch x:Name="LevelsToggle" Grid.Column="1" OnContent="" OffContent="" MinWidth="0" Toggled="OnLevelsToggled" />
+                    </Grid>
+                </Border>
+
                 <!-- Music -->
                 <TextBlock Text="Music" Style="{StaticResource SectionHeaderStyle}" />
                 <Border Style="{StaticResource CardStyle}">

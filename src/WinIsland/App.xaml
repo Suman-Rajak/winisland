@@ -8,6 +8,27 @@
             <ResourceDictionary.MergedDictionaries>
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
             </ResourceDictionary.MergedDictionaries>
+
+            <!-- Shared by the island's activity views. The island recolours this brush from the album art. -->
+            <SolidColorBrush x:Key="IslandAccentBrush" Color="White" />
+
+            <Style x:Key="IslandButtonStyle" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
+                <Setter Property="Width" Value="44" />
+                <Setter Property="Height" Value="44" />
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="CornerRadius" Value="22" />
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="Foreground" Value="White" />
+                <!-- The island never takes keyboard focus (its window is no-activate). -->
+                <Setter Property="IsTabStop" Value="False" />
+                <Setter Property="UseSystemFocusVisuals" Value="False" />
+            </Style>
+
+            <Style x:Key="LevelBarStyle" TargetType="Rectangle">
+                <Setter Property="Fill" Value="{StaticResource IslandAccentBrush}" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+            </Style>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="WinIsland.Activities.ClockView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+        <TextBlock x:Name="TimeText" FontSize="34" FontWeight="SemiBold" Foreground="White" HorizontalAlignment="Center" />
+        <TextBlock x:Name="DateText" FontSize="13" Foreground="#99FFFFFF" HorizontalAlignment="Center" />
+    </StackPanel>
+</UserControl>

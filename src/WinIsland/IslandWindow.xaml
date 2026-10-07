@@ -13,31 +13,11 @@
         The glass is built from layers, back to front: Backdrop holds the tint (matched to the
         artwork while music plays) and a soft colour wash made from the artwork (GlowLayer); its
         opacity is the "glass transparency" setting. Then a top highlight and bright rim drawn in
-        code (SheenHost), then the content.
+        code (SheenHost), then the activities' views (ContentHost).
 
         The island is always dark, whatever the Windows theme; the settings window follows Windows.
     -->
     <Grid x:Name="Stage" RequestedTheme="Dark">
-        <Grid.Resources>
-            <SolidColorBrush x:Key="AccentBrush" Color="White" />
-            <Style x:Key="IslandButtonStyle" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
-                <Setter Property="Width" Value="44" />
-                <Setter Property="Height" Value="44" />
-                <Setter Property="Padding" Value="0" />
-                <Setter Property="CornerRadius" Value="22" />
-                <Setter Property="Background" Value="Transparent" />
-                <Setter Property="BorderThickness" Value="0" />
-                <Setter Property="Foreground" Value="White" />
-                <!-- The island never takes keyboard focus (its window is no-activate). -->
-                <Setter Property="IsTabStop" Value="False" />
-                <Setter Property="UseSystemFocusVisuals" Value="False" />
-            </Style>
-            <Style x:Key="BarStyle" TargetType="Rectangle">
-                <Setter Property="Fill" Value="{StaticResource AccentBrush}" />
-                <Setter Property="VerticalAlignment" Value="Center" />
-            </Style>
-        </Grid.Resources>
-
         <Grid x:Name="Backdrop" Background="#FF1C1C1F" Opacity="0.92" IsHitTestVisible="False">
             <Grid.BackgroundTransition>
                 <BrushTransition Duration="0:0:0.5" />
@@ -54,113 +34,7 @@
 
         <Canvas x:Name="SheenHost" IsHitTestVisible="False" />
 
-        <!-- Compact: something is playing -->
-        <Grid x:Name="CompactLayer"
-              Width="250" Height="34" Margin="0,8,0,0" Padding="6,0,14,0"
-              HorizontalAlignment="Center" VerticalAlignment="Top">
-            <Grid Width="24" Height="24" HorizontalAlignment="Left">
-                <Border CornerRadius="7" Background="#26FFFFFF">
-                    <FontIcon Glyph="&#xE8D6;" FontSize="11" Foreground="#99FFFFFF" />
-                </Border>
-                <Border CornerRadius="7">
-                    <Border.Background>
-                        <ImageBrush x:Name="CompactArt" Stretch="UniformToFill" />
-                    </Border.Background>
-                </Border>
-            </Grid>
-            <StackPanel x:Name="CompactBars" Orientation="Horizontal" Spacing="2"
-                        HorizontalAlignment="Right" VerticalAlignment="Center">
-                <Rectangle Width="3" Height="14" RadiusX="1.5" RadiusY="1.5" Style="{StaticResource BarStyle}" />
-                <Rectangle Width="3" Height="14" RadiusX="1.5" RadiusY="1.5" Style="{StaticResource BarStyle}" />
-                <Rectangle Width="3" Height="14" RadiusX="1.5" RadiusY="1.5" Style="{StaticResource BarStyle}" />
-                <Rectangle Width="3" Height="14" RadiusX="1.5" RadiusY="1.5" Style="{StaticResource BarStyle}" />
-            </StackPanel>
-        </Grid>
-
-        <!-- Expanded, nothing playing: clock -->
-        <Grid x:Name="ExpandedEmptyLayer"
-              Width="300" Height="92" Margin="0,8,0,0"
-              HorizontalAlignment="Center" VerticalAlignment="Top">
-            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                <TextBlock x:Name="ClockText" FontSize="34" FontWeight="SemiBold" Foreground="White"
-                           HorizontalAlignment="Center" />
-                <TextBlock x:Name="DateText" FontSize="13" Foreground="#99FFFFFF" HorizontalAlignment="Center" />
-            </StackPanel>
-        </Grid>
-
-        <!-- Expanded, media: artwork, title, progress, controls -->
-        <Grid x:Name="ExpandedMediaLayer"
-              Width="420" Height="172" Margin="0,8,0,0" Padding="20,18,20,10" RowSpacing="12"
-              HorizontalAlignment="Center" VerticalAlignment="Top">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="64" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
-            </Grid.RowDefinitions>
-
-            <Grid ColumnSpacing="14">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="64" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-
-                <Grid>
-                    <Border CornerRadius="14" Background="#26FFFFFF">
-                        <FontIcon Glyph="&#xE8D6;" FontSize="24" Foreground="#99FFFFFF" />
-                    </Border>
-                    <Border CornerRadius="14">
-                        <Border.Background>
-                            <ImageBrush x:Name="ExpandedArt" Stretch="UniformToFill" />
-                        </Border.Background>
-                    </Border>
-                </Grid>
-
-                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
-                    <TextBlock x:Name="TitleText" FontSize="16" FontWeight="SemiBold" Foreground="White"
-                               TextTrimming="CharacterEllipsis" MaxLines="1" />
-                    <TextBlock x:Name="ArtistText" FontSize="13" Foreground="#B3FFFFFF"
-                               TextTrimming="CharacterEllipsis" MaxLines="1" />
-                    <TextBlock x:Name="SourceText" FontSize="11" Foreground="#73FFFFFF" MaxLines="1" />
-                </StackPanel>
-
-                <StackPanel x:Name="ExpandedBars" Grid.Column="2" Orientation="Horizontal" Spacing="2.5"
-                            VerticalAlignment="Top" Margin="0,8,0,0">
-                    <Rectangle Width="3.5" Height="18" RadiusX="1.75" RadiusY="1.75" Style="{StaticResource BarStyle}" />
-                    <Rectangle Width="3.5" Height="18" RadiusX="1.75" RadiusY="1.75" Style="{StaticResource BarStyle}" />
-                    <Rectangle Width="3.5" Height="18" RadiusX="1.75" RadiusY="1.75" Style="{StaticResource BarStyle}" />
-                    <Rectangle Width="3.5" Height="18" RadiusX="1.75" RadiusY="1.75" Style="{StaticResource BarStyle}" />
-                </StackPanel>
-            </Grid>
-
-            <Grid x:Name="ProgressRow" Grid.Row="1" ColumnSpacing="10">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <TextBlock x:Name="ElapsedText" FontSize="11" Foreground="#99FFFFFF" VerticalAlignment="Center" />
-                <ProgressBar x:Name="Progress" Grid.Column="1" Minimum="0" Maximum="1"
-                             Foreground="{StaticResource AccentBrush}" Background="#33FFFFFF" VerticalAlignment="Center" />
-                <TextBlock x:Name="RemainingText" Grid.Column="2" FontSize="11" Foreground="#99FFFFFF"
-                           VerticalAlignment="Center" />
-            </Grid>
-
-            <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="28"
-                        HorizontalAlignment="Center" VerticalAlignment="Center">
-                <Button Style="{StaticResource IslandButtonStyle}" Click="OnPreviousClick"
-                        ToolTipService.ToolTip="Previous">
-                    <FontIcon Glyph="&#xE892;" FontSize="18" />
-                </Button>
-                <Button Style="{StaticResource IslandButtonStyle}" Click="OnPlayPauseClick"
-                        ToolTipService.ToolTip="Play / pause">
-                    <FontIcon x:Name="PlayPauseIcon" Glyph="&#xE769;" FontSize="24" />
-                </Button>
-                <Button Style="{StaticResource IslandButtonStyle}" Click="OnNextClick"
-                        ToolTipService.ToolTip="Next">
-                    <FontIcon Glyph="&#xE893;" FontSize="18" />
-                </Button>
-            </StackPanel>
-        </Grid>
+        <!-- Every activity's compact and expanded views, stacked; only the one being shown is visible. -->
+        <Grid x:Name="ContentHost" />
     </Grid>
 </Window>

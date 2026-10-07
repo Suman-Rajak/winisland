@@ -56,6 +56,9 @@ internal sealed class AppSettings
     /// <summary>Look up artwork online (iTunes, MusicBrainz) when the music app provides none. Sends artist + title to them.</summary>
     public bool FindArtworkOnline { get; set; } = true;
 
+    /// <summary>Briefly show volume and brightness changes on the island.</summary>
+    public bool ShowLevelIndicators { get; set; } = true;
+
     [JsonIgnore]
     public double GlassOpacity => 1 - Math.Clamp(GlassTransparency, 0, 0.3);
 
@@ -87,6 +90,7 @@ internal sealed class AppSettings
         GlassTransparency = defaults.GlassTransparency;
         MatchMusicColors = defaults.MatchMusicColors;
         FindArtworkOnline = defaults.FindArtworkOnline;
+        ShowLevelIndicators = defaults.ShowLevelIndicators;
         Save();
     }
 

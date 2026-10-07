@@ -87,6 +87,7 @@ public sealed partial class SettingsWindow : Window
             TransparencyLabel.Text = $"{_settings.GlassTransparency * 100:0}%";
             MusicColorsToggle.IsOn = _settings.MatchMusicColors;
 
+            LevelsToggle.IsOn = _settings.ShowLevelIndicators;
             ArtworkToggle.IsOn = _settings.FindArtworkOnline;
         }
         finally
@@ -157,6 +158,9 @@ public sealed partial class SettingsWindow : Window
 
     private void OnMusicColorsToggled(object sender, RoutedEventArgs e) =>
         Update(s => s.MatchMusicColors = MusicColorsToggle.IsOn);
+
+    private void OnLevelsToggled(object sender, RoutedEventArgs e) =>
+        Update(s => s.ShowLevelIndicators = LevelsToggle.IsOn);
 
     private void OnArtworkToggled(object sender, RoutedEventArgs e) =>
         Update(s => s.FindArtworkOnline = ArtworkToggle.IsOn);
