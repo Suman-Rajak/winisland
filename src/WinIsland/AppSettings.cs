@@ -82,6 +82,9 @@ internal sealed class AppSettings
     /// <summary>One of <see cref="Services.HotkeyListener.Choices"/>.</summary>
     public string AssistantShortcut { get; set; } = Services.HotkeyListener.Choices[0];
 
+    /// <summary>Listen for "Hey Siro" all the time (the microphone stays open; nothing leaves the PC).</summary>
+    public bool WakeWord { get; set; }
+
     [JsonIgnore]
     public double GlassOpacity => 1 - Math.Clamp(GlassTransparency, 0, 0.3);
 
@@ -122,6 +125,7 @@ internal sealed class AppSettings
         ShowNotifications = defaults.ShowNotifications;
         VoiceAssistant = defaults.VoiceAssistant;
         AssistantShortcut = defaults.AssistantShortcut;
+        WakeWord = defaults.WakeWord;
         Save();
     }
 

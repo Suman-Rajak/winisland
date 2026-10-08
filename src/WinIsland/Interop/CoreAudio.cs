@@ -4,7 +4,8 @@ namespace WinIsland.Interop;
 
 /// <summary>
 /// The slice of the Windows Core Audio API the island needs: the default speakers' volume and mute,
-/// change notifications for them, and notice when the default output device changes.
+/// change notifications for them, notice when the default output device changes, and listing
+/// microphones with their names and driver family.
 /// Only the methods up to the last one used are declared; COM only cares about vtable order.
 /// </summary>
 internal static class CoreAudio
@@ -33,7 +34,7 @@ internal static class CoreAudio
     [ComImport, Guid("A95664D2-9614-4F35-A746-DE8DB63617E6"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     public interface IMMDeviceEnumerator
     {
-        [PreserveSig] int EnumAudioEndpoints(EDataFlow dataFlow, int stateMask, out IntPtr devices);
+        [PreserveSig] int EnumAudioEndpoints(EDataFlow dataFlow, int stateMask, out IMMDeviceCollection devices);
         [PreserveSig] int GetDefaultAudioEndpoint(EDataFlow dataFlow, ERole role, out IMMDevice device);
         [PreserveSig] int GetDevice([MarshalAs(UnmanagedType.LPWStr)] string id, out IMMDevice device);
         [PreserveSig] int RegisterEndpointNotificationCallback(IMMNotificationClient client);
@@ -45,7 +46,74 @@ internal static class CoreAudio
     {
         [PreserveSig]
         int Activate(ref Guid iid, int clsCtx, IntPtr activationParams, [MarshalAs(UnmanagedType.IUnknown)] out object instance);
+        [PreserveSig] int OpenPropertyStore(int access, out IPropertyStore properties);
+        [PreserveSig] int GetId([MarshalAs(UnmanagedType.LPWStr)] out string id);
     }
+
+    public const int DEVICE_STATE_ACTIVE = 0x1;
+    public const int STGM_READ = 0;
+
+    [ComImport, Guid("0BD7A1BE-7A1A-44DB-8397-CC5392387B5E"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    public interface IMMDeviceCollection
+    {
+        [PreserveSig] int GetCount(out uint count);
+        [PreserveSig] int Item(uint index, out IMMDevice device);
+    }
+
+    [ComImport, Guid("886D8EEB-8CF2-4446-8D02-CDBA1DBDCF99"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    public interface IPropertyStore
+    {
+        [PreserveSig] int GetCount(out uint count);
+        [PreserveSig] int GetAt(uint index, out PropertyKey key);
+        [PreserveSig] int GetValue(ref PropertyKey key, out PropVariant value);
+    }
+
+    /// <summary>PROPVARIANT, enough to read a string (VT_LPWSTR). 24 bytes on 64-bit, as in Windows.</summary>
+    [StructLayout(LayoutKind.Explicit, Size = 24)]
+    public struct PropVariant
+    {
+        [FieldOffset(0)] public ushort Type;
+        [FieldOffset(8)] public IntPtr Pointer;
+    }
+
+    private const ushort VT_LPWSTR = 31;
+
+    /// <summary>The device's driver family: "BTHHFENUM" for a Bluetooth headset's microphone, "HDAUDIO" for a built-in one, "USB"…</summary>
+    public static readonly PropertyKey PKEY_Device_EnumeratorName = new() { FormatId = new("A45C254E-DF1C-4EFD-8020-67D146A850E0"), PropertyId = 24 };
+
+    public static readonly PropertyKey PKEY_Device_FriendlyName = new() { FormatId = new("A45C254E-DF1C-4EFD-8020-67D146A850E0"), PropertyId = 14 };
+
+    /// <summary>A string property of a device, or null.</summary>
+    public static string? GetString(IMMDevice device, PropertyKey key)
+    {
+        if (device.OpenPropertyStore(STGM_READ, out var store) != 0)
+        {
+            return null;
+        }
+
+        try
+        {
+            if (store.GetValue(ref key, out var value) != 0)
+            {
+                return null;
+            }
+            try
+            {
+                return value.Type == VT_LPWSTR ? Marshal.PtrToStringUni(value.Pointer) : null;
+            }
+            finally
+            {
+                PropVariantClear(ref value);
+            }
+        }
+        finally
+        {
+            Marshal.ReleaseComObject(store);
+        }
+    }
+
+    [DllImport("ole32.dll")]
+    private static extern int PropVariantClear(ref PropVariant value);
 
     [ComImport, Guid("5CDF2C82-841E-4546-9722-0CF74078229A"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     public interface IAudioEndpointVolume

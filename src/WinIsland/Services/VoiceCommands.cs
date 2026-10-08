@@ -262,9 +262,15 @@ internal static partial class VoiceCommands
 
     private static bool Has(string text, string pattern) => Regex.IsMatch(text, pattern);
 
-    /// <summary>"hey siro", "ok siri", "siro" at the start.</summary>
+    /// <summary>
+    /// "hey siro", "siro", "ok zero" at the start (a real word like "zero" only after a greeting). "Hey" is
+    /// sometimes heard as "it's", "say" or "a".
+    /// </summary>
     private static readonly Regex s_wakePattern = new(
-        $@"^((hey|hi|okay|ok|hello)\s+)?({string.Join("|", [Assistant.Name.ToLowerInvariant(), .. Assistant.SoundsLike])})\b\s*");
+        $@"^((({Greetings})\s+)?({string.Join("|", [Assistant.Name.ToLowerInvariant(), .. Assistant.SoundsLike])})" +
+        $@"|({Greetings})\s+({string.Join("|", Assistant.AlsoHeardAs)}))\b\s*");
+
+    private const string Greetings = "hey|hi|high|okay|ok|hello|it's|its|say|a";
 
     // Not "start" or "run": "start the music" isn't opening an app called Music.
     [GeneratedRegex(@"^(open|launch)\s+(?<app>.+)$")]

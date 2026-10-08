@@ -113,6 +113,14 @@ public sealed partial class SettingsWindow : Window
                 ? _settings.AssistantShortcut
                 : HotkeyListener.Choices[0];
             UpdateShortcutDescription();
+
+            WakeWordTitle.Text = $"Listen for “{Assistant.WakePhrase}”";
+            WakeWordDescription.Text =
+                $"Say “{Assistant.WakePhrase}” instead of pressing the shortcut, or say it with your request: “{Assistant.WakePhrase}, next song”. " +
+                "The microphone stays on (Windows shows its mic icon in the taskbar). Only the first moment of each thing said near the PC " +
+                "is checked for the name, on this PC; nothing is kept or sent anywhere. A Bluetooth headset's microphone is never used for this.";
+            WakeWordToggle.IsOn = _settings.WakeWord;
+            UpdateWakeWordStatus();
         }
         finally
         {
@@ -225,6 +233,25 @@ public sealed partial class SettingsWindow : Window
     {
         Update(s => s.VoiceAssistant = AssistantToggle.IsOn);
         UpdateShortcutDescription();
+        UpdateWakeWordStatus();
+    }
+
+    private async void OnWakeWordToggled(object sender, RoutedEventArgs e)
+    {
+        Update(s => s.WakeWord = WakeWordToggle.IsOn);
+        UpdateWakeWordStatus();
+
+        // The microphone opens in the background; say how that went.
+        await Task.Delay(1500);
+        UpdateWakeWordStatus();
+    }
+
+    private void UpdateWakeWordStatus()
+    {
+        WakeWordToggle.IsEnabled = _settings.VoiceAssistant;
+        string? problem = _settings.VoiceAssistant && _settings.WakeWord ? AssistantActivity.WakeWordProblem : null;
+        WakeWordStatus.Text = problem ?? "";
+        WakeWordStatus.Visibility = problem is null ? Visibility.Collapsed : Visibility.Visible;
     }
 
     private void OnShortcutChanged(object sender, SelectionChangedEventArgs e)

@@ -35,7 +35,9 @@ internal sealed class PrivacyActivity : TransientActivity
 
     protected override bool IsEnabled => AppSettings.Current.ShowPrivacy;
 
-    public bool MicrophoneInUse => IsEnabled && _uses.Any(u => u.Capability == Capability.Microphone);
+    /// <summary>WinIsland's own use counts only while the assistant listens to a request, not while it waits for its name.</summary>
+    public bool MicrophoneInUse => IsEnabled && _uses.Any(u =>
+        u.Capability == Capability.Microphone && (!PrivacyMonitor.IsThisApp(u) || AssistantActivity.IsListeningToRequest));
 
     public bool CameraInUse => IsEnabled && _uses.Any(u => u.Capability == Capability.Camera);
 

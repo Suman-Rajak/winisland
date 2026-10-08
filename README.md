@@ -2,7 +2,7 @@
 
 A Dynamic Island for Windows: a pill at the top of the screen that expands on hover and shows what's going on.
 
-**Status: Phase 3** — voice: **Siro**, a push-to-talk assistant that runs simple commands on the spot. (Phase 2's live activities: now playing, volume, brightness, battery, Bluetooth, mic/camera, clipboard history, file shelf, notifications.)
+**Status: Phase 3** — voice: **Siro**, an assistant you start with a shortcut or "Hey Siro", which runs simple commands on the spot. (Phase 2's live activities: now playing, volume, brightness, battery, Bluetooth, mic/camera, clipboard history, file shelf, notifications.)
 
 ## What works
 
@@ -28,7 +28,9 @@ A Dynamic Island for Windows: a pill at the top of the screen that expands on ho
   - apps: "open Chrome", "open VS Code", "open settings" (anything in the Start menu; a few sites like YouTube and Gmail open in the browser if there's no app)
   - "what time is it", "what's the date", "lock my PC", "what can you do"
 
-  It answers on the island and out loud (Windows' own voice), except for music commands, where you'd hear it over the song. Anything else gets "I can't do that yet" — the assistant brain comes in Phase 4. Speech is turned into text on this PC by OpenAI's Whisper ("small" model, via whisper.cpp), on the graphics card through Vulkan when there is one, else the CPU; it detects the language by itself. The model (465 MB) is downloaded once from Hugging Face the first time you press the shortcut, into `Models` in the data folder; nothing you say leaves the PC. The model stays loaded for 10 minutes after use, then is unloaded to free memory. While Siro listens the mic dot shows as usual, but without the "who's using the mic" notice.
+  With **Listen for "Hey Siro"** on (Settings, off by default) you can also just say "Hey Siro", pause, then the request, or say it all in one go: "Hey Siro, next song". The microphone then stays open (Windows shows its mic icon in the taskbar; the island's own mic dot shows only while Siro listens to a request). A loudness check finds where speech starts after a pause, and only the first two seconds of it are checked for the name, by one quick Whisper pass (~0.2 s on the graphics card) that's told to expect "Siro" and must hear "hey/hi/okay Siro". "Hey Siri", "zero" and the like don't match, and noise comes out as captions ("static", "music"), but some voices' "Hey Sarah" can; Siro then just listens and times out. Nothing else is kept, logged or sent. Windows' echo cancellation removes the PC's own sound from the microphone, so music, videos and Siro's replies don't wake it, and "Hey Siro, pause" works over loud music. (It also means you can't test it by playing "Hey Siro" through the PC's speakers.) A Bluetooth headset's microphone is never held open for this (it would switch the headset to muffled phone-call audio); the built-in one is used instead, or none.
+
+  It answers on the island and out loud (Windows' own voice), except for music commands, where you'd hear it over the song. Anything else gets "I can't do that yet" — the assistant brain comes in Phase 4. Speech is turned into text on this PC by OpenAI's Whisper ("small" model, via whisper.cpp), on the graphics card through Vulkan when there is one, else the CPU. It picks between English and Hindi by itself (left to choose from every language, Whisper takes short English requests for Spanish or even Sinhala). The model (465 MB) is downloaded once from Hugging Face the first time you press the shortcut, into `Models` in the data folder; nothing you say leaves the PC. The model stays loaded for 10 minutes after use, then is unloaded to free memory. While Siro listens the mic dot shows as usual, but without the "who's using the mic" notice.
 - Hides itself while a fullscreen app or game is in front.
 - Tray icon: click for Settings, right-click to hide the island or quit. Launching WinIsland again while it's running also opens Settings.
 
@@ -57,6 +59,7 @@ Changes apply immediately and are saved to `settings.json` in the data folder:
 | Notifications | Other apps' notifications on the island (installed version only) |
 | Siro voice assistant | The shortcut and the island's mic button |
 | Keyboard shortcut | Siro's shortcut: Ctrl+Alt+S, Ctrl+Alt+Space, Ctrl+Shift+Space or Alt+Shift+Space; warns if another app already owns it |
+| Listen for "Hey Siro" | Wake phrase instead of (or as well as) the shortcut; keeps the microphone open |
 | Find missing album art online | iTunes / MusicBrainz lookup for apps that don't share artwork (sends artist + title to them) |
 
 ## Run it
@@ -130,8 +133,11 @@ src/WinIsland/
   Services/NotificationMonitor.cs  other apps' notifications (UserNotificationListener; packaged only)
   Services/Assistant.cs          the assistant's name, in one place
   Services/HotkeyListener.cs     Siro's global keyboard shortcut
-  Services/MicrophoneRecorder.cs microphone capture (AudioGraph) → 16 kHz mono, with live loudness
-  Services/SpeechToText.cs       Whisper: model download, loading (Vulkan GPU, CPU fallback), transcription
+  Services/MicrophoneRecorder.cs microphone capture (AudioGraph) into a rolling 20 s buffer, read back as 16 kHz mono
+  Services/MicrophonePicker.cs   which microphone to use (never a Bluetooth headset's when there's another)
+  Services/SpeechDetector.cs     speech vs. background noise, by loudness
+  Services/WakeWordDetector.cs   finds the start of each thing said and has it checked for "Hey Siro"
+  Services/SpeechToText.cs       Whisper: model download, loading (Vulkan GPU, CPU fallback), transcription (English or Hindi), wake-phrase check
   Services/VoiceCommands.cs      understands the spoken commands and carries them out
   Services/SystemActions.cs      volume, brightness, media keys, lock
   Services/AppCatalog.cs         finds installed apps by spoken name and opens them

@@ -287,6 +287,21 @@
                                   SelectionChanged="OnShortcutChanged" />
                     </Grid>
                 </Border>
+                <Border Style="{StaticResource CardStyle}">
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock x:Name="WakeWordTitle" Style="{StaticResource CardTitleStyle}" />
+                            <TextBlock x:Name="WakeWordDescription" Style="{StaticResource CardDescriptionStyle}" />
+                            <TextBlock x:Name="WakeWordStatus" Style="{StaticResource CardDescriptionStyle}" Margin="0,4,0,0"
+                                       Foreground="{ThemeResource SystemFillColorCautionBrush}" Visibility="Collapsed" />
+                        </StackPanel>
+                        <ToggleSwitch x:Name="WakeWordToggle" Grid.Column="1" OnContent="" OffContent="" MinWidth="0" Toggled="OnWakeWordToggled" />
+                    </Grid>
+                </Border>
 
                 <!-- Music -->
                 <TextBlock Text="Music" Style="{StaticResource SectionHeaderStyle}" />

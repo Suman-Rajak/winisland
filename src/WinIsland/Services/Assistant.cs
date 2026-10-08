@@ -7,6 +7,12 @@ internal static class Assistant
 
     public static string WakePhrase => $"Hey {Name}";
 
-    /// <summary>How speech recognition sometimes writes the name.</summary>
-    public static readonly string[] SoundsLike = ["siri", "sirow", "sero", "cero", "ciro", "cyro", "syro", "sirro", "sheero", "shiro"];
+    /// <summary>How speech recognition writes the name when it's expecting it (lower case).</summary>
+    public static readonly string[] SoundsLike = ["sirow", "sero", "cero", "ciro", "cyro", "syro", "sirro", "sheero", "shiro"];
+
+    /// <summary>
+    /// Real words it sometimes hears instead. Taken as the name only at the start of a request, after a
+    /// greeting ("hey zero, next song"), never on their own.
+    /// </summary>
+    public static readonly string[] AlsoHeardAs = ["zero", "0", "sorrow", "sirio", "cirro", "siri"];
 }

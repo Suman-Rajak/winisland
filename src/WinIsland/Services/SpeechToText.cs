@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using System.Text;
+using System.Text.RegularExpressions;
 using Whisper.net;
 using Whisper.net.LibraryLoader;
 using Whisper.net.Logger;
@@ -9,7 +11,8 @@ namespace WinIsland.Services;
 /// Turns speech into text on this PC with OpenAI's Whisper (the "small" model, through whisper.cpp).
 /// It runs on the graphics card through Vulkan when there is one, else on the CPU. The model (465 MB)
 /// is downloaded once from Hugging Face into the data folder; nothing you say leaves the PC.
-/// Loading the model takes a few seconds, so it stays loaded until it's been unused for a while.
+/// Loading the model takes a second or two, so it stays loaded until it's been unused for a while
+/// (or for good, while listening for the wake phrase).
 /// </summary>
 internal sealed class SpeechToText
 {
@@ -22,10 +25,24 @@ internal sealed class SpeechToText
 
     private static readonly string s_modelPath = Path.Combine(AppPaths.DataFolder, "Models", ModelFile);
 
+    /// <summary>The languages requests may be in; the first is the fallback.</summary>
+    private static readonly string[] s_languages = ["en", "hi"];
+
+    // The wake phrase at the start of what was said: "hey siro", "ok siro…". The check is told to expect
+    // the name, so it spells it right. (Told nothing, it writes real voices as "a0" or even "(laughing)";
+    // told to expect rivals too, "Hey Siri, hey hey hey"; both lose more real wake-ups than they save.)
+    // Noise doesn't fool it: it's captioned ("static", "music"). Some voices' "Hey Sarah" can.
+    private static readonly string s_wakePrompt = $"{Assistant.WakePhrase}.";
+    private static readonly Regex s_wakePhrase = new(
+        $@"^(hey|hi|high|hay|ok|okay|a|eh) ({string.Join("|", [Assistant.Name.ToLowerInvariant(), .. Assistant.SoundsLike])})(?!\S)");
+    private static readonly TimeSpan WakeCheckLength = TimeSpan.FromSeconds(3);
+
     private readonly SemaphoreSlim _lock = new(1, 1);
     private readonly Timer _unloadTimer;
     private WhisperFactory? _factory;
     private WhisperProcessor? _processor;
+    private WhisperProcessor? _wakeCheck; // short audio, English, no retries
+    private readonly HashSet<WhisperProcessor> _warmed = [];
     private Task? _download;
 
     static SpeechToText()
@@ -47,6 +64,9 @@ internal sealed class SpeechToText
     }
 
     public static bool IsModelDownloaded => File.Exists(s_modelPath);
+
+    /// <summary>Keep the model loaded even when unused (while listening for the wake phrase).</summary>
+    public bool KeepLoaded { get; set; }
 
     /// <summary>
     /// Downloads the model, reporting progress (0 to 1). Calling it again while a download is running
@@ -104,13 +124,32 @@ internal sealed class SpeechToText
         return await source.ReadAsync(buffer, stalled.Token);
     }
 
-    /// <summary>Loads the model ahead of time (say, while you're still talking). Needs the model downloaded.</summary>
-    public Task WarmUpAsync() => Task.Run(async () =>
+    /// <summary>
+    /// Loads the model ahead of time (say, while you're still talking), and gets the graphics card ready
+    /// by running a moment of silence through it: the first run sets up the GPU code, which can take
+    /// many seconds. <paramref name="wakeCheck"/> readies the wake-phrase check too. Needs the model downloaded.
+    /// </summary>
+    public Task WarmUpAsync(bool wakeCheck = false) => Task.Run(async () =>
     {
         await _lock.WaitAsync();
         try
         {
             EnsureLoaded();
+            var silence = new float[MicrophoneRecorder.SampleRate];
+            var watch = Stopwatch.StartNew();
+            foreach (var processor in wakeCheck ? new[] { _processor!, _wakeCheck! } : new[] { _processor! })
+            {
+                if (_warmed.Add(processor))
+                {
+                    await foreach (var _ in processor.ProcessAsync(silence))
+                    {
+                    }
+                }
+            }
+            if (watch.ElapsedMilliseconds > 100)
+            {
+                Log.Info($"Speech recognition warmed up in {watch.ElapsedMilliseconds} ms");
+            }
         }
         catch (Exception ex)
         {
@@ -130,12 +169,16 @@ internal sealed class SpeechToText
         {
             EnsureLoaded();
             var watch = Stopwatch.StartNew();
+
+            // Left to guess from a few seconds, Whisper takes plain English for Spanish, Hungarian, even
+            // Sinhala (and then struggles for seconds), so it only chooses between the languages you speak.
+            var (language, _) = _processor!.DetectLanguageWithProbability(samples, s_languages);
+            _processor.ChangeLanguage(language ?? s_languages[0]);
+
             var text = new List<string>();
-            string? language = null;
-            await foreach (var segment in _processor!.ProcessAsync(samples, cancellation))
+            await foreach (var segment in _processor.ProcessAsync(samples, cancellation))
             {
                 text.Add(segment.Text);
-                language ??= segment.Language;
             }
 
             string result = CleanUp(string.Concat(text));
@@ -149,6 +192,46 @@ internal sealed class SpeechToText
             _lock.Release();
         }
     }, cancellation);
+
+    /// <summary>
+    /// Whether 16 kHz mono audio (up to ~2 s) starts with the wake phrase: one quick pass (~0.2 s on a
+    /// graphics card); see the pattern above. Returns null if it doesn't; otherwise whether more was said
+    /// after it ("hey siro, what time…").
+    /// </summary>
+    public Task<bool?> CheckWakePhraseAsync(float[] samples) => Task.Run(async () =>
+    {
+        await _lock.WaitAsync();
+        try
+        {
+            EnsureLoaded();
+            var audio = new float[Math.Max(samples.Length, (int)(WakeCheckLength.TotalSeconds * MicrophoneRecorder.SampleRate))];
+            samples.CopyTo(audio, 0);
+
+            string heard = await TranscribeForWakeAsync(_wakeCheck!, audio);
+            var wake = s_wakePhrase.Match(heard);
+            if (!wake.Success)
+            {
+                return (bool?)null;
+            }
+            Log.Info("Heard the wake phrase");
+            return heard.Length > wake.Length;
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    });
+
+    /// <summary>Lower case, words only: "Hey, Siro!" → "hey siro".</summary>
+    private static async Task<string> TranscribeForWakeAsync(WhisperProcessor processor, float[] audio)
+    {
+        var text = new StringBuilder();
+        await foreach (var segment in processor.ProcessAsync(audio))
+        {
+            text.Append(segment.Text).Append(' ');
+        }
+        return Regex.Replace(text.ToString().ToLowerInvariant(), @"[^\p{L}\p{N}]+", " ").Trim();
+    }
 
     /// <summary>Call while holding the lock.</summary>
     private void EnsureLoaded()
@@ -166,6 +249,18 @@ internal sealed class SpeechToText
             .WithNoContext()
             .WithThreads(Math.Clamp(Environment.ProcessorCount / 2, 2, 8))
             .Build();
+
+        // The wake check looks at ~2 s of English (the encoder only covers the first 5 s: much faster), and
+        // takes Whisper's first answer instead of retrying when it's unsure (which could take seconds).
+        _wakeCheck = _factory.CreateBuilder()
+            .WithLanguage("en")
+            .WithPrompt(s_wakePrompt)
+            .WithNoContext()
+            .WithAudioContextSize(256)
+            .WithTemperatureInc(0)
+            .WithMaxTokensPerSegment(24)
+            .WithThreads(Math.Clamp(Environment.ProcessorCount / 2, 2, 8))
+            .Build();
         Log.Info($"Speech model loaded in {watch.ElapsedMilliseconds} ms, running on {RuntimeOptions.LoadedLibrary?.ToString() ?? "unknown"}");
         _unloadTimer.Change(UnloadAfter, Timeout.InfiniteTimeSpan);
     }
@@ -175,14 +270,17 @@ internal sealed class SpeechToText
         await _lock.WaitAsync();
         try
         {
-            if (_processor is null)
+            if (_processor is null || KeepLoaded)
             {
                 return;
             }
 
             await _processor.DisposeAsync();
+            await _wakeCheck!.DisposeAsync();
             _factory?.Dispose();
+            _warmed.Clear();
             _processor = null;
+            _wakeCheck = null;
             _factory = null;
             Log.Info("Speech model unloaded (unused for a while)");
         }
@@ -198,8 +296,8 @@ internal sealed class SpeechToText
     /// </summary>
     private static string CleanUp(string text)
     {
-        text = System.Text.RegularExpressions.Regex.Replace(text, @"\[[^\]]*\]|\([^)]*\)|\*[^*]*\*", " ");
-        text = System.Text.RegularExpressions.Regex.Replace(text, @"\s+", " ").Trim();
+        text = Regex.Replace(text, @"\[[^\]]*\]|\([^)]*\)|\*[^*]*\*", " ");
+        text = Regex.Replace(text, @"\s+", " ").Trim();
         return text.Trim('.', ' ') is "" or "Thank you" or "Thanks for watching" or "you" ? "" : text;
     }
 }
