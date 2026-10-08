@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using Microsoft.UI.Dispatching;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Storage.Streams;
+using WinIsland.Interop;
 
 namespace WinIsland.Services;
 
@@ -27,19 +28,16 @@ internal sealed record Clip(ClipKind Kind, string Key, string? Text, byte[]? Ima
 internal sealed class ClipboardWatcher
 {
     private const int WM_CLIPBOARDUPDATE = 0x031D;
-    private static readonly IntPtr HWND_MESSAGE = new(-3);
     private const long MaxImageBytes = 20 * 1024 * 1024;
 
     private readonly DispatcherQueue _dispatcher;
-    private readonly WndProc _wndProc; // kept alive: Windows holds a pointer to it
-    private IntPtr _window;
+    private MessageWindow? _window;
     private bool _readQueued;
     private DateTime _ignoreUntil;
 
     public ClipboardWatcher(DispatcherQueue dispatcher)
     {
         _dispatcher = dispatcher;
-        _wndProc = OnMessage;
     }
 
     public event Action<Clip>? Copied;
@@ -52,22 +50,15 @@ internal sealed class ClipboardWatcher
 
     public void Start()
     {
-        var windowClass = new WNDCLASSEX
-        {
-            cbSize = Marshal.SizeOf<WNDCLASSEX>(),
-            lpfnWndProc = Marshal.GetFunctionPointerForDelegate(_wndProc),
-            hInstance = GetModuleHandle(null),
-            lpszClassName = "WinIsland.ClipboardWatcher",
-        };
-        RegisterClassEx(ref windowClass);
-        _window = CreateWindowEx(0, windowClass.lpszClassName, "", 0, 0, 0, 0, 0, HWND_MESSAGE, IntPtr.Zero, windowClass.hInstance, IntPtr.Zero);
-        if (_window == IntPtr.Zero || !AddClipboardFormatListener(_window))
+        _window = new MessageWindow("ClipboardWatcher");
+        _window.MessageReceived += OnMessage;
+        if (!AddClipboardFormatListener(_window.Handle))
         {
             throw new InvalidOperationException($"Couldn't listen to the clipboard (error {Marshal.GetLastWin32Error()})");
         }
     }
 
-    private IntPtr OnMessage(IntPtr hwnd, uint message, IntPtr wParam, IntPtr lParam)
+    private void OnMessage(uint message, IntPtr wParam, IntPtr lParam)
     {
         // Apps often set the clipboard several times in a row; read once they're done.
         if (message == WM_CLIPBOARDUPDATE && !_readQueued)
@@ -80,7 +71,6 @@ internal sealed class ClipboardWatcher
                 await ReadAsync();
             });
         }
-        return DefWindowProc(hwnd, message, wParam, lParam);
     }
 
     private async Task ReadAsync()
@@ -185,40 +175,6 @@ internal sealed class ClipboardWatcher
         return bytes;
     }
 
-    // ---------------------------------------------------------------- Win32
-
-    private delegate IntPtr WndProc(IntPtr hwnd, uint message, IntPtr wParam, IntPtr lParam);
-
-    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-    private struct WNDCLASSEX
-    {
-        public int cbSize;
-        public uint style;
-        public IntPtr lpfnWndProc;
-        public int cbClsExtra;
-        public int cbWndExtra;
-        public IntPtr hInstance;
-        public IntPtr hIcon;
-        public IntPtr hCursor;
-        public IntPtr hbrBackground;
-        public string? lpszMenuName;
-        public string lpszClassName;
-        public IntPtr hIconSm;
-    }
-
-    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-    private static extern ushort RegisterClassEx(ref WNDCLASSEX windowClass);
-
-    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-    private static extern IntPtr CreateWindowEx(int exStyle, string className, string windowName, int style,
-        int x, int y, int width, int height, IntPtr parent, IntPtr menu, IntPtr instance, IntPtr param);
-
-    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
-    private static extern IntPtr DefWindowProc(IntPtr hwnd, uint message, IntPtr wParam, IntPtr lParam);
-
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool AddClipboardFormatListener(IntPtr hwnd);
-
-    [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
-    private static extern IntPtr GetModuleHandle(string? moduleName);
 }

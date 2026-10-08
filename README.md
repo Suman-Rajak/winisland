@@ -2,7 +2,7 @@
 
 A Dynamic Island for Windows: a pill at the top of the screen that expands on hover and shows what's going on.
 
-**Status: Phase 2** — live activities: now playing, volume, brightness, battery, Bluetooth, mic/camera, clipboard history, file shelf, notifications.
+**Status: Phase 3** — voice: **Siro**, a push-to-talk assistant that runs simple commands on the spot. (Phase 2's live activities: now playing, volume, brightness, battery, Bluetooth, mic/camera, clipboard history, file shelf, notifications.)
 
 ## What works
 
@@ -21,6 +21,14 @@ A Dynamic Island for Windows: a pill at the top of the screen that expands on ho
 - Clipboard history: the last 20 things you copied (text, links, images, files), newest first; click one to copy it again, × to forget it. Kept in memory only (gone when WinIsland quits), and anything password managers mark as private is skipped, using the same markers as Windows' own clipboard history.
 - File shelf: drag files or folders onto the island to park them; drag them out later into any folder, email or chat (always as a copy, the originals never move), click to open, × to take off the shelf. The shelf only remembers where files are, in `shelf.json` in the data folder (see below), so it survives restarts. Things that aren't files yet (an image dragged out of a browser) are saved into a `Shelf` folder there.
 - Notifications (installed version only, see below): other apps' notifications appear as a two-line banner for a few seconds; hover it to read the whole message, with Open and Clear. Quiet while Windows' Do Not Disturb is on. Windows' own banner still shows too (turn it off per app in Windows Settings if you only want the island).
+- **Siro**, the voice assistant: press **Ctrl+Alt+S** (S for Siro; another shortcut can be picked in Settings) or the mic at the end of the expanded island's tab row, and speak. The pill shows a live waveform while it listens and stops by itself when you pause (or press the shortcut again, or tap the pill). It understands:
+  - music: "pause", "play", "next song", "previous", "skip this track"
+  - volume: "volume 30", "turn it up", "quieter", "mute", "unmute"
+  - brightness: "brightness 50", "brighter", "make the screen dimmer"
+  - apps: "open Chrome", "open VS Code", "open settings" (anything in the Start menu; a few sites like YouTube and Gmail open in the browser if there's no app)
+  - "what time is it", "what's the date", "lock my PC", "what can you do"
+
+  It answers on the island and out loud (Windows' own voice), except for music commands, where you'd hear it over the song. Anything else gets "I can't do that yet" — the assistant brain comes in Phase 4. Speech is turned into text on this PC by OpenAI's Whisper ("small" model, via whisper.cpp), on the graphics card through Vulkan when there is one, else the CPU; it detects the language by itself. The model (465 MB) is downloaded once from Hugging Face the first time you press the shortcut, into `Models` in the data folder; nothing you say leaves the PC. The model stays loaded for 10 minutes after use, then is unloaded to free memory. While Siro listens the mic dot shows as usual, but without the "who's using the mic" notice.
 - Hides itself while a fullscreen app or game is in front.
 - Tray icon: click for Settings, right-click to hide the island or quit. Launching WinIsland again while it's running also opens Settings.
 
@@ -47,6 +55,8 @@ Changes apply immediately and are saved to `settings.json` in the data folder:
 | Clipboard history | The clipboard tab; off also forgets everything in it |
 | File shelf | The shelf tab, and dropping files on the island |
 | Notifications | Other apps' notifications on the island (installed version only) |
+| Siro voice assistant | The shortcut and the island's mic button |
+| Keyboard shortcut | Siro's shortcut: Ctrl+Alt+S, Ctrl+Alt+Space, Ctrl+Shift+Space or Alt+Shift+Space; warns if another app already owns it |
 | Find missing album art online | iTunes / MusicBrainz lookup for apps that don't share artwork (sends artist + title to them) |
 
 ## Run it
@@ -103,6 +113,7 @@ src/WinIsland/
     ClipboardActivity.cs      clipboard history tab (+ ClipboardView, ClipboardEntry)
     ShelfActivity.cs          file shelf tab (+ ShelfView, ShelfItem); dropping on the island is handled in IslandWindow
     NotificationActivity.cs   notification banner and expanded message (+ NotificationView, NotificationExpandedView)
+    AssistantActivity.cs      Siro: listening, thinking, answering (+ AssistantView with the waveform)
   SettingsWindow.xaml(.cs)    settings UI
   AppSettings.cs              settings model + JSON persistence
   StartupRegistration.cs      "Start with Windows"
@@ -117,12 +128,21 @@ src/WinIsland/
   Services/PrivacyMonitor.cs     which apps are using the mic/camera (consent store, re-read every 1.5 s)
   Services/ClipboardWatcher.cs   clipboard change listener; reads copies, skips private ones
   Services/NotificationMonitor.cs  other apps' notifications (UserNotificationListener; packaged only)
-  Package.appxmanifest        the packaged build's manifest (notification access, startup task)
+  Services/Assistant.cs          the assistant's name, in one place
+  Services/HotkeyListener.cs     Siro's global keyboard shortcut
+  Services/MicrophoneRecorder.cs microphone capture (AudioGraph) → 16 kHz mono, with live loudness
+  Services/SpeechToText.cs       Whisper: model download, loading (Vulkan GPU, CPU fallback), transcription
+  Services/VoiceCommands.cs      understands the spoken commands and carries them out
+  Services/SystemActions.cs      volume, brightness, media keys, lock
+  Services/AppCatalog.cs         finds installed apps by spoken name and opens them
+  Services/Speaker.cs            spoken replies (Windows speech synthesis)
+  Package.appxmanifest        the packaged build's manifest (notification and microphone access, startup task)
   AppPaths.cs                 data folder, and whether this is the installed (packaged) build
 build-package.ps1             builds and installs the packaged version (Developer Mode)
   Services/FullscreenDetector.cs
   Interop/Native.cs           Win32 / DWM calls
   Interop/CoreAudio.cs        Core Audio COM interfaces
   Interop/Displays.cs         monitor enumeration
+  Interop/MessageWindow.cs    hidden message-only window (clipboard and hotkey messages)
   TrayIconController.cs       notification-area icon
 ```

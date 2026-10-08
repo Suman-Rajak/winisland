@@ -258,6 +258,36 @@
                     </Grid>
                 </Border>
 
+                <!-- Voice assistant (named in code: Assistant.Name) -->
+                <TextBlock x:Name="AssistantHeader" Style="{StaticResource SectionHeaderStyle}" />
+                <Border Style="{StaticResource CardStyle}">
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock x:Name="AssistantTitle" Style="{StaticResource CardTitleStyle}" />
+                            <TextBlock x:Name="AssistantDescription" Style="{StaticResource CardDescriptionStyle}" />
+                        </StackPanel>
+                        <ToggleSwitch x:Name="AssistantToggle" Grid.Column="1" OnContent="" OffContent="" MinWidth="0" Toggled="OnAssistantToggled" />
+                    </Grid>
+                </Border>
+                <Border Style="{StaticResource CardStyle}">
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Keyboard shortcut" Style="{StaticResource CardTitleStyle}" />
+                            <TextBlock x:Name="ShortcutDescription" Style="{StaticResource CardDescriptionStyle}" />
+                        </StackPanel>
+                        <ComboBox x:Name="ShortcutCombo" Grid.Column="1" MinWidth="170" VerticalAlignment="Center"
+                                  SelectionChanged="OnShortcutChanged" />
+                    </Grid>
+                </Border>
+
                 <!-- Music -->
                 <TextBlock Text="Music" Style="{StaticResource SectionHeaderStyle}" />
                 <Border Style="{StaticResource CardStyle}">

@@ -6,7 +6,9 @@ using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Windows.Graphics;
+using WinIsland.Activities;
 using WinIsland.Interop;
+using WinIsland.Services;
 using WinRT.Interop;
 
 namespace WinIsland;
@@ -98,6 +100,19 @@ public sealed partial class SettingsWindow : Window
                 ? "Show other apps' notifications on the island; hover one to read it all. Quiet while Do Not Disturb is on."
                 : "Needs the installed version of WinIsland: this copy isn't installed as a package, so Windows won't share notifications with it.";
             ArtworkToggle.IsOn = _settings.FindArtworkOnline;
+
+            AssistantHeader.Text = Assistant.Name;
+            AssistantTitle.Text = $"{Assistant.Name} voice assistant";
+            AssistantToggle.IsOn = _settings.VoiceAssistant;
+            AssistantDescription.Text =
+                "Press the shortcut below (or the mic on the expanded island) and speak: “pause”, “next song”, " +
+                "“volume 30”, “open Chrome”. Your voice is turned into text on this PC and never sent anywhere." +
+                (SpeechToText.IsModelDownloaded ? "" : " The first time, it downloads its speech model (465 MB).");
+            ShortcutCombo.ItemsSource = HotkeyListener.Choices;
+            ShortcutCombo.SelectedItem = HotkeyListener.Choices.Contains(_settings.AssistantShortcut)
+                ? _settings.AssistantShortcut
+                : HotkeyListener.Choices[0];
+            UpdateShortcutDescription();
         }
         finally
         {
@@ -205,6 +220,33 @@ public sealed partial class SettingsWindow : Window
 
     private void OnNotificationsToggled(object sender, RoutedEventArgs e) =>
         Update(s => s.ShowNotifications = NotificationsToggle.IsOn);
+
+    private void OnAssistantToggled(object sender, RoutedEventArgs e)
+    {
+        Update(s => s.VoiceAssistant = AssistantToggle.IsOn);
+        UpdateShortcutDescription();
+    }
+
+    private void OnShortcutChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (ShortcutCombo.SelectedItem is string shortcut)
+        {
+            Update(s => s.AssistantShortcut = shortcut);
+            UpdateShortcutDescription();
+        }
+    }
+
+    /// <summary>The island registers the shortcut as soon as the setting changes, so whether it got it is known right away.</summary>
+    private void UpdateShortcutDescription()
+    {
+        ShortcutCombo.IsEnabled = _settings.VoiceAssistant;
+        ShortcutDescription.Text = !_settings.VoiceAssistant || AssistantActivity.ShortcutWorks
+            ? "Works in any app. Press it again to stop early."
+            : $"Another app already uses {_settings.AssistantShortcut}, so it does nothing here. Pick another.";
+        ShortcutDescription.Foreground = !_settings.VoiceAssistant || AssistantActivity.ShortcutWorks
+            ? (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"]
+            : (Brush)Application.Current.Resources["SystemFillColorCautionBrush"];
+    }
 
     private void OnArtworkToggled(object sender, RoutedEventArgs e) =>
         Update(s => s.FindArtworkOnline = ArtworkToggle.IsOn);

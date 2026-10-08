@@ -47,6 +47,17 @@ internal sealed class PrivacyMonitor
 
     public event Action<IReadOnlyList<CapabilityUse>>? Changed;
 
+    /// <summary>
+    /// WinIsland itself (the assistant listening). It's already showing its own waveform, so it gets no
+    /// "who's using the mic" notice, though the dot still shows as for any app.
+    /// </summary>
+    public static bool IsThisApp(CapabilityUse use) => use.Key.Equals(s_ownKey.Value, StringComparison.OrdinalIgnoreCase);
+
+    // How the consent store names us: the package family, or the exe's path with \ as #.
+    private static readonly Lazy<string> s_ownKey = new(() => AppPaths.IsPackaged
+        ? Windows.ApplicationModel.Package.Current.Id.FamilyName
+        : (Environment.ProcessPath ?? "").Replace('\\', '#'));
+
     public void Start()
     {
         // Registry change notifications belong to the thread that asked for them, so a dedicated one waits.

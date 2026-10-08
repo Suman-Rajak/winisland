@@ -76,6 +76,12 @@ internal sealed class AppSettings
     /// <summary>Show other apps' notifications on the island (needs the installed, packaged WinIsland).</summary>
     public bool ShowNotifications { get; set; } = true;
 
+    /// <summary>The voice assistant, started with <see cref="AssistantShortcut"/> or the island's mic button.</summary>
+    public bool VoiceAssistant { get; set; } = true;
+
+    /// <summary>One of <see cref="Services.HotkeyListener.Choices"/>.</summary>
+    public string AssistantShortcut { get; set; } = Services.HotkeyListener.Choices[0];
+
     [JsonIgnore]
     public double GlassOpacity => 1 - Math.Clamp(GlassTransparency, 0, 0.3);
 
@@ -114,6 +120,8 @@ internal sealed class AppSettings
         ClipboardHistory = defaults.ClipboardHistory;
         FileShelf = defaults.FileShelf;
         ShowNotifications = defaults.ShowNotifications;
+        VoiceAssistant = defaults.VoiceAssistant;
+        AssistantShortcut = defaults.AssistantShortcut;
         Save();
     }
 

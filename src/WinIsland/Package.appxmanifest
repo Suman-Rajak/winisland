@@ -47,5 +47,7 @@
     <rescap:Capability Name="runFullTrust" />
     <!-- Reading other apps' notifications; Windows also asks you once. -->
     <uap3:Capability Name="userNotificationListener" />
+    <!-- The voice assistant; Windows asks you once. -->
+    <DeviceCapability Name="microphone" />
   </Capabilities>
 </Package>

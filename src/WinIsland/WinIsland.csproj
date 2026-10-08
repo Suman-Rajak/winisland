@@ -16,6 +16,7 @@
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks> <!-- reading microphone buffers -->
   </PropertyGroup>
 
   <!--
@@ -44,6 +45,18 @@
     <PackageReference Include="WinUIEx" Version="2.9.3" />
     <PackageReference Include="H.NotifyIcon.WinUI" Version="2.4.1" />
     <PackageReference Include="System.Management" Version="10.0.12" />
+    <!-- Siro's speech-to-text: Whisper on the GPU through Vulkan, with a CPU fallback. -->
+    <PackageReference Include="Whisper.net" Version="1.9.1" />
+    <PackageReference Include="Whisper.net.Runtime" Version="1.9.1" />
+    <PackageReference Include="Whisper.net.Runtime.Vulkan" Version="1.9.1" />
   </ItemGroup>
+
+  <!-- Whisper's packages bring native libraries for every OS and processor; keep only the Windows ones for this build's. -->
+  <Target Name="KeepOnlyThisPlatformsWhisperLibraries" BeforeTargets="AssignTargetPaths">
+    <ItemGroup>
+      <None Remove="@(None)"
+            Condition="$([System.String]::Copy('%(None.TargetPath)').StartsWith('runtimes')) and !$([System.String]::Copy('%(None.TargetPath)').Contains('/win-$(Platform.ToLowerInvariant())/'))" />
+    </ItemGroup>
+  </Target>
 
 </Project>

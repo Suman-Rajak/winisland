@@ -58,6 +58,15 @@ foreach ($file in "settings.json", "shelf.json") {
     }
 }
 
+# Siro's speech model is big (465 MB): move the plain build's rather than download it a second time.
+$plainModel = Join-Path $plainData "Models\ggml-small.bin"
+$packageModels = Join-Path $packageData "Models"
+if ((Test-Path $plainModel) -and -not (Test-Path (Join-Path $packageModels "ggml-small.bin"))) {
+    New-Item -ItemType Directory -Force $packageModels | Out-Null
+    Move-Item $plainModel $packageModels
+    Write-Host "Moved the speech model from the plain build."
+}
+
 # The plain build's "Start with Windows" entry would launch the old copy at sign-in. Swap it for a note
 # that tells the installed app to turn on its own startup task (it can't touch the real Run key itself).
 $runKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"

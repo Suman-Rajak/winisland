@@ -69,7 +69,9 @@ internal sealed class PrivacyActivity : TransientActivity
 
     private void OnUsesChanged(IReadOnlyList<CapabilityUse> uses)
     {
-        var started = uses.Where(u => !_uses.Any(p => p.Capability == u.Capability && p.Key == u.Key)).ToList();
+        var started = uses
+            .Where(u => !PrivacyMonitor.IsThisApp(u) && !_uses.Any(p => p.Capability == u.Capability && p.Key == u.Key))
+            .ToList();
         _uses = uses;
         Log.Info($"Mic/camera in use: {(uses.Count == 0 ? "nothing" : string.Join(", ", uses.Select(u => $"{u.App} ({u.Capability})")))}");
 

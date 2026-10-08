@@ -48,12 +48,14 @@ public sealed partial class IslandWindow : Window
     private readonly List<IslandActivity> _activities;
     private readonly PrivacyActivity _privacy;
     private readonly ShelfActivity _shelf;
+    private readonly AssistantActivity _assistant;
     private readonly Visual _bubbleVisual;
     private readonly ExpressionAnimation _bubbleFollow;
     private readonly Dictionary<FrameworkElement, bool> _layerVisible = [];
 
     private IslandState _state = IslandState.Idle;
     private IslandActivity? _shown;
+    private PillShape _appliedShape;
     private List<IslandActivity> _tabs = [];
     private int _selectedTab;
     private string _tabBarSignature = string.Empty;
@@ -109,6 +111,7 @@ public sealed partial class IslandWindow : Window
         var clipboard = new ClipboardActivity(DispatcherQueue);
         _shelf = new ShelfActivity();
         var notifications = new NotificationActivity(DispatcherQueue);
+        _assistant = new AssistantActivity(DispatcherQueue);
         _activities =
         [
             new ClockActivity(DispatcherQueue),
@@ -121,6 +124,7 @@ public sealed partial class IslandWindow : Window
             notifications,
             clipboard,
             _shelf,
+            _assistant,
         ];
         foreach (var activity in _activities)
         {
@@ -504,8 +508,9 @@ public sealed partial class IslandWindow : Window
         }
         tabs.AddRange(_activities.Where(a => a.IsTab && a.HasExpanded));
 
+        bool held = _activities.Any(a => a.HoldsIsland);
         var state = _options.PinnedState
-            ?? (_wantExpanded && tabs.Count > 0 ? IslandState.Expanded
+            ?? (_wantExpanded && tabs.Count > 0 && !held ? IslandState.Expanded
                 : compact is not null ? IslandState.Compact
                 : IslandState.Idle);
 
@@ -531,6 +536,11 @@ public sealed partial class IslandWindow : Window
         _tabs = tabs;
         if (state == _state && shown == _shown && !tabsChanged)
         {
+            // Same activity, but it may have changed size (the assistant goes from listening to answering).
+            if (CurrentShape() != _appliedShape)
+            {
+                ApplyShape();
+            }
             return;
         }
 
@@ -539,7 +549,8 @@ public sealed partial class IslandWindow : Window
         ApplyState();
     }
 
-    private bool ShowTabs => _state == IslandState.Expanded && _tabs.Count > 1;
+    /// <summary>The tab row also holds the assistant's mic button, so it shows even with a single tab.</summary>
+    private bool ShowTabs => _state == IslandState.Expanded && (_tabs.Count > 1 || AssistantActivity.IsEnabled);
 
     // ---------------------------------------------------------------- dropping files on the shelf
 
@@ -658,7 +669,7 @@ public sealed partial class IslandWindow : Window
 
     private void ApplyState()
     {
-        AnimatePill(CurrentShape(), expanding: _state == IslandState.Expanded);
+        ApplyShape();
 
         if (_state == IslandState.Expanded && _shown?.ExpandedView is { } expandedView)
         {
@@ -681,10 +692,30 @@ public sealed partial class IslandWindow : Window
         ApplyTheme();
     }
 
+    /// <summary>Springs the pill to the current shape and sizes the shown view to match (most views keep one size; the assistant's changes).</summary>
+    private void ApplyShape()
+    {
+        var shape = CurrentShape();
+        _appliedShape = shape;
+        AnimatePill(shape, expanding: _state == IslandState.Expanded);
+
+        var (view, viewShape) = _state switch
+        {
+            IslandState.Expanded => (_shown?.ExpandedView, _shown?.ExpandedShape),
+            IslandState.Compact => (_shown?.CompactView, _shown?.CompactShape),
+            _ => (null, null),
+        };
+        if (view is not null && viewShape is { } size)
+        {
+            view.Width = size.Width;
+            view.Height = size.Height;
+        }
+    }
+
     /// <summary>One small icon button per tab, the selected one highlighted. Rebuilt only when tabs or selection change.</summary>
     private void UpdateTabBar()
     {
-        string signature = string.Join(",", _tabs.Select(t => t.Name)) + "|" + _selectedTab;
+        string signature = string.Join(",", _tabs.Select(t => t.Name)) + "|" + _selectedTab + "|" + (AssistantActivity.IsEnabled ? AssistantActivity.Shortcut : "");
         if (signature == _tabBarSignature)
         {
             return;
@@ -716,6 +747,35 @@ public sealed partial class IslandWindow : Window
                 UpdateState();
             };
             TabBar.Children.Add(button);
+        }
+
+        if (AssistantActivity.IsEnabled)
+        {
+            // After the tabs, set apart: the assistant's mic.
+            TabBar.Children.Add(new Microsoft.UI.Xaml.Shapes.Rectangle
+            {
+                Width = 1,
+                Height = 14,
+                Margin = new Thickness(4, 0, 4, 0),
+                Fill = new SolidColorBrush(Color.FromArgb(0x33, 255, 255, 255)),
+                VerticalAlignment = VerticalAlignment.Center,
+            });
+            var mic = new Microsoft.UI.Xaml.Controls.Button
+            {
+                Style = (Style)Application.Current.Resources["IslandButtonStyle"],
+                Width = 40,
+                Height = 26,
+                CornerRadius = new CornerRadius(13),
+                Content = new Microsoft.UI.Xaml.Controls.FontIcon
+                {
+                    Glyph = "", // Microphone
+                    FontSize = 13,
+                    Foreground = new SolidColorBrush(Color.FromArgb(0xCC, 255, 255, 255)),
+                },
+            };
+            Microsoft.UI.Xaml.Controls.ToolTipService.SetToolTip(mic, $"Talk to {Assistant.Name} ({AssistantActivity.Shortcut})");
+            mic.Click += (_, _) => _assistant.Toggle();
+            TabBar.Children.Add(mic);
         }
     }
 

@@ -55,6 +55,12 @@ internal abstract class IslandActivity
     /// </summary>
     public virtual bool IsTab => false;
 
+    /// <summary>
+    /// Keeps the island compact on this activity even while the pointer is over it (the assistant
+    /// listening or answering shouldn't turn into tabs because the mouse happens to be there).
+    /// </summary>
+    public virtual bool HoldsIsland => false;
+
     public event EventHandler? Changed;
 
     /// <summary>Begin watching whatever this activity is about. Called once, after the island is up.</summary>

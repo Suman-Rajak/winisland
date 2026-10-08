@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="WinIsland.Activities.AssistantView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--
+        The assistant in the pill: its orb on the left, then one of
+          - a live waveform while it listens,
+          - a status line ("Thinking…", download progress, "Didn't catch that"),
+          - what it heard and its answer.
+        Tapping stops listening early, or dismisses the answer.
+    -->
+    <Grid Padding="10,0,18,0" ColumnSpacing="11" Background="Transparent" Tapped="OnTapped">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <Ellipse x:Name="Orb" Width="20" Height="20" VerticalAlignment="Center">
+            <Ellipse.Fill>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                    <GradientStop Offset="0" Color="#FF8A6CFF" />
+                    <GradientStop Offset="0.5" Color="#FFF05AB4" />
+                    <GradientStop Offset="1" Color="#FF3DB8FF" />
+                </LinearGradientBrush>
+            </Ellipse.Fill>
+        </Ellipse>
+
+        <StackPanel x:Name="Wave" Grid.Column="1" Orientation="Horizontal" Spacing="3"
+                    HorizontalAlignment="Center" VerticalAlignment="Center" />
+
+        <StackPanel x:Name="StatusPanel" Grid.Column="1" VerticalAlignment="Center" Spacing="5">
+            <TextBlock x:Name="StatusText" FontSize="13" FontWeight="SemiBold" Foreground="White"
+                       TextTrimming="CharacterEllipsis" MaxLines="1" />
+            <ProgressBar x:Name="Progress" Height="3" MinHeight="3" Maximum="1" CornerRadius="1.5"
+                         Foreground="{StaticResource IslandAccentBrush}" Background="#33FFFFFF" />
+        </StackPanel>
+
+        <StackPanel x:Name="AnswerPanel" Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+            <TextBlock x:Name="HeardText" FontSize="12" Foreground="#99FFFFFF"
+                       TextTrimming="CharacterEllipsis" MaxLines="1" />
+            <TextBlock x:Name="ReplyText" FontSize="14" FontWeight="SemiBold" Foreground="White"
+                       TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxLines="2" />
+        </StackPanel>
+    </Grid>
+</UserControl>
