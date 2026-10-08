@@ -21,7 +21,7 @@ internal static partial class VoiceCommands
         string text = Normalize(heard);
         try
         {
-            return await RunNormalizedAsync(text);
+            return await RunNormalizedAsync(text, heard);
         }
         catch (Exception ex)
         {
@@ -30,7 +30,7 @@ internal static partial class VoiceCommands
         }
     }
 
-    private static async Task<CommandResult> RunNormalizedAsync(string text)
+    private static async Task<CommandResult> RunNormalizedAsync(string text, string heard)
     {
         if (text.Length == 0 || Has(text, @"^(hi|hello|hey|yes|yo)$"))
         {
@@ -39,7 +39,13 @@ internal static partial class VoiceCommands
 
         if (Has(text, @"\bwhat can you do\b|^help$"))
         {
-            return new CommandResult("I can play, pause and skip music, change the volume and brightness, open apps, tell the time, and lock your PC.");
+            return new CommandResult("I can set timers, alarms and reminders, play, pause and skip music, change the volume and brightness, " +
+                                     "open apps, tell the time, and lock your PC.");
+        }
+
+        if (Timers(text, heard) is { } timers)
+        {
+            return timers;
         }
 
         if (Has(text, @"\b(what|tell me)\b.*\btime\b|\btime is it\b"))
@@ -80,6 +86,144 @@ internal static partial class VoiceCommands
 
         Log.Info($"No command for \"{text}\"");
         return new CommandResult("I can't do that yet.");
+    }
+
+    // ---------------------------------------------------------------- timers, alarms and reminders
+
+    /// <summary>
+    /// "Timer 10 minutes", "alarm at 7 am", "remind me at 5 to call mom", "remind me in 20 minutes to
+    /// check the oven", "how much time is left", "what are my reminders", "cancel the alarm", and while
+    /// something rings, "stop" or "snooze". Null if it isn't about timers.
+    /// </summary>
+    /// <param name="heard">As said, for the capitals in a reminder ("call Rahul").</param>
+    private static CommandResult? Timers(string text, string heard)
+    {
+        if (TimerService.Current is not { } timers)
+        {
+            return null;
+        }
+
+        string digits = SpokenTime.WithDigits(text);
+        var now = DateTime.Now;
+
+        if (timers.Ringing is not null)
+        {
+            if (Has(text, @"^(stop|ok|okay|dismiss|turn it off|shut up|silence|enough|got it|thanks|thank you)( (it|that|the alarm|the timer|the reminder|alarm|timer))?$"))
+            {
+                timers.Dismiss();
+                return new CommandResult("OK.", Speak: false);
+            }
+            if (Has(text, @"\bsnooze\b"))
+            {
+                var delay = SpokenTime.Duration(digits) ?? TimeSpan.FromMinutes(5);
+                timers.Snooze(delay);
+                return new CommandResult($"Snoozed for {SpokenTime.Describe(delay)}.");
+            }
+        }
+
+        if (Has(text, @"\b(cancel|stop|delete|remove|clear|turn off|switch off)\b") && KindIn(text) is { } cancelKind)
+        {
+            bool all = Has(text, @"\b(all|every|timers|alarms|reminders)\b");
+            int cancelled = timers.Cancel(cancelKind, all);
+            string what = cancelKind.ToString().ToLowerInvariant();
+            return new CommandResult(cancelled switch
+            {
+                0 => $"There's no {what} to cancel.",
+                1 => $"Cancelled the {what}.",
+                _ => $"Cancelled {cancelled} {what}s.",
+            });
+        }
+
+        if (Has(text, @"\b(how (much|long)|time)\b.*\b(left|remaining)\b"))
+        {
+            var next = timers.Items.FirstOrDefault(i => i.Kind == TimerKind.Timer) ?? timers.Items.FirstOrDefault();
+            return new CommandResult(next is null
+                ? "Nothing's set."
+                : $"{SpokenTime.Describe(TimeSpan.FromSeconds(Math.Round((next.DueAt - now).TotalSeconds)))} left on the {next.Title.ToLowerInvariant()}.");
+        }
+
+        if (Has(text, @"\b(what|when|which|any|list|show)\b.*\b(timers?|alarms?|reminders?)\b"))
+        {
+            var kind = KindIn(text);
+            var set = timers.Items.Where(i => kind is null || i.Kind == kind).ToList();
+            if (set.Count == 0)
+            {
+                return new CommandResult($"No {(kind?.ToString().ToLowerInvariant() ?? "timer")}s are set.");
+            }
+            var said = set.Take(3).Select(i => i.Kind == TimerKind.Timer
+                ? $"{i.Title}, {SpokenTime.Describe(TimeSpan.FromSeconds(Math.Round((i.DueAt - now).TotalSeconds)))} left"
+                : $"{i.Title} {SpokenTime.Describe(i.DueAt, now)}");
+            return new CommandResult(string.Join("; ", said) + (set.Count > 3 ? $"; and {set.Count - 3} more." : "."));
+        }
+
+        if (Has(text, @"\b(timer|countdown|count down)\b"))
+        {
+            if (SpokenTime.Duration(digits) is not { } length)
+            {
+                return new CommandResult("How long? Say something like “timer 10 minutes”.");
+            }
+            timers.Add(TimerKind.Timer, now + length, length: length);
+            return new CommandResult($"Timer set for {SpokenTime.Describe(length)}.");
+        }
+
+        if (Has(text, @"\b(alarm|wake me)\b"))
+        {
+            var at = SpokenTime.TimeOfDay(digits, now, morning: true) ?? (SpokenTime.Duration(digits) is { } after ? now + after : null);
+            if (at is null)
+            {
+                return new CommandResult("For what time? Say something like “alarm at 7 am”.");
+            }
+            timers.Add(TimerKind.Alarm, at.Value);
+            return new CommandResult($"Alarm set {SpokenTime.Describe(at.Value, now)}.");
+        }
+
+        if (Has(text, @"\b(remind|reminder)\b"))
+        {
+            // "In 20 minutes" counts from now; otherwise a time of day ("at 5", "tomorrow").
+            bool relative = Has(digits, @"\b(in|after)\s+\d");
+            var at = relative && SpokenTime.Duration(digits) is { } after
+                ? now + after
+                : SpokenTime.TimeOfDay(digits, now) ?? (SpokenTime.Duration(digits) is { } fromNow ? now + fromNow : null);
+            if (at is null)
+            {
+                return new CommandResult("When should I remind you? Say something like “remind me at 5 to call Mom”.");
+            }
+
+            string label = RestoreCase(ReminderText(digits), heard);
+            timers.Add(TimerKind.Reminder, at.Value, label);
+            string when = relative
+                ? $"in {SpokenTime.Describe(TimeSpan.FromSeconds(Math.Round((at.Value - now).TotalSeconds)))}"
+                : SpokenTime.Describe(at.Value, now);
+            return new CommandResult($"OK, I'll remind you {when}: {label}.");
+        }
+
+        return null;
+    }
+
+    private static TimerKind? KindIn(string text) =>
+        Has(text, @"\btimers?\b") ? TimerKind.Timer
+        : Has(text, @"\balarms?\b") ? TimerKind.Alarm
+        : Has(text, @"\breminders?\b") ? TimerKind.Reminder
+        : null;
+
+    /// <summary>"remind me at 5 to call mom" → "Call mom".</summary>
+    private static string ReminderText(string digits)
+    {
+        string text = Regex.Replace(digits, @"^(set |create |add )?(a )?(remind me|reminder)( please)?\b", "");
+        text = SpokenTime.Strip(text);
+        text = Regex.Replace(text, @"^(to|that|about|of|for)\s+", "");
+        text = Regex.Replace(text, @"\s+please$", "").Trim();
+        return text.Length == 0 ? "Reminder" : char.ToUpperInvariant(text[0]) + text[1..];
+    }
+
+    /// <summary>Gives words back the capitals they had as said: "Call rahul" + "…call Rahul." → "Call Rahul".</summary>
+    private static string RestoreCase(string text, string heard)
+    {
+        var said = Regex.Matches(heard, @"[\p{L}\p{N}']+").Select(m => m.Value)
+            .GroupBy(w => w.ToLowerInvariant()).ToDictionary(g => g.Key, g => g.First());
+        var words = text.Split(' ').Select(w =>
+            said.TryGetValue(w.ToLowerInvariant(), out var original) && original != original.ToLowerInvariant() ? original : w);
+        return string.Join(' ', words);
     }
 
     // ---------------------------------------------------------------- music

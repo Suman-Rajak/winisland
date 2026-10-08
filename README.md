@@ -26,6 +26,7 @@ A Dynamic Island for Windows: a pill at the top of the screen that expands on ho
   - volume: "volume 30", "turn it up", "quieter", "mute", "unmute"
   - brightness: "brightness 50", "brighter", "make the screen dimmer"
   - apps: "open Chrome", "open VS Code", "open settings" (anything in the Start menu; a few sites like YouTube and Gmail open in the browser if there's no app)
+  - timers, alarms and reminders: "timer 10 minutes", "alarm at 7 am", "wake me up at 6:30 tomorrow", "remind me at 5 to call Mom", "remind me in 20 minutes to check the oven", "how much time is left", "what are my reminders", "cancel the alarm"; while one rings, "stop" or "snooze". A running timer counts down in the pill, everything set is in a Timers tab (× cancels), and when one is due the island shows it with Stop/Snooze, plays a sound (a reminder is also read out) and rings for up to a minute. They're saved in `timers.json` in the data folder; anything due while WinIsland wasn't running rings, marked missed, when it starts.
   - "what time is it", "what's the date", "lock my PC", "what can you do"
 
   With **Listen for "Hey Siro"** on (Settings, off by default) you can also just say "Hey Siro", pause, then the request, or say it all in one go: "Hey Siro, next song". The microphone then stays open (Windows shows its mic icon in the taskbar; the island's own mic dot shows only while Siro listens to a request). A loudness check finds where speech starts after a pause, and only the first two seconds of it are checked for the name, by one quick Whisper pass (~0.2 s on the graphics card) that's told to expect "Siro" and must hear "hey/hi/okay Siro". "Hey Siri", "zero" and the like don't match, and noise comes out as captions ("static", "music"), but some voices' "Hey Sarah" can; Siro then just listens and times out. Nothing else is kept, logged or sent. Windows' echo cancellation removes the PC's own sound from the microphone, so music, videos and Siro's replies don't wake it, and "Hey Siro, pause" works over loud music. (It also means you can't test it by playing "Hey Siro" through the PC's speakers.) A Bluetooth headset's microphone is never held open for this (it would switch the headset to muffled phone-call audio); the built-in one is used instead, or none.
@@ -116,6 +117,7 @@ src/WinIsland/
     ClipboardActivity.cs      clipboard history tab (+ ClipboardView, ClipboardEntry)
     ShelfActivity.cs          file shelf tab (+ ShelfView, ShelfItem); dropping on the island is handled in IslandWindow
     NotificationActivity.cs   notification banner and expanded message (+ NotificationView, NotificationExpandedView)
+    TimerActivity.cs          timer countdown, ringing view, Timers tab (+ TimerView, TimersView)
     AssistantActivity.cs      Siro: listening, thinking, answering (+ AssistantView with the waveform)
   SettingsWindow.xaml(.cs)    settings UI
   AppSettings.cs              settings model + JSON persistence
@@ -142,6 +144,8 @@ src/WinIsland/
   Services/SystemActions.cs      volume, brightness, media keys, lock
   Services/AppCatalog.cs         finds installed apps by spoken name and opens them
   Services/Speaker.cs            spoken replies (Windows speech synthesis)
+  Services/TimerService.cs       timers, alarms and reminders: saved, ticking, ringing when due
+  Services/SpokenTime.cs         "ten minutes", "5 30 p m", "tomorrow at 7" → durations and times
   Package.appxmanifest        the packaged build's manifest (notification and microphone access, startup task)
   AppPaths.cs                 data folder, and whether this is the installed (packaged) build
 build-package.ps1             builds and installs the packaged version (Developer Mode)

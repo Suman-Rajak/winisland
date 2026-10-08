@@ -124,6 +124,7 @@ public sealed partial class IslandWindow : Window
             notifications,
             clipboard,
             _shelf,
+            new TimerActivity(DispatcherQueue),
             _assistant,
         ];
         foreach (var activity in _activities)

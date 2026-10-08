@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="WinIsland.Activities.TimerView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--
+        Either a running timer's countdown ([⏱] 10 minute timer ........ 9:42),
+        or what's ringing, with Snooze and Stop ([⏰] Call Mom / Reminder · 5:00 PM   [Snooze] [Stop]).
+    -->
+    <Grid Padding="14,0,10,0" ColumnSpacing="10">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+
+        <FontIcon x:Name="Icon" Glyph="&#xE916;" FontSize="15" Foreground="#FFFF9F0A" VerticalAlignment="Center" />
+
+        <TextBlock x:Name="CountdownTitle" Grid.Column="1" FontSize="13" Foreground="#CCFFFFFF"
+                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxLines="1" />
+        <TextBlock x:Name="CountdownText" Grid.Column="2" FontSize="15" FontWeight="SemiBold" Foreground="#FFFF9F0A"
+                   VerticalAlignment="Center" Margin="0,0,4,0" />
+
+        <StackPanel x:Name="RingText" Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+            <TextBlock x:Name="RingTitle" FontSize="14" FontWeight="SemiBold" Foreground="White"
+                       TextTrimming="CharacterEllipsis" MaxLines="1" />
+            <TextBlock x:Name="RingSubtitle" FontSize="12" Foreground="#99FFFFFF"
+                       TextTrimming="CharacterEllipsis" MaxLines="1" />
+        </StackPanel>
+        <StackPanel x:Name="RingButtons" Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+            <Button x:Name="SnoozeButton" Style="{StaticResource IslandButtonStyle}" Width="72" Height="34" CornerRadius="17"
+                    Background="#26FFFFFF" Click="OnSnoozeClick">
+                <TextBlock Text="Snooze" FontSize="12" Foreground="White" />
+            </Button>
+            <Button Style="{StaticResource IslandButtonStyle}" Width="64" Height="34" CornerRadius="17"
+                    Background="#FFFF9F0A" Click="OnStopClick">
+                <TextBlock Text="Stop" FontSize="12" FontWeight="SemiBold" Foreground="Black" />
+            </Button>
+        </StackPanel>
+    </Grid>
+</UserControl>
