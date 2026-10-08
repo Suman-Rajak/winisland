@@ -29,6 +29,9 @@ public partial class App : Application
             return;
         }
 
+        Log.Info($"WinIsland {typeof(App).Assembly.GetName().Version?.ToString(3)} starting " +
+                 $"({(AppPaths.IsPackaged ? "installed package" : "unpackaged")}, data in {AppPaths.DataFolder})");
+
         var dispatcher = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
         ThreadPool.RegisterWaitForSingleObject(s_showSettingsSignal,
             (_, _) => dispatcher.TryEnqueue(OpenSettings), null, Timeout.Infinite, executeOnlyOnce: false);
@@ -36,6 +39,7 @@ public partial class App : Application
         _island = new IslandWindow(IslandOptions.FromCommandLine(Environment.GetCommandLineArgs()));
         _tray = new TrayIconController(_island, OpenSettings, Quit);
         _island.Start();
+        _ = StartupRegistration.MigrateToPackageAsync();
     }
 
     private void OpenSettings()

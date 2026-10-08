@@ -11,14 +11,13 @@ internal enum AnimationSpeed
 }
 
 /// <summary>
-/// User settings, stored as JSON in %LOCALAPPDATA%\WinIsland\settings.json.
+/// User settings, stored as JSON in settings.json in <see cref="AppPaths.DataFolder"/>.
 /// Change properties on the UI thread, then call <see cref="Save"/>: it raises <see cref="Changed"/>
 /// straight away and writes the file shortly after, so dragging a slider doesn't hammer the disk.
 /// </summary>
 internal sealed class AppSettings
 {
-    private static readonly string s_path = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WinIsland", "settings.json");
+    private static readonly string s_path = Path.Combine(AppPaths.DataFolder, "settings.json");
 
     private static readonly JsonSerializerOptions s_json = new()
     {
@@ -74,6 +73,9 @@ internal sealed class AppSettings
     /// <summary>A file shelf tab: drop files on the island to keep them handy, drag them out later.</summary>
     public bool FileShelf { get; set; } = true;
 
+    /// <summary>Show other apps' notifications on the island (needs the installed, packaged WinIsland).</summary>
+    public bool ShowNotifications { get; set; } = true;
+
     [JsonIgnore]
     public double GlassOpacity => 1 - Math.Clamp(GlassTransparency, 0, 0.3);
 
@@ -111,6 +113,7 @@ internal sealed class AppSettings
         ShowPrivacy = defaults.ShowPrivacy;
         ClipboardHistory = defaults.ClipboardHistory;
         FileShelf = defaults.FileShelf;
+        ShowNotifications = defaults.ShowNotifications;
         Save();
     }
 

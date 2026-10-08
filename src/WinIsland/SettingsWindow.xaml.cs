@@ -60,11 +60,11 @@ public sealed partial class SettingsWindow : Window
 
     private void LoadValues()
     {
+        _ = LoadStartupAsync();
+
         _loading = true;
         try
         {
-            StartupToggle.IsOn = StartupRegistration.IsEnabled;
-
             DisplayCombo.Items.Clear();
             DisplayCombo.Items.Add(new ComboBoxItem { Content = "Main display", Tag = null });
             var displays = Displays.All();
@@ -93,6 +93,10 @@ public sealed partial class SettingsWindow : Window
             PrivacyToggle.IsOn = _settings.ShowPrivacy;
             ClipboardToggle.IsOn = _settings.ClipboardHistory;
             ShelfToggle.IsOn = _settings.FileShelf;
+            NotificationsToggle.IsOn = _settings.ShowNotifications;
+            NotificationsDescription.Text = AppPaths.IsPackaged
+                ? "Show other apps' notifications on the island; hover one to read it all. Quiet while Do Not Disturb is on."
+                : "Needs the installed version of WinIsland: this copy isn't installed as a package, so Windows won't share notifications with it.";
             ArtworkToggle.IsOn = _settings.FindArtworkOnline;
         }
         finally
@@ -113,24 +117,41 @@ public sealed partial class SettingsWindow : Window
         _settings.Save();
     }
 
-    private void OnStartupToggled(object sender, RoutedEventArgs e)
+    private async Task LoadStartupAsync()
+    {
+        bool enabled = await StartupRegistration.IsEnabledAsync();
+        _loading = true;
+        StartupToggle.IsOn = enabled;
+        _loading = false;
+    }
+
+    private async void OnStartupToggled(object sender, RoutedEventArgs e)
     {
         if (_loading)
         {
             return;
         }
 
+        bool wanted = StartupToggle.IsOn;
+        bool result;
         try
         {
-            StartupRegistration.SetEnabled(StartupToggle.IsOn);
-            StartupDescription.Text = "Open WinIsland when you sign in.";
+            result = await StartupRegistration.SetEnabledAsync(wanted);
+            StartupDescription.Text = result == wanted
+                ? "Open WinIsland when you sign in."
+                : "Windows has this turned off. Turn it back on in Task Manager → Startup apps.";
         }
         catch (Exception ex)
         {
             Log.Error("Changing startup registration failed", ex);
             StartupDescription.Text = "Couldn't change this setting. See the log for details.";
+            result = await StartupRegistration.IsEnabledAsync();
+        }
+
+        if (result != wanted)
+        {
             _loading = true;
-            StartupToggle.IsOn = StartupRegistration.IsEnabled;
+            StartupToggle.IsOn = result;
             _loading = false;
         }
     }
@@ -181,6 +202,9 @@ public sealed partial class SettingsWindow : Window
 
     private void OnShelfToggled(object sender, RoutedEventArgs e) =>
         Update(s => s.FileShelf = ShelfToggle.IsOn);
+
+    private void OnNotificationsToggled(object sender, RoutedEventArgs e) =>
+        Update(s => s.ShowNotifications = NotificationsToggle.IsOn);
 
     private void OnArtworkToggled(object sender, RoutedEventArgs e) =>
         Update(s => s.FindArtworkOnline = ArtworkToggle.IsOn);

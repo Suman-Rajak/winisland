@@ -10,13 +10,29 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\island.ico</ApplicationIcon>
     <Platforms>x64;ARM64</Platforms>
+    <Configurations>Debug;Release;Packaged</Configurations>
     <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
     <UseWinUI>true</UseWinUI>
-    <!-- Unpackaged for now. Phase 2 (notifications) will add MSIX packaging for package identity. -->
-    <WindowsPackageType>None</WindowsPackageType>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <!--
+    Two ways to build:
+    - Debug / Release: a plain exe. Everything works except notifications.
+    - Packaged (-c Packaged): an MSIX layout with package identity, which Windows requires before it shares
+      notifications. Unsigned, so it's registered in place with Developer Mode on; see build-package.ps1.
+      Its own configuration, so its output (bin\x64\Packaged) never mixes with the plain build's.
+  -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Packaged'">
+    <WindowsPackageType>MSIX</WindowsPackageType>
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <AppxPackageSigningEnabled>false</AppxPackageSigningEnabled>
+    <GenerateAppxPackageOnBuild>false</GenerateAppxPackageOnBuild>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' != 'Packaged'">
+    <WindowsPackageType>None</WindowsPackageType>
   </PropertyGroup>
 
   <ItemGroup>

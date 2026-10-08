@@ -10,9 +10,9 @@ namespace WinIsland.Activities;
 /// <summary>
 /// The file shelf, a tab in the expanded island: drag files onto the island to park them, drag them out
 /// later (always as a copy), click to open, × to take off the shelf. The shelf only remembers where
-/// files are (in %LOCALAPPDATA%\WinIsland\shelf.json, so it survives restarts); files never move.
-/// The one exception is things that aren't files yet, like an image dragged out of a browser: those
-/// are saved into %LOCALAPPDATA%\WinIsland\Shelf so they have somewhere to live.
+/// files are (in shelf.json in <see cref="AppPaths.DataFolder"/>, so it survives restarts); files never
+/// move. The one exception is things that aren't files yet, like an image dragged out of a browser:
+/// those are saved into the Shelf folder there so they have somewhere to live.
 /// </summary>
 internal sealed class ShelfActivity : IslandActivity
 {
@@ -20,10 +20,8 @@ internal sealed class ShelfActivity : IslandActivity
     private const int VisibleRows = 2;
     private const int TileHeight = 84; // tile plus its margins
 
-    private static readonly string DataFolder = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WinIsland");
-    private static readonly string StoreFile = Path.Combine(DataFolder, "shelf.json");
-    private static readonly string SavedDropsFolder = Path.Combine(DataFolder, "Shelf");
+    private static readonly string StoreFile = Path.Combine(AppPaths.DataFolder, "shelf.json");
+    private static readonly string SavedDropsFolder = Path.Combine(AppPaths.DataFolder, "Shelf");
 
     private readonly ShelfView _view = new();
     private bool _persist = true;
@@ -182,7 +180,7 @@ internal sealed class ShelfActivity : IslandActivity
 
         try
         {
-            Directory.CreateDirectory(DataFolder);
+            Directory.CreateDirectory(AppPaths.DataFolder);
             File.WriteAllText(StoreFile, JsonSerializer.Serialize(_view.Items.Select(i => i.Path).ToList()));
         }
         catch (Exception ex)

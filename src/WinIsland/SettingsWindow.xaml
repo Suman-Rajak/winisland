@@ -244,6 +244,19 @@
                         <ToggleSwitch x:Name="ShelfToggle" Grid.Column="1" OnContent="" OffContent="" MinWidth="0" Toggled="OnShelfToggled" />
                     </Grid>
                 </Border>
+                <Border Style="{StaticResource CardStyle}">
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Notifications" Style="{StaticResource CardTitleStyle}" />
+                            <TextBlock x:Name="NotificationsDescription" Style="{StaticResource CardDescriptionStyle}" />
+                        </StackPanel>
+                        <ToggleSwitch x:Name="NotificationsToggle" Grid.Column="1" OnContent="" OffContent="" MinWidth="0" Toggled="OnNotificationsToggled" />
+                    </Grid>
+                </Border>
 
                 <!-- Music -->
                 <TextBlock Text="Music" Style="{StaticResource SectionHeaderStyle}" />

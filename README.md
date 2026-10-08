@@ -2,7 +2,7 @@
 
 A Dynamic Island for Windows: a pill at the top of the screen that expands on hover and shows what's going on.
 
-**Status: Phase 2** — live activities: now playing, volume, brightness, battery, Bluetooth, mic/camera, clipboard history, file shelf. Notifications are next.
+**Status: Phase 2** — live activities: now playing, volume, brightness, battery, Bluetooth, mic/camera, clipboard history, file shelf, notifications.
 
 ## What works
 
@@ -19,13 +19,17 @@ A Dynamic Island for Windows: a pill at the top of the screen that expands on ho
 - Microphone and camera: while any app uses them, a dot sits in a small bubble beside the island (orange for the mic, green for the camera), and the island stays visible even with "hide when idle". When an app starts using one, the island says which ("Discord · Microphone"); point at the bubble to see it again. Read from Windows' capability consent store, the same place its own privacy indicator looks.
 - Tabs: the expanded island has a small tab row: music (or the clock), the clipboard and the file shelf. Every hover starts on the first tab; dragging files onto the island opens the shelf.
 - Clipboard history: the last 20 things you copied (text, links, images, files), newest first; click one to copy it again, × to forget it. Kept in memory only (gone when WinIsland quits), and anything password managers mark as private is skipped, using the same markers as Windows' own clipboard history.
-- File shelf: drag files or folders onto the island to park them; drag them out later into any folder, email or chat (always as a copy, the originals never move), click to open, × to take off the shelf. The shelf only remembers where files are, in `%LOCALAPPDATA%\WinIsland\shelf.json`, so it survives restarts. Things that aren't files yet (an image dragged out of a browser) are saved into `%LOCALAPPDATA%\WinIsland\Shelf`.
+- File shelf: drag files or folders onto the island to park them; drag them out later into any folder, email or chat (always as a copy, the originals never move), click to open, × to take off the shelf. The shelf only remembers where files are, in `shelf.json` in the data folder (see below), so it survives restarts. Things that aren't files yet (an image dragged out of a browser) are saved into a `Shelf` folder there.
+- Notifications (installed version only, see below): other apps' notifications appear as a two-line banner for a few seconds; hover it to read the whole message, with Open and Clear. Quiet while Windows' Do Not Disturb is on. Windows' own banner still shows too (turn it off per app in Windows Settings if you only want the island).
 - Hides itself while a fullscreen app or game is in front.
 - Tray icon: click for Settings, right-click to hide the island or quit. Launching WinIsland again while it's running also opens Settings.
 
 ## Settings
 
-Changes apply immediately and are saved to `%LOCALAPPDATA%\WinIsland\settings.json`.
+Changes apply immediately and are saved to `settings.json` in the data folder:
+
+- plain build: `%LOCALAPPDATA%\WinIsland`
+- installed (packaged) build: `%LOCALAPPDATA%\Packages\WinIsland_…\LocalState`. Windows quietly redirects a packaged app's writes elsewhere in AppData, so it uses the folder Windows gives the package; `build-package.ps1` copies the plain build's settings and shelf there the first time.
 
 | Setting | What it does |
 |---|---|
@@ -42,6 +46,7 @@ Changes apply immediately and are saved to `%LOCALAPPDATA%\WinIsland\settings.js
 | Microphone and camera in use | Dot beside the island while an app uses them, and which app |
 | Clipboard history | The clipboard tab; off also forgets everything in it |
 | File shelf | The shelf tab, and dropping files on the island |
+| Notifications | Other apps' notifications on the island (installed version only) |
 | Find missing album art online | iTunes / MusicBrainz lookup for apps that don't share artwork (sends artist + title to them) |
 
 ## Run it
@@ -53,6 +58,16 @@ dotnet build src/WinIsland/WinIsland.csproj -p:Platform=x64
 ```
 
 Then run `src/WinIsland/bin/x64/Debug/net10.0-windows10.0.26100.0/WinIsland.exe`, or open `WinIsland.slnx` in Visual Studio and press F5.
+
+### Installed (packaged) version
+
+Windows only shares notifications with apps installed as a package (MSIX). With **Developer Mode** on (Settings → System → For developers), this builds the `Packaged` configuration and installs it for you, unsigned, straight from the build folder:
+
+```bash
+./build-package.ps1
+```
+
+Then start WinIsland from the Start menu; the first time, Windows asks whether it may read your notifications. Run the script again after changes to update it (if the manifest changed, it reinstalls, keeping the app's data). The installed version keeps its own settings, shelf and log; the first install copies the plain build's across and moves "Start with Windows" to the package's startup task (shown in Task Manager → Startup apps). To uninstall: `Get-AppxPackage WinIsland | Remove-AppxPackage`.
 
 ### Developer switches
 
@@ -66,9 +81,10 @@ Then run `src/WinIsland/bin/x64/Debug/net10.0-windows10.0.26100.0/WinIsland.exe`
 | `--demo-privacy` | Pretend Discord just started using the microphone |
 | `--demo-clipboard` | Add a few made-up clipboard entries |
 | `--demo-shelf` | Put a few of the app's own files on the shelf (not saved) |
+| `--demo-notification` | Keep a made-up message up |
 | `--tab=N` | With `--pin=expanded`, open tab N (0 = first) |
 
-Errors are logged to `%LOCALAPPDATA%\WinIsland\log.txt`.
+Errors are logged to `log.txt` in the data folder (see Settings above).
 
 ## Layout
 
@@ -86,6 +102,7 @@ src/WinIsland/
     PrivacyActivity.cs        "Discord · Microphone" notice (+ PrivacyView); the dot bubble lives in IslandWindow
     ClipboardActivity.cs      clipboard history tab (+ ClipboardView, ClipboardEntry)
     ShelfActivity.cs          file shelf tab (+ ShelfView, ShelfItem); dropping on the island is handled in IslandWindow
+    NotificationActivity.cs   notification banner and expanded message (+ NotificationView, NotificationExpandedView)
   SettingsWindow.xaml(.cs)    settings UI
   AppSettings.cs              settings model + JSON persistence
   StartupRegistration.cs      "Start with Windows"
@@ -99,6 +116,10 @@ src/WinIsland/
   Services/BluetoothMonitor.cs   paired Bluetooth devices' connections, type and battery
   Services/PrivacyMonitor.cs     which apps are using the mic/camera (consent store, re-read every 1.5 s)
   Services/ClipboardWatcher.cs   clipboard change listener; reads copies, skips private ones
+  Services/NotificationMonitor.cs  other apps' notifications (UserNotificationListener; packaged only)
+  Package.appxmanifest        the packaged build's manifest (notification access, startup task)
+  AppPaths.cs                 data folder, and whether this is the installed (packaged) build
+build-package.ps1             builds and installs the packaged version (Developer Mode)
   Services/FullscreenDetector.cs
   Interop/Native.cs           Win32 / DWM calls
   Interop/CoreAudio.cs        Core Audio COM interfaces

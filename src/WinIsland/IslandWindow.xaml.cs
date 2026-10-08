@@ -108,6 +108,7 @@ public sealed partial class IslandWindow : Window
         _privacy = new PrivacyActivity(DispatcherQueue);
         var clipboard = new ClipboardActivity(DispatcherQueue);
         _shelf = new ShelfActivity();
+        var notifications = new NotificationActivity(DispatcherQueue);
         _activities =
         [
             new ClockActivity(DispatcherQueue),
@@ -117,6 +118,7 @@ public sealed partial class IslandWindow : Window
             battery,
             bluetooth,
             _privacy,
+            notifications,
             clipboard,
             _shelf,
         ];
@@ -154,6 +156,10 @@ public sealed partial class IslandWindow : Window
         if (options.DemoShelf)
         {
             _ = _shelf.DemoAsync();
+        }
+        if (options.DemoNotification)
+        {
+            notifications.Demo();
         }
         _selectedTab = options.Tab; // only sticks with --pin=expanded; hovering starts on the first tab
 
