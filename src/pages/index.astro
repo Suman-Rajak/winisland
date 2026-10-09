@@ -2,7 +2,6 @@
 import Base from '../layouts/Base.astro';
 import AdSlot from '../components/AdSlot.astro';
 import Island from '../components/Island.astro';
-import { badges } from '../data/badges.js';
 import { comingSoon, tools } from '../data/tools.js';
 ---
 
@@ -17,7 +16,7 @@ import { comingSoon, tools } from '../data/tools.js';
         <h1>Pick an island.<br /><span class="glow">Start the party!</span></h1>
         <p class="lead">
           Spin a light-up wheel, host a tambola room, draw Secret Santa names, split teams, flip coins and roll dice.
-          Earn XP, level up and unlock badges every time you play.
+          Everything is free and runs right in your browser.
         </p>
         <div class="btn-row hero-cta">
           <a class="btn btn-play btn-xl" href="/spin-the-wheel/">▶ Play now</a>
@@ -81,30 +80,6 @@ import { comingSoon, tools } from '../data/tools.js';
     </section>
 
     <AdSlot name="home" />
-
-    <section class="quests panel" aria-labelledby="quests-title">
-      <div class="quest-head">
-        <div>
-          <p class="kicker">🏆 Quest log</p>
-          <h2 id="quests-title">Level up while you play</h2>
-          <p>Every spin, call and draw earns XP. Unlock all {badges.length} badges and become an Island Legend.</p>
-        </div>
-        <button class="btn btn-pink btn-lg" type="button" data-open-trophies>Trophy room</button>
-      </div>
-      <ul class="badge-strip">
-        {
-          badges.map((b) => (
-            <li class="mini-badge" data-badge={b.id}>
-              <span class="b-icon" aria-hidden="true">
-                {b.icon}
-              </span>
-              <span class="b-name">{b.name}</span>
-              <span class="b-state sr-only">Locked</span>
-            </li>
-          ))
-        }
-      </ul>
-    </section>
 
     <section class="why" aria-labelledby="why-title">
       <h2 id="why-title">Why players love winisland</h2>
@@ -392,75 +367,6 @@ import { comingSoon, tools } from '../data/tools.js';
   .island-card.locked h3,
   .island-card.locked .card-kicker {
     color: #8f86bb;
-  }
-
-  /* ---- Quests ---- */
-  .quests {
-    margin-top: 44px;
-    padding: 24px;
-    overflow: hidden;
-  }
-
-  @media (min-width: 720px) {
-    .quests {
-      padding: 32px;
-    }
-  }
-
-  .quest-head {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 16px 24px;
-    margin-bottom: 22px;
-  }
-
-  .quest-head p:last-child {
-    margin: 0;
-    color: var(--muted);
-  }
-
-  .badge-strip {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 10px;
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
-
-  .mini-badge {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    padding: 14px 8px;
-    border-radius: 18px;
-    border: 1px dashed var(--line-strong);
-    background: rgb(0 0 0 / 0.2);
-    text-align: center;
-  }
-
-  .mini-badge .b-icon {
-    font-size: 2.1rem;
-    line-height: 1.1;
-    filter: grayscale(1) brightness(0.55);
-  }
-
-  .mini-badge .b-name {
-    font-weight: 900;
-    font-size: 0.88rem;
-    line-height: 1.2;
-  }
-
-  .mini-badge.earned {
-    border: 1px solid var(--gold);
-    background: radial-gradient(circle at 50% 0%, rgb(255 207 58 / 0.25), rgb(0 0 0 / 0.15) 70%);
-  }
-
-  .mini-badge.earned .b-icon {
-    filter: none;
   }
 
   /* ---- Why ---- */

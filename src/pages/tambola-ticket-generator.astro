@@ -240,7 +240,6 @@ import AdSlot from '../components/AdSlot.astro';
 
 <script>
   import { load, save } from '../scripts/storage.js';
-  import { award } from '../scripts/player.js';
   import { sfx } from '../scripts/sfx.js';
   import {
     cleanPerPlayer,
@@ -360,7 +359,6 @@ import AdSlot from '../components/AdSlot.astro';
       errorEl.textContent = error;
       return;
     }
-    award('tickets');
     printTickets(
       items.map(({ ticket, title, tag }) => printTicket(ticket, { title, tag: `${tag} · winisland.in` })),
       Number(checked('layout')),

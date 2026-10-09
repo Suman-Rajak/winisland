@@ -96,7 +96,7 @@ const SIDES = [6, 4, 8, 10, 12, 20];
       </details>
       <details>
         <summary>What are snake eyes?</summary>
-        <p>Rolling two ones with two six-sided dice. It happens once every 36 rolls on average, and it unlocks a badge here.</p>
+        <p>Rolling two ones with two six-sided dice. It happens once every 36 rolls on average, and the roller celebrates it with confetti.</p>
       </details>
       <details>
         <summary>Does it work offline?</summary>
@@ -368,7 +368,6 @@ const SIDES = [6, 4, 8, 10, 12, 20];
   import { load, save } from '../scripts/storage.js';
   import { sfx } from '../scripts/sfx.js';
   import { confetti, prefersReducedMotion } from '../scripts/confetti.js';
-  import { award } from '../scripts/player.js';
 
   const STORE_KEY = 'winisland:dice';
   const MAX_DICE = 6;
@@ -533,8 +532,6 @@ const SIDES = [6, 4, 8, 10, 12, 20];
     renderHistory();
     rolling = false;
     rollBtn.removeAttribute('aria-disabled');
-    const snakeEyes = sides === 6 && values.length === 2 && total === 2;
-    award('roll', snakeEyes ? { snakeEyes: true } : {});
   }
 
   $('fewer').addEventListener('click', () => {

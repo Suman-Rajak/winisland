@@ -194,7 +194,6 @@ import ToolPage from '../layouts/ToolPage.astro';
   import { load, save } from '../scripts/storage.js';
   import { sfx } from '../scripts/sfx.js';
   import { confetti } from '../scripts/confetti.js';
-  import { award } from '../scripts/player.js';
   import { cleanPerPlayer, cleanRoomCode, normalizeName, prizes, ticketsForName } from '../scripts/tickets.js';
   import { printTicket, printTickets, ticketCard } from '../scripts/ticket-view.js';
 
@@ -321,7 +320,6 @@ import ToolPage from '../layouts/ToolPage.astro';
   });
 
   $('print-mine').addEventListener('click', () => {
-    award('tickets');
     printTickets(
       tickets.map((ticket, i) =>
         printTicket(ticket, {

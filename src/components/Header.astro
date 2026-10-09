@@ -28,21 +28,7 @@ const path = Astro.url.pathname;
       </ul>
     </nav>
 
-    <div class="player">
-      <button class="level-chip" type="button" data-open-trophies aria-label="Trophy room: your level and badges">
-        <span class="lv">
-          <span class="lv-label">LV</span>
-          <span class="lv-num" data-hud-level>1</span>
-        </span>
-        <span class="lv-meta">
-          <span class="lv-rank" data-hud-rank>Rookie</span>
-          <span class="xp-bar"><span data-hud-fill></span></span>
-        </span>
-        <span class="trophies">
-          <ToolIcon kind="trophy" size={20} />
-          <span data-hud-badges>0</span>
-        </span>
-      </button>
+    <div class="actions">
       <button id="hud-sound" class="icon-btn" type="button" aria-pressed="true" aria-label="Sound effects">
         <ToolIcon kind="sound" size={22} />
       </button>
@@ -84,7 +70,7 @@ const path = Astro.url.pathname;
     display: grid;
     grid-template-columns: auto 1fr;
     grid-template-areas:
-      'brand player'
+      'brand actions'
       'worlds worlds';
     align-items: center;
     gap: 8px 12px;
@@ -198,128 +184,12 @@ const path = Astro.url.pathname;
     }
   }
 
-  .player {
-    grid-area: player;
+  .actions {
+    grid-area: actions;
     display: flex;
     align-items: center;
     justify-content: flex-end;
     gap: 8px;
-  }
-
-  .level-chip {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    gap: 9px;
-    padding: 5px 10px 5px 5px;
-    border-radius: 999px;
-    border: 1px solid var(--line-strong);
-    background: rgb(10 6 32 / 0.7);
-    color: var(--text);
-    font: inherit;
-    cursor: pointer;
-    transition: border-color 0.15s;
-  }
-
-  .level-chip:hover {
-    border-color: var(--gold);
-  }
-
-  .lv {
-    display: grid;
-    place-items: center;
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    background: radial-gradient(circle at 35% 30%, #ffe680, #ffb300 70%);
-    color: #3a1c00;
-    line-height: 0.9;
-    box-shadow: 0 0 14px rgb(255 207 58 / 0.5);
-  }
-
-  .lv-label {
-    font-size: 0.55rem;
-    font-weight: 900;
-    letter-spacing: 0.08em;
-  }
-
-  .lv-num {
-    font-family: var(--font-display-stack);
-    font-size: 1.05rem;
-  }
-
-  .lv-meta {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    text-align: left;
-  }
-
-  .lv-rank {
-    font-size: 0.78rem;
-    font-weight: 900;
-    line-height: 1;
-    white-space: nowrap;
-  }
-
-  .xp-bar {
-    display: block;
-    width: 74px;
-    height: 7px;
-    border-radius: 99px;
-    background: rgb(255 255 255 / 0.12);
-    overflow: hidden;
-  }
-
-  .xp-bar span {
-    display: block;
-    height: 100%;
-    border-radius: inherit;
-    background: linear-gradient(90deg, var(--lime), var(--cyan));
-    transform-origin: left;
-    transform: scaleX(0.02);
-    transition: transform 0.6s cubic-bezier(0.2, 1.2, 0.4, 1);
-  }
-
-  .trophies {
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
-    font-weight: 900;
-    font-size: 0.9rem;
-    color: var(--gold);
-  }
-
-  :global(html:not([data-player='ready'])) .level-chip [data-hud-level],
-  :global(html:not([data-player='ready'])) .level-chip [data-hud-rank],
-  :global(html:not([data-player='ready'])) .level-chip [data-hud-badges] {
-    visibility: hidden;
-  }
-
-  .level-chip :global(.xp-pop) {
-    position: absolute;
-    right: 8px;
-    top: -6px;
-    font-weight: 900;
-    font-size: 0.9rem;
-    color: var(--lime);
-    text-shadow: 0 2px 0 #0b3d12;
-    pointer-events: none;
-    animation: xp-rise 1.2s ease-out forwards;
-  }
-
-  @keyframes xp-rise {
-    from {
-      transform: translateY(10px);
-      opacity: 0;
-    }
-    20% {
-      opacity: 1;
-    }
-    to {
-      transform: translateY(-26px);
-      opacity: 0;
-    }
   }
 
   .icon-btn {
@@ -347,7 +217,6 @@ const path = Astro.url.pathname;
     color: var(--muted);
   }
 
-  /* Phones: keep the level and XP bar; rank and badge count live in the trophy room. */
   @media (max-width: 520px) {
     .brand :global(svg) {
       width: 34px;
@@ -356,15 +225,6 @@ const path = Astro.url.pathname;
 
     .wordmark {
       font-size: 1.4rem;
-    }
-
-    .lv-rank,
-    .trophies {
-      display: none;
-    }
-
-    .xp-bar {
-      width: 56px;
     }
 
     .icon-btn {

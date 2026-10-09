@@ -13,7 +13,7 @@ const others = [...tools.slice(index + 1), ...tools.slice(0, index)].slice(0, 4)
 ---
 
 <Base title={title} description={description} noindex={noindex}>
-  <div class="container" data-island={island}>
+  <div class="container">
     <header class="level-head">
       <p class="kicker"><ToolIcon kind={island} size={26} /> {kicker ?? tool.island}</p>
       <h1>{heading}</h1>
@@ -114,11 +114,3 @@ const others = [...tools.slice(index + 1), ...tools.slice(0, index)].slice(0, 4)
     line-height: 1.4;
   }
 </style>
-
-<script>
-  import { visit } from '../scripts/player.js';
-
-  const island = document.querySelector('[data-island]')?.dataset.island;
-  // Wait until the header HUD is listening so it can show the "new island" toast.
-  window.addEventListener('DOMContentLoaded', () => visit(island));
-</script>

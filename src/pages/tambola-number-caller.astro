@@ -761,7 +761,6 @@ const numbers = Array.from({ length: 90 }, (_, i) => i + 1);
   import { shuffle } from '../scripts/random.js';
   import { load, save } from '../scripts/storage.js';
   import { callFor } from '../scripts/tambola-calls.js';
-  import { award } from '../scripts/player.js';
   import { sfx } from '../scripts/sfx.js';
   import { confetti } from '../scripts/confetti.js';
   import {
@@ -964,11 +963,9 @@ const numbers = Array.from({ length: 90 }, (_, i) => i + 1);
     game.called += 1;
     saveGame();
     render({ animate: true });
-    award('call');
     if (inProgress()) keepAwake();
     else {
       letSleep();
-      award('fullHouse');
       sfx.win();
       confetti();
     }
@@ -1128,7 +1125,6 @@ const numbers = Array.from({ length: 90 }, (_, i) => i + 1);
 
   $('create-room').addEventListener('click', () => {
     setRoom({ code: newRoomCode(), perPlayer: 1 });
-    award('room');
     sfx.sparkle();
   });
 

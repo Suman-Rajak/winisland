@@ -39,7 +39,7 @@ const bulbs = Array.from({ length: BULBS }, (_, i) => {
         <button id="spin" class="hub" type="button">Spin</button>
       </div>
 
-      <p class="spin-hint">Tap <strong>SPIN</strong> or the wheel · <span class="xp">+10 XP</span> per spin</p>
+      <p class="spin-hint">Tap <strong>SPIN</strong> or the wheel</p>
 
       <div id="history-wrap" class="history" hidden>
         <span class="history-label">Last picks</span>
@@ -70,7 +70,6 @@ const bulbs = Array.from({ length: BULBS }, (_, i) => {
     <form method="dialog"><button class="reward-close" aria-label="Close">✕</button></form>
     <p id="win-label" class="reward-kicker">🏆 The wheel picked</p>
     <p id="win-name" class="reward-name"></p>
-    <p class="reward-xp">+10 XP</p>
     <p class="watermark">Picked on <b>winisland.in</b></p>
     <div class="btn-row">
       <button id="win-again" class="btn btn-play btn-lg" type="button" autofocus>Spin again</button>
@@ -92,7 +91,7 @@ const bulbs = Array.from({ length: BULBS }, (_, i) => {
       </ol>
       <p>
         Your entries are saved in this browser, so they are still there next time. <strong>Shuffle</strong> mixes up the
-        slices and <strong>Sort A–Z</strong> tidies a long list. Every spin earns XP towards your next level.
+        slices and <strong>Sort A–Z</strong> tidies a long list.
       </p>
     </section>
 
@@ -156,13 +155,6 @@ const bulbs = Array.from({ length: BULBS }, (_, i) => {
         <p>
           Tap the speaker button at the top of the page to switch sound effects off. If your phone or computer is set to
           reduce motion, the wheel skips the long spin and shows the result straight away.
-        </p>
-      </details>
-      <details>
-        <summary>What are XP and badges?</summary>
-        <p>
-          Just for fun: every spin, pick and tambola call earns XP, and you level up and unlock badges as you play. Tap
-          your level at the top of the page to see your trophy room. It's saved on your device; no account needed.
         </p>
       </details>
     </section>
@@ -360,11 +352,6 @@ const bulbs = Array.from({ length: BULBS }, (_, i) => {
     text-align: center;
   }
 
-  .spin-hint .xp {
-    color: var(--lime);
-    font-weight: 900;
-  }
-
   .history {
     display: flex;
     flex-wrap: wrap;
@@ -447,7 +434,6 @@ const bulbs = Array.from({ length: BULBS }, (_, i) => {
   import { load, save } from '../scripts/storage.js';
   import { confetti, prefersReducedMotion } from '../scripts/confetti.js';
   import { sfx } from '../scripts/sfx.js';
-  import { award } from '../scripts/player.js';
 
   const STORE_KEY = 'winisland:wheel';
   const MAX_ENTRIES = 500;
@@ -713,7 +699,6 @@ const bulbs = Array.from({ length: BULBS }, (_, i) => {
       winName.textContent = name;
       dialog.showModal();
       confetti({ x: 0.5, y: 0.35 });
-      award('spin'); // after the dialog opens, so badge and level toasts show above it
     }, prefersReducedMotion() ? 0 : 450);
     setTimeout(() => box.classList.remove('won'), 2400);
   }

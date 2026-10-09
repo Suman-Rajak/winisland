@@ -304,7 +304,6 @@ import AdSlot from '../components/AdSlot.astro';
   import { load, save } from '../scripts/storage.js';
   import { prefersReducedMotion, confetti } from '../scripts/confetti.js';
   import { sfx } from '../scripts/sfx.js';
-  import { award } from '../scripts/player.js';
 
   const STORE_KEY = 'winisland:teams';
   const MAX_PLAYERS = 200;
@@ -474,7 +473,6 @@ import AdSlot from '../components/AdSlot.astro';
     $('team-actions').hidden = false;
     sfx.win();
     confetti();
-    award('teams');
   }
 
   function teamsText(teams) {

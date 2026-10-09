@@ -1,6 +1,6 @@
 # winisland.in
 
-Free party games ("islands") built with Astro as a static site, styled as a neon game universe with XP, levels and badges. See `CLAUDE.md` for the plan and rules.
+Free party games ("islands") built with Astro as a static site, styled as a neon game universe. See `CLAUDE.md` for the plan and rules.
 
 ## Commands
 
@@ -39,9 +39,10 @@ Secret Santa works the same way: each reveal link carries its match after the `#
 ## Layout
 
 - `src/pages/`: one file per page. Tool pages use `src/layouts/ToolPage.astro` (header, game, ad, guide, sidebar).
-- `src/components/`: header HUD, trophy room, island art (`Island.astro`), icons, ad slot.
-- `src/data/`: `tools.js` (live and coming-soon islands), `badges.js`, `ads.js`.
-- `src/scripts/`: shared browser code: `random.js` (fair Web Crypto randomness), `seeded.js` (repeatable randomness for room tickets), `tickets.js` (tambola tickets, rooms, prize checks), `ticket-view.js` (on-screen and printed tickets), `santa.js`, `player.js` (XP, levels, badges), `hud.js` (toasts, trophy room), `sfx.js` (sound effects), `confetti.js`, `storage.js`, `tambola-calls.js`.
+- `src/components/`: header, footer, island art (`Island.astro`), icons, ad slot.
+- `src/data/`: `tools.js` (live and coming-soon islands), `ads.js`, `site.js` (contact email and the "Last updated" date on the Privacy Policy and Terms).
+- About, Contact, Privacy Policy and Terms use `src/layouts/InfoPage.astro` and are linked from the footer.
+- `src/scripts/`: shared browser code: `random.js` (fair Web Crypto randomness), `seeded.js` (repeatable randomness for room tickets), `tickets.js` (tambola tickets, rooms, prize checks), `ticket-view.js` (on-screen and printed tickets), `santa.js`, `hud.js` (header sound switch), `sfx.js` (sound effects), `confetti.js`, `storage.js`, `tambola-calls.js`.
 - Private pages (`/tambola-room/`, `/secret-santa-generator/reveal/`) are `noindex` and left out of the sitemap.
 - `public/sw.js`: offline support. The build fills in the file list (see `astro.config.mjs`).
 - `public/_headers`: Cloudflare Pages cache and security headers.
@@ -50,7 +51,7 @@ Secret Santa works the same way: each reveal link carries its match after the `#
 
 1. Add it to `tools` in `src/data/tools.js` (and remove it from `comingSoon`).
 2. Add an icon in `ToolIcon.astro` and a prop in `Island.astro` for its `id`.
-3. Create the page with `ToolPage` and call `award(...)` from `src/scripts/player.js` when someone plays.
+3. Create the page with `ToolPage`.
 
 ## Deploying to Cloudflare Pages
 

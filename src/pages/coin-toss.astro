@@ -335,7 +335,6 @@ import AdSlot from '../components/AdSlot.astro';
   import { load, save } from '../scripts/storage.js';
   import { sfx } from '../scripts/sfx.js';
   import { confetti, prefersReducedMotion } from '../scripts/confetti.js';
-  import { award } from '../scripts/player.js';
 
   const STORE_KEY = 'winisland:coin';
   const DURATION = 1600;
@@ -410,7 +409,6 @@ import AdSlot from '../components/AdSlot.astro';
           confetti({ y: 0.4, count: 90 });
         }
       }
-      award('flip');
     };
 
     if (prefersReducedMotion()) return done();

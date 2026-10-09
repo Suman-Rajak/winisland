@@ -109,15 +109,6 @@ export const sfx = {
     [1318.5, 1568, 2093].forEach((freq, i) => tone(ac, { freq, start: 0.5 + i * 0.06, length: 0.25, volume: 0.05, type: 'sine' }));
   },
 
-  /** Level up jingle. */
-  levelUp() {
-    const ac = audio();
-    if (!ac) return;
-    [392, 523.25, 659.25, 783.99, 1046.5].forEach((freq, i) =>
-      tone(ac, { freq, start: i * 0.07, length: 0.18, volume: 0.08, type: 'square' }),
-    );
-  },
-
   /** Coin flick / card whoosh. */
   whoosh() {
     const ac = audio();
@@ -159,13 +150,5 @@ export const sfx = {
     [1568, 2093, 2637, 3136, 2637, 3520].forEach((freq, i) =>
       tone(ac, { freq, start: i * 0.06, length: 0.3, volume: 0.05, type: 'sine' }),
     );
-  },
-
-  /** Badge unlocked chime. */
-  badge() {
-    const ac = audio();
-    if (!ac) return;
-    tone(ac, { freq: 987.77, length: 0.25, volume: 0.1, type: 'sine' });
-    tone(ac, { freq: 1318.5, start: 0.12, length: 0.4, volume: 0.1, type: 'sine' });
   },
 };

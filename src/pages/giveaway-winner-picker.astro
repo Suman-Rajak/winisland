@@ -437,7 +437,6 @@ import Island from '../components/Island.astro';
   import { load, save } from '../scripts/storage.js';
   import { confetti, prefersReducedMotion } from '../scripts/confetti.js';
   import { sfx } from '../scripts/sfx.js';
-  import { award } from '../scripts/player.js';
 
   const STORE_KEY = 'winisland:picker';
 
@@ -633,7 +632,6 @@ import Island from '../components/Island.astro';
     show(result);
     announce.textContent = `${r.winners.length === 1 ? 'Winner' : 'Winners'}: ${r.winners.join(', ')}`;
     sfx.win();
-    award('pick');
     const box = stage.getBoundingClientRect();
     confetti({ x: (box.left + box.width / 2) / window.innerWidth, y: Math.max(0.2, (box.top + 80) / window.innerHeight) });
   }
