@@ -1,0 +1,80 @@
+---
+import InfoPage from '../layouts/InfoPage.astro';
+import { tools } from '../data/tools.js';
+---
+
+<InfoPage
+  title="About winisland – Free Party Games and Giveaway Tools | winisland"
+  description="winisland.in is a free set of party and giveaway tools: spin the wheel, tambola caller and tickets, winner picker, team divider, Secret Santa, coin toss and dice. No sign-up."
+  kicker="About us"
+  heading="About winisland"
+  intro="A small island of free party tools, built so the fun starts in one tap: no app to install, no account, no fuss."
+>
+  <section class="panel">
+    <h2>Why we made it</h2>
+    <p>
+      Every party, classroom game and online giveaway hits the same moment: someone has to pick a name, call a number
+      or split the teams, and everyone wants it to be fair. Most tools for that are cluttered, ask you to sign up, or want
+      access to your social accounts.
+    </p>
+    <p>
+      winisland is our answer. Each tool opens instantly on a phone or laptop, does one job well, and
+      shows <strong>"Picked on winisland.in"</strong> on the result so everyone can see where it came from.
+    </p>
+  </section>
+
+  <section class="panel">
+    <h2>What's on the island</h2>
+    <ul>
+      {
+        tools.map((tool) => (
+          <li>
+            <a href={tool.href}>{tool.name}</a>: {tool.blurb}
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+
+  <section class="panel">
+    <h2>How we keep it fair and private</h2>
+    <ul>
+      <li>
+        <strong>Fair picks.</strong> Wheels, draws, team splits, coins and dice use your browser's built-in cryptographic
+        random number generator, so every name and number has an equal chance.
+      </li>
+      <li>
+        <strong>Your lists stay with you.</strong> Everything runs in your browser. The names you type are saved only on
+        your own device, and we have no database to store them in.
+      </li>
+      <li>
+        <strong>No login, ever.</strong> The giveaway picker works from a pasted list, so you never hand over your
+        Instagram or YouTube password.
+      </li>
+      <li>
+        <strong>Works offline.</strong> Once you've opened the site, the tools keep working without internet, which helps
+        at parties with patchy Wi-Fi.
+      </li>
+    </ul>
+  </section>
+
+  <section class="panel">
+    <h2>Free, and kept that way by ads</h2>
+    <p>
+      All the tools are free to use. To pay for hosting and new tools, some pages may show ads beside or below the tool.
+      Ads never cover the game area. You can read how ads use data in our <a href="/privacy-policy/">Privacy Policy</a>.
+    </p>
+    <p>
+      winisland is for fun and fair choices only. It is not a betting or gambling site, and our tools must not be used
+      for real-money games.
+    </p>
+  </section>
+
+  <section class="panel">
+    <h2>Say hello</h2>
+    <p>
+      Found a bug, want a new tool or a feature for your next party? We'd love to hear from you on
+      our <a href="/contact/">Contact page</a>.
+    </p>
+  </section>
+</InfoPage>

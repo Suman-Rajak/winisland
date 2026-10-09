@@ -1,0 +1,107 @@
+---
+import InfoPage from '../layouts/InfoPage.astro';
+import { CONTACT_EMAIL } from '../data/site.js';
+
+const topics = [
+  { subject: 'Bug report', label: 'Report a bug', hint: 'Tell us the tool, your phone or browser, and what went wrong.' },
+  { subject: 'Tool idea', label: 'Suggest a tool or feature', hint: 'What would make your next party or giveaway easier?' },
+  { subject: 'Privacy request', label: 'Privacy question', hint: 'Questions about your data or our Privacy Policy.' },
+  { subject: 'Partnership', label: 'Business and partnerships', hint: 'Branded wheels, ticket packs, press or collaborations.' },
+];
+const mailto = (subject) => `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`winisland: ${subject}`)}`;
+---
+
+<InfoPage
+  title="Contact winisland | winisland"
+  description="Get in touch with winisland.in: report a bug, suggest a new party tool, ask a privacy question or talk about partnerships."
+  kicker="Contact"
+  heading="Contact us"
+  intro="Questions, bug reports, tool ideas or a kind word: we read every message."
+>
+  <section class="panel">
+    <h2>Email us</h2>
+    <p>The fastest way to reach us is by email:</p>
+    <p class="email">
+      <a class="btn btn-play btn-lg" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
+    </p>
+    <p class="hint">We usually reply within a few working days.</p>
+  </section>
+
+  <section class="panel">
+    <h2>What can we help with?</h2>
+    <p>Pick a topic to open an email with the subject filled in.</p>
+    <ul class="topics">
+      {
+        topics.map((t) => (
+          <li>
+            <a href={mailto(t.subject)}>{t.label}</a>
+            <span>{t.hint}</span>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+
+  <section class="panel faq">
+    <h2>Before you write</h2>
+    <details>
+      <summary>Can you get back a list I typed into a tool?</summary>
+      <p>
+        No. Your lists are saved only in your own browser, never on our servers, so we can't see or restore them. If you
+        cleared your browser data, the list is gone.
+      </p>
+    </details>
+    <details>
+      <summary>Can you pick a winner for my giveaway?</summary>
+      <p>
+        We don't run giveaways or pick winners for anyone. Use the <a href="/giveaway-winner-picker/">Giveaway Winner
+        Picker</a> and share a screen recording of the draw with your followers.
+      </p>
+    </details>
+    <details>
+      <summary>The tambola voice is silent. What do I do?</summary>
+      <p>
+        Check that your phone isn't on silent and the media volume is up, and that <strong>Read numbers aloud</strong> is ticked in the caller. The voice comes from your
+        device, so some older phones or browsers may not have one.
+      </p>
+    </details>
+  </section>
+</InfoPage>
+
+<style>
+  .email {
+    margin: 4px 0 0;
+  }
+
+  .email .btn {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    text-transform: none;
+  }
+
+  .topics {
+    list-style: none;
+    padding: 0 !important;
+    display: grid;
+    gap: 10px;
+  }
+
+  .topics li {
+    display: grid;
+    gap: 2px;
+    margin: 0;
+    padding: 12px 14px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--line);
+    background: rgb(0 0 0 / 0.18);
+  }
+
+  .topics a {
+    font-weight: 800;
+  }
+
+  .topics span {
+    color: var(--muted);
+    font-size: 0.95rem;
+  }
+</style>

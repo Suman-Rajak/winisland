@@ -1,0 +1,141 @@
+---
+import InfoPage from '../layouts/InfoPage.astro';
+import { CONTACT_EMAIL, LEGAL_UPDATED } from '../data/site.js';
+---
+
+<InfoPage
+  title="Terms and Conditions | winisland"
+  description="The terms for using winisland.in's free party and giveaway tools: fair use, no gambling, your responsibilities when running giveaways, and our disclaimers."
+  kicker="Terms"
+  heading="Terms and Conditions"
+  intro="The ground rules for using winisland. They're short, so please give them a read."
+  updated={LEGAL_UPDATED}
+>
+  <section class="panel">
+    <h2>1. Agreeing to these terms</h2>
+    <p>
+      By using <strong>winisland.in</strong> ("winisland", "we", "us") you agree to these terms and to
+      our <a href="/privacy-policy/">Privacy Policy</a>. If you don't agree, please don't use the site.
+    </p>
+  </section>
+
+  <section class="panel">
+    <h2>2. The service</h2>
+    <p>
+      winisland offers free browser-based tools for parties, games, classrooms and giveaways. We may add, change or
+      remove tools or features at any time, and we don't promise the site will always be available or error-free.
+    </p>
+  </section>
+
+  <section class="panel">
+    <h2>3. Using the tools fairly</h2>
+    <p>You agree not to:</p>
+    <ul>
+      <li>
+        use winisland for gambling, betting, lotteries or any game where people pay money for a chance to win money or
+        prizes;
+      </li>
+      <li>use the tools for anything illegal, or to harass, embarrass or harm other people;</li>
+      <li>
+        present a result as something it isn't, such as editing a screenshot or re-running a draw until you get the
+        "winner" you wanted;
+      </li>
+      <li>try to break, overload or copy the site, or get around its security.</li>
+    </ul>
+  </section>
+
+  <section class="panel">
+    <h2>4. Giveaways and contests you run</h2>
+    <p>
+      If you use winisland to pick winners, the giveaway is yours, not ours. You are responsible for its rules,
+      eligibility, prizes and delivery, and for following the laws of your country and the rules of any platform you run it
+      on (such as Instagram, YouTube or WhatsApp).
+    </p>
+    <p>
+      winisland is not a sponsor, organiser or judge of any giveaway, and is not connected with or endorsed by Instagram,
+      YouTube, WhatsApp, Meta or Google. Any dispute about a result is between you and your participants.
+    </p>
+  </section>
+
+  <section class="panel">
+    <h2>5. What you type in</h2>
+    <p>
+      The names and lists you enter stay in your browser (see our <a href="/privacy-policy/">Privacy Policy</a>). Only
+      enter names you have a right to use, and don't enter sensitive details such as phone numbers, addresses or ID
+      numbers. You keep any rights you have in what you type.
+    </p>
+  </section>
+
+  <section class="panel">
+    <h2>6. Results</h2>
+    <p>
+      Our tools use your browser's cryptographic random number generator to make every pick fair. Results are for fun and
+      fair decisions, and are provided without any guarantee. We aren't responsible for decisions you make based on them.
+    </p>
+  </section>
+
+  <section class="panel">
+    <h2>7. Our content</h2>
+    <p>
+      The winisland name, logo, design, artwork, code and text belong to us. You're welcome to:
+    </p>
+    <ul>
+      <li>share screenshots and screen recordings of your results (keeping the "Picked on winisland.in" mark);</li>
+      <li>print tambola tickets and Secret Santa slips for your own events.</li>
+    </ul>
+    <p>
+      Please don't copy the site, sell our printables or tools as your own, or remove the winisland mark from results you
+      share.
+    </p>
+  </section>
+
+  <section class="panel">
+    <h2>8. Ads and links to other sites</h2>
+    <p>
+      The site may show ads and contain links, including affiliate links, to other websites. We don't control those sites
+      and aren't responsible for their content, products or privacy practices.
+    </p>
+  </section>
+
+  <section class="panel">
+    <h2>9. No warranty</h2>
+    <p>
+      winisland is provided "as is" and "as available", without warranties of any kind, whether express or implied,
+      including that it will meet your needs or work without interruption, errors or data loss. Saved lists live in your
+      browser and can be lost if you clear your browser data, so keep a copy of anything important.
+    </p>
+  </section>
+
+  <section class="panel">
+    <h2>10. Limitation of liability</h2>
+    <p>
+      To the fullest extent allowed by law, winisland is not liable for any indirect, incidental or consequential loss, or
+      for any loss of data, profit or goodwill, arising from your use of the site. Our total liability to you for any claim
+      is limited to the amount you paid us in the 12 months before the claim, or ₹1,000 if that is more.
+    </p>
+  </section>
+
+  <section class="panel">
+    <h2>11. Changes to these terms</h2>
+    <p>
+      We may update these terms from time to time. When we do, we'll change the "Last updated" date at the top. If you keep
+      using the site after a change, you accept the new terms.
+    </p>
+  </section>
+
+  <section class="panel">
+    <h2>12. Governing law</h2>
+    <p>
+      These terms are governed by the laws of India. This doesn't take away any rights you have under the consumer laws
+      of the country you live in.
+    </p>
+  </section>
+
+  <section class="panel">
+    <h2>13. Contact</h2>
+    <p>
+      Questions about these terms? Email <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> or visit
+      our <a href="/contact/">Contact page</a>.
+    </p>
+  </section>
+</InfoPage>

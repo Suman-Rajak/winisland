@@ -3,6 +3,12 @@ import Logo from './Logo.astro';
 import { tools } from '../data/tools.js';
 
 const year = new Date().getFullYear();
+const siteLinks = [
+  { href: '/about/', name: 'About us' },
+  { href: '/contact/', name: 'Contact' },
+  { href: '/privacy-policy/', name: 'Privacy Policy' },
+  { href: '/terms/', name: 'Terms and Conditions' },
+];
 ---
 
 <footer class="site-footer">
@@ -29,6 +35,18 @@ const year = new Date().getFullYear();
         }
       </ul>
     </nav>
+    <nav aria-label="Site">
+      <p class="col-title">winisland</p>
+      <ul>
+        {
+          siteLinks.map((link) => (
+            <li>
+              <a href={link.href}>{link.name}</a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
   </div>
   <div class="container legal">© {year} winisland.in · Made for parties</div>
 </footer>
@@ -45,12 +63,21 @@ const year = new Date().getFullYear();
 
   .footer-grid {
     display: grid;
-    gap: 24px;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px 16px;
+  }
+
+  .about {
+    grid-column: 1 / -1;
   }
 
   @media (min-width: 720px) {
     .footer-grid {
-      grid-template-columns: 2fr 1fr;
+      grid-template-columns: 2fr 1fr 1fr;
+    }
+
+    .about {
+      grid-column: auto;
     }
   }
 
