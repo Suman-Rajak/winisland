@@ -1,0 +1,455 @@
+---
+import ToolPage from '../layouts/ToolPage.astro';
+import AdSlot from '../components/AdSlot.astro';
+---
+
+<ToolPage
+  title="Coin Toss – Flip a Coin Online, Heads or Tails | winisland"
+  description="Flip a coin online with a realistic 3D coin. Call heads or tails, keep score and see your streak. Fair, free and instant, perfect for cricket tosses and quick decisions."
+  island="coin"
+  heading="Coin Toss"
+  intro="Heads or tails? Make your call and flip a shiny 3D coin. Perfect for the cricket toss, settling arguments or any quick decision."
+>
+  <section class="arena coin-arena" aria-label="Coin toss">
+    <div class="coin-stage">
+      <div id="coin-wrap" class="coin-wrap">
+        <div id="coin" class="coin" role="img" aria-label="Coin showing heads">
+          <div class="face heads">
+            <svg viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+              <path
+                d="M50 18L56.5 35.5L75 36.4L60.5 48L65.4 66L50 55.8L34.6 66L39.5 48L25 36.4L43.5 35.5Z"
+                fill="#fff4c2"
+                stroke="#b86f00"
+                stroke-width="2"
+                stroke-linejoin="round"></path>
+              <text x="50" y="84" text-anchor="middle" font-size="13" fill="#7a3e00" style="font-family: var(--font-display-stack)">
+                HEADS
+              </text>
+            </svg>
+          </div>
+          <div class="face tails">
+            <svg viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+              <ellipse cx="50" cy="60" rx="26" ry="8" fill="#fff4c2" stroke="#b86f00" stroke-width="2"></ellipse>
+              <path d="M52 58c-1-10-2-18-8-26" stroke="#b86f00" stroke-width="4" fill="none" stroke-linecap="round"></path>
+              <g fill="#fff4c2" stroke="#b86f00" stroke-width="1.6">
+                <path d="M44 32c6-7 16-8 22-3-7-1-15 0-22 3z"></path>
+                <path d="M44 32c-6-6-15-6-20-1 7-1 14-1 20 1z"></path>
+                <path d="M44 32c3-8 0-15-6-18 3 6 4 12 6 18z"></path>
+                <path d="M44 32c8-3 14 2 16 9-5-5-10-8-16-9z"></path>
+              </g>
+              <text x="50" y="84" text-anchor="middle" font-size="13" fill="#7a3e00" style="font-family: var(--font-display-stack)">
+                TAILS
+              </text>
+            </svg>
+          </div>
+        </div>
+      </div>
+      <div id="shadow" class="coin-shadow" aria-hidden="true"></div>
+    </div>
+
+    <div class="coin-panel">
+      <p id="result" class="coin-result" aria-live="polite">Make your call!</p>
+      <p id="verdict" class="verdict"></p>
+
+      <fieldset class="seg">
+        <legend>Your call</legend>
+        <div class="seg-options">
+          <label><input type="radio" name="call" value="" checked /><span>No call</span></label>
+          <label><input type="radio" name="call" value="heads" /><span>Heads</span></label>
+          <label><input type="radio" name="call" value="tails" /><span>Tails</span></label>
+        </div>
+      </fieldset>
+
+      <button id="flip" class="btn btn-play btn-xl flip-btn" type="button">Flip the coin</button>
+
+      <div class="score panel">
+        <div class="score-row">
+          <span class="score-item"><b id="heads-count">0</b> Heads</span>
+          <span class="score-item"><b id="tails-count">0</b> Tails</span>
+          <span class="score-item"><b id="streak">0</b> <span id="streak-label">Streak</span></span>
+        </div>
+        <ol id="history" class="history" aria-label="Last flips, newest first"></ol>
+        <div class="score-foot">
+          <p class="watermark">Flipped on <b>winisland.in</b></p>
+          <button id="reset" class="btn" type="button">Reset score</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <Fragment slot="guide">
+    <section class="panel">
+      <h2>How to flip a coin online</h2>
+      <ol>
+        <li>Choose your call, <strong>Heads</strong> or <strong>Tails</strong>, or flip without calling.</li>
+        <li>Press <strong>Flip the coin</strong>, or tap the coin itself.</li>
+        <li>The coin spins, lands and shows the result. If you made a call, it tells you if you got it right.</li>
+      </ol>
+      <p>The score board keeps count of heads, tails and the current streak, so you can play best of three or best of five.</p>
+    </section>
+
+    <AdSlot name="inGuide" />
+
+    <section class="panel">
+      <h2>Is an online coin toss fair?</h2>
+      <p>
+        Yes. Each flip uses your browser's cryptographic random number generator, so heads and tails each have exactly a
+        50% chance. Past flips never affect the next one: after five heads in a row, the next flip is still a 50/50 chance.
+        A real coin can be slightly biased by how it is thrown or caught; this one can't.
+      </p>
+    </section>
+
+    <section class="panel">
+      <h2>When to use a coin toss</h2>
+      <ul>
+        <li><strong>Cricket:</strong> the captain who wins the toss chooses to bat or bowl first.</li>
+        <li><strong>Football:</strong> decide who kicks off or which end each team defends.</li>
+        <li><strong>Board games:</strong> pick who goes first.</li>
+        <li><strong>Everyday decisions:</strong> pizza or burgers, movie or series. Notice which side you were hoping for!</li>
+      </ul>
+      <p>Need to split players first? Use the <a href="/team-divider/">team divider</a>.</p>
+    </section>
+
+    <section class="panel faq">
+      <h2>Frequently asked questions</h2>
+      <details>
+        <summary>Can I flip more than once?</summary>
+        <p>Yes, as many times as you like. The score board keeps track until you reset it.</p>
+      </details>
+      <details>
+        <summary>What are the odds of getting heads three times in a row?</summary>
+        <p>One in eight (12.5%). Each flip is 1 in 2, so three in a row is ½ × ½ × ½.</p>
+      </details>
+      <details>
+        <summary>Does it work offline?</summary>
+        <p>Yes. Once you've opened winisland, the coin toss works without internet.</p>
+      </details>
+    </section>
+  </Fragment>
+</ToolPage>
+
+<style>
+  .coin-arena {
+    display: grid;
+    gap: 20px;
+    align-items: center;
+  }
+
+  @media (min-width: 900px) {
+    .coin-arena {
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+    }
+  }
+
+  .coin-stage {
+    position: relative;
+    display: grid;
+    place-items: center;
+    height: clamp(280px, 70vw, 380px);
+    perspective: 900px;
+  }
+
+  .coin-stage::before {
+    content: '';
+    position: absolute;
+    inset: 10%;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgb(255 207 58 / 0.3), transparent 65%);
+  }
+
+  .coin-wrap {
+    position: relative;
+    z-index: 1;
+    width: clamp(170px, 46vw, 230px);
+    aspect-ratio: 1;
+    cursor: pointer;
+  }
+
+  .coin {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transform-style: preserve-3d;
+  }
+
+  .face {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    backface-visibility: hidden;
+    background: radial-gradient(circle at 34% 28%, #fff6c4 0%, #ffd34d 38%, #e9a400 70%, #b77700 100%);
+    box-shadow:
+      inset 0 0 0 7px #e09a00,
+      inset 0 0 0 10px #ffe68a,
+      inset 0 -10px 20px rgb(120 60 0 / 0.35),
+      0 0 40px rgb(255 207 58 / 0.35);
+  }
+
+  .face svg {
+    width: 74%;
+  }
+
+  .tails {
+    transform: rotateX(180deg);
+  }
+
+  .coin-shadow {
+    position: absolute;
+    bottom: 8%;
+    width: clamp(120px, 32vw, 170px);
+    height: 18px;
+    border-radius: 50%;
+    background: radial-gradient(ellipse, rgb(0 0 0 / 0.55), transparent 70%);
+  }
+
+  .coin-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    text-align: center;
+  }
+
+  .coin-result {
+    margin: 0;
+    font-family: var(--font-display-stack);
+    font-size: clamp(2.4rem, 1.8rem + 3vw, 3.6rem);
+    line-height: 1;
+    color: var(--gold);
+    text-shadow:
+      0 5px 0 #7a3e00,
+      0 0 30px rgb(255 207 58 / 0.5);
+  }
+
+  .coin-result.pop {
+    animation: result-pop 0.5s cubic-bezier(0.2, 1.6, 0.4, 1);
+  }
+
+  @keyframes result-pop {
+    from {
+      transform: scale(0.4);
+    }
+  }
+
+  .verdict {
+    margin: 0;
+    min-height: 1.6em;
+    font-weight: 900;
+    font-size: 1.1rem;
+  }
+
+  .verdict.right {
+    color: var(--lime);
+  }
+
+  .verdict.wrong {
+    color: #ff8fc8;
+  }
+
+  .seg .seg-options {
+    justify-content: center;
+  }
+
+  .flip-btn {
+    width: min(100%, 360px);
+  }
+
+  .score {
+    width: min(100%, 420px);
+    padding: 16px;
+    display: grid;
+    gap: 12px;
+  }
+
+  .score-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .score-item {
+    display: flex;
+    flex-direction: column;
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .score-item b {
+    font-family: var(--font-display-stack);
+    font-weight: 400;
+    font-size: 1.9rem;
+    line-height: 1.1;
+    color: var(--text);
+    letter-spacing: 0;
+  }
+
+  .history {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 5px;
+    min-height: 30px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .history :global(li) {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #fff6c4, #ffcf3a 55%, #c98600);
+    color: #5a2d00;
+    font-family: var(--font-display-stack);
+    font-size: 0.85rem;
+  }
+
+  .history :global(li.t) {
+    background: radial-gradient(circle at 35% 30%, #ffffff, #cfd6f5 55%, #8b95c6);
+    color: #1d2240;
+  }
+
+  .score-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .score-foot .btn {
+    min-height: 38px;
+    font-size: 0.85rem;
+  }
+</style>
+
+<script>
+  import { randomInt } from '../scripts/random.js';
+  import { load, save } from '../scripts/storage.js';
+  import { sfx } from '../scripts/sfx.js';
+  import { confetti, prefersReducedMotion } from '../scripts/confetti.js';
+  import { award } from '../scripts/player.js';
+
+  const STORE_KEY = 'winisland:coin';
+  const DURATION = 1600;
+
+  const $ = (id) => document.getElementById(id);
+  const coin = $('coin');
+  const wrap = $('coin-wrap');
+  const shadow = $('shadow');
+  const resultEl = $('result');
+  const verdict = $('verdict');
+  const flipBtn = $('flip');
+
+  let angle = 0; // current rotateX of the coin, in degrees
+  let flipping = false;
+  const saved = load(STORE_KEY, null);
+  let history = Array.isArray(saved?.history) ? saved.history.filter((s) => s === 'H' || s === 'T') : [];
+
+  function renderScore() {
+    $('heads-count').textContent = history.filter((s) => s === 'H').length;
+    $('tails-count').textContent = history.filter((s) => s === 'T').length;
+    let streak = 0;
+    while (streak < history.length && history[history.length - 1 - streak] === history.at(-1)) streak += 1;
+    $('streak').textContent = streak;
+    $('streak-label').textContent = history.length ? `${history.at(-1) === 'H' ? 'Heads' : 'Tails'} streak` : 'Streak';
+    $('history').replaceChildren(
+      ...history
+        .slice(-24)
+        .reverse()
+        .map((s) => {
+          const li = Object.assign(document.createElement('li'), { textContent: s, className: s === 'T' ? 't' : '' });
+          li.setAttribute('aria-label', s === 'H' ? 'Heads' : 'Tails');
+          return li;
+        }),
+    );
+  }
+
+  function flip() {
+    if (flipping) return;
+    flipping = true;
+    flipBtn.setAttribute('aria-disabled', 'true');
+    verdict.textContent = '';
+    verdict.className = 'verdict';
+    resultEl.textContent = '…';
+    resultEl.classList.remove('pop');
+
+    const heads = randomInt(2) === 0;
+    const call = document.querySelector('input[name="call"]:checked').value;
+    const from = angle;
+    const spins = 5 + randomInt(3);
+    // Land on 0° (heads) or 180° (tails), after several full spins.
+    angle = from - (from % 360) + spins * 360 + (heads ? 0 : 180);
+    coin.style.transform = `rotateX(${angle}deg)`;
+
+    const done = () => {
+      flipping = false;
+      flipBtn.removeAttribute('aria-disabled');
+      const side = heads ? 'Heads' : 'Tails';
+      coin.setAttribute('aria-label', `Coin showing ${side.toLowerCase()}`);
+      resultEl.textContent = `${side}!`;
+      resultEl.classList.add('pop');
+      history.push(heads ? 'H' : 'T');
+      history = history.slice(-200);
+      save(STORE_KEY, { history });
+      renderScore();
+      sfx.clink();
+      if (call) {
+        const right = (call === 'heads') === heads;
+        verdict.textContent = right ? 'You called it! 🎉' : 'Not this time!';
+        verdict.classList.add(right ? 'right' : 'wrong');
+        if (right) {
+          sfx.win();
+          confetti({ y: 0.4, count: 90 });
+        }
+      }
+      award('flip');
+    };
+
+    if (prefersReducedMotion()) return done();
+    sfx.whoosh();
+    coin.animate([{ transform: `rotateX(${from}deg)` }, { transform: `rotateX(${angle}deg)` }], {
+      duration: DURATION,
+      easing: 'cubic-bezier(0.15, 0.55, 0.25, 1)',
+    });
+    wrap.animate(
+      [
+        { transform: 'translateY(0) scale(1)' },
+        { transform: 'translateY(-46%) scale(1.18)', offset: 0.42 },
+        { transform: 'translateY(0) scale(1)', offset: 0.84 },
+        { transform: 'translateY(-6%) scale(1)', offset: 0.92 },
+        { transform: 'translateY(0) scale(1)' },
+      ],
+      { duration: DURATION, easing: 'ease-in-out' },
+    );
+    shadow.animate(
+      [
+        { transform: 'scale(1)', opacity: 1 },
+        { transform: 'scale(0.5)', opacity: 0.4, offset: 0.42 },
+        { transform: 'scale(1)', opacity: 1, offset: 0.84 },
+        { transform: 'scale(1)', opacity: 1 },
+      ],
+      { duration: DURATION, easing: 'ease-in-out' },
+    );
+    setTimeout(done, DURATION);
+  }
+
+  flipBtn.addEventListener('click', flip);
+  wrap.addEventListener('click', flip);
+  $('reset').addEventListener('click', () => {
+    history = [];
+    save(STORE_KEY, { history });
+    renderScore();
+    resultEl.textContent = 'Make your call!';
+    verdict.textContent = '';
+  });
+
+  renderScore();
+</script>

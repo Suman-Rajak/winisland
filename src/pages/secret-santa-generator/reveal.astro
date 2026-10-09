@@ -1,0 +1,266 @@
+---
+import Base from '../../layouts/Base.astro';
+import AdSlot from '../../components/AdSlot.astro';
+---
+
+<Base title="Your Secret Santa | winisland" description="Open your private Secret Santa link to see who you're buying a gift for." noindex>
+  <div class="container reveal-page">
+    <section class="arena reveal" aria-label="Your Secret Santa">
+      <div id="bad" hidden>
+        <p class="kicker">🎅 Secret Santa</p>
+        <h1>This link looks broken</h1>
+        <p class="lead">Ask the organiser to send your link again, and make sure you open the whole link.</p>
+      </div>
+
+      <div id="good" class="good" hidden>
+        <p id="event-kicker" class="kicker">🎅 Secret Santa</p>
+        <h1 id="hello"></h1>
+        <p class="lead">You're the Secret Santa for…</p>
+
+        <button id="gift" class="gift" type="button" aria-label="Open the gift to see who you're buying for">
+          <svg viewBox="0 0 200 200" aria-hidden="true" focusable="false">
+            <ellipse cx="100" cy="186" rx="70" ry="8" fill="rgb(0 0 0 / 0.35)"></ellipse>
+            <rect x="40" y="92" width="120" height="88" rx="8" fill="#ff3b4f"></rect>
+            <rect x="40" y="92" width="120" height="14" fill="#c81a33" opacity="0.6"></rect>
+            <rect x="92" y="92" width="16" height="88" fill="#ffcf3a"></rect>
+            <g id="lid" class="lid">
+              <rect x="32" y="70" width="136" height="26" rx="8" fill="#ff5c6c"></rect>
+              <rect x="92" y="70" width="16" height="26" fill="#ffcf3a"></rect>
+              <ellipse cx="80" cy="60" rx="22" ry="12" transform="rotate(-25 80 60)" fill="#ffcf3a"></ellipse>
+              <ellipse cx="120" cy="60" rx="22" ry="12" transform="rotate(25 120 60)" fill="#ffcf3a"></ellipse>
+              <circle cx="100" cy="66" r="9" fill="#ffe27a"></circle>
+            </g>
+          </svg>
+        </button>
+        <p id="tap" class="tap">Tap the gift to open it</p>
+
+        <div id="answer" class="answer" aria-live="polite" hidden>
+          <p id="to" class="to"></p>
+          <ul id="info" class="info"></ul>
+          <p class="secret">🤫 Shh! Keep it secret.</p>
+          <p class="watermark">Picked on <b>winisland.in</b></p>
+        </div>
+      </div>
+    </section>
+
+    <AdSlot name="belowTool" />
+
+    <section class="panel cta">
+      <h2>Organising a party?</h2>
+      <p>Run your own free Secret Santa in a minute, or try the other party games on winisland.</p>
+      <div class="btn-row">
+        <a class="btn btn-play" href="/secret-santa-generator/">Start a Secret Santa</a>
+        <a class="btn" href="/">See all games</a>
+      </div>
+    </section>
+  </div>
+</Base>
+
+<style>
+  .reveal-page {
+    padding-top: 28px;
+    max-width: 720px;
+  }
+
+  .reveal {
+    text-align: center;
+    padding-block: 30px;
+    background:
+      radial-gradient(ellipse at 50% 0%, #4a1238 0%, #1d0f4c 60%, #120a35 100%) padding-box,
+      linear-gradient(135deg, var(--gold), #ff3b4f, var(--lime)) border-box;
+  }
+
+  .kicker {
+    background: rgb(255 59 79 / 0.15);
+    border-color: rgb(255 59 79 / 0.5);
+    color: #ffc2c9;
+    padding-left: 14px;
+  }
+
+  .lead {
+    color: var(--muted);
+    font-size: 1.15rem;
+  }
+
+  .gift {
+    display: block;
+    width: min(240px, 70vw);
+    margin: 0 auto;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    animation: wobble 2.4s ease-in-out infinite;
+  }
+
+  .gift:focus-visible {
+    border-radius: 20px;
+  }
+
+  @keyframes wobble {
+    0%,
+    80%,
+    100% {
+      transform: rotate(0);
+    }
+    85% {
+      transform: rotate(-5deg);
+    }
+    90% {
+      transform: rotate(5deg);
+    }
+    95% {
+      transform: rotate(-3deg);
+    }
+  }
+
+  .gift.shaking {
+    animation: shake 0.12s linear infinite;
+  }
+
+  @keyframes shake {
+    0%,
+    100% {
+      transform: translateX(0) rotate(0);
+    }
+    25% {
+      transform: translateX(-6px) rotate(-4deg);
+    }
+    75% {
+      transform: translateX(6px) rotate(4deg);
+    }
+  }
+
+  .lid {
+    transform-box: fill-box;
+    transform-origin: center;
+    transition:
+      transform 0.7s cubic-bezier(0.2, 1, 0.3, 1),
+      opacity 0.7s;
+  }
+
+  .gift.open {
+    animation: none;
+    cursor: default;
+  }
+
+  .gift.open .lid {
+    transform: translate(60px, -130px) rotate(40deg);
+    opacity: 0;
+  }
+
+  .tap {
+    margin: 10px 0 0;
+    font-weight: 800;
+    color: var(--gold);
+  }
+
+  .answer {
+    margin-top: 8px;
+  }
+
+  .to {
+    margin: 0;
+    font-family: var(--font-display-stack);
+    font-size: clamp(2.6rem, 1.8rem + 6vw, 4.4rem);
+    line-height: 1.05;
+    overflow-wrap: anywhere;
+    color: #fff;
+    text-shadow:
+      0 5px 0 #7a1222,
+      0 0 40px rgb(255 207 58 / 0.7);
+    animation: name-pop 0.6s cubic-bezier(0.2, 1.6, 0.4, 1);
+  }
+
+  @keyframes name-pop {
+    from {
+      transform: scale(0.3);
+      opacity: 0;
+    }
+  }
+
+  .info {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    list-style: none;
+    margin: 16px 0;
+    padding: 0;
+  }
+
+  .info:empty {
+    display: none;
+  }
+
+  .info :global(li) {
+    padding: 6px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--line-strong);
+    background: rgb(0 0 0 / 0.25);
+    font-weight: 800;
+  }
+
+  .secret {
+    font-weight: 800;
+    margin: 0 0 6px;
+  }
+
+  .cta {
+    margin-top: 10px;
+    padding: 22px;
+    text-align: center;
+  }
+
+  .cta .btn-row {
+    justify-content: center;
+  }
+</style>
+
+<script>
+  import { decodeMatch } from '../../scripts/santa.js';
+  import { sfx } from '../../scripts/sfx.js';
+  import { confetti, prefersReducedMotion } from '../../scripts/confetti.js';
+
+  const $ = (id) => document.getElementById(id);
+  const match = decodeMatch(location.hash.slice(1));
+  const gift = $('gift');
+
+  if (!match) {
+    $('bad').hidden = false;
+  } else {
+    $('good').hidden = false;
+    $('hello').textContent = `Hi ${match.g}!`;
+    if (match.e) $('event-kicker').textContent = `🎅 Secret Santa · ${match.e}`;
+
+    const info = [];
+    if (match.b) info.push(`💰 Budget ${match.b}`);
+    if (match.d) {
+      const date = new Date(`${match.d}T12:00`);
+      if (!Number.isNaN(date.getTime())) info.push(`📅 ${date.toLocaleDateString(undefined, { dateStyle: 'medium' })}`);
+    }
+    if (match.n) info.push(`💬 ${match.n}`);
+    $('info').replaceChildren(...info.map((text) => Object.assign(document.createElement('li'), { textContent: text })));
+  }
+
+  gift.addEventListener('click', () => {
+    if (!match || gift.classList.contains('open')) return;
+    const quick = prefersReducedMotion();
+    gift.classList.add('shaking');
+    sfx.rattle(0.7);
+    setTimeout(
+      () => {
+        gift.classList.remove('shaking');
+        gift.classList.add('open');
+        gift.setAttribute('aria-disabled', 'true');
+        $('tap').hidden = true;
+        $('to').textContent = match.r;
+        $('answer').hidden = false;
+        sfx.sparkle();
+        sfx.win();
+        confetti({ y: 0.35 });
+      },
+      quick ? 0 : 800,
+    );
+  });
+</script>

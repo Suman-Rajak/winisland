@@ -1,0 +1,21 @@
+{
+  "name": "winisland – free party and giveaway tools",
+  "short_name": "winisland",
+  "description": "Free party games: spin the wheel, a talking tambola caller and a giveaway winner picker. No sign-up, works offline.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0b0722",
+  "theme_color": "#140c36",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Spin the wheel", "url": "/spin-the-wheel/" },
+    { "name": "Tambola number caller", "url": "/tambola-number-caller/" },
+    { "name": "Giveaway winner picker", "url": "/giveaway-winner-picker/" }
+  ]
+}

@@ -1,0 +1,19 @@
+---
+// Same artwork as public/favicon.svg, inlined so it renders with no extra request.
+const { size = 32 } = Astro.props;
+---
+
+<svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+  <rect width="64" height="64" rx="14" fill="#1b0f4a"></rect>
+  <rect x="1.5" y="1.5" width="61" height="61" rx="12.5" fill="none" stroke="#9461ff" stroke-width="3"></rect>
+  <g stroke="#1b0f4a" stroke-width="1.5" stroke-linejoin="round">
+    <path d="M32 35L32 14A21 21 0 0 1 50.19 24.5Z" fill="#ff3fa4"></path>
+    <path d="M32 35L50.19 24.5A21 21 0 0 1 50.19 45.5Z" fill="#ffcf3a"></path>
+    <path d="M32 35L50.19 45.5A21 21 0 0 1 32 56Z" fill="#2ee6ff"></path>
+    <path d="M32 35L32 56A21 21 0 0 1 13.81 45.5Z" fill="#ff3fa4"></path>
+    <path d="M32 35L13.81 45.5A21 21 0 0 1 13.81 24.5Z" fill="#ffcf3a"></path>
+    <path d="M32 35L13.81 24.5A21 21 0 0 1 32 14Z" fill="#2ee6ff"></path>
+  </g>
+  <circle cx="32" cy="35" r="5" fill="#fff" stroke="#1b0f4a" stroke-width="2.5"></circle>
+  <path d="M26.5 7.5h11L32 17Z" fill="#ffcf3a" stroke="#1b0f4a" stroke-width="1.5" stroke-linejoin="round"></path>
+</svg>

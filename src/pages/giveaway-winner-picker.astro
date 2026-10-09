@@ -1,0 +1,692 @@
+---
+import ToolPage from '../layouts/ToolPage.astro';
+import AdSlot from '../components/AdSlot.astro';
+import Island from '../components/Island.astro';
+---
+
+<ToolPage
+  title="Giveaway Winner Picker – Random Name Picker for Giveaways | winisland"
+  description="Pick fair random giveaway winners from a list of names or usernames. Paste your entries, remove duplicates and add backup winners. Free, no login."
+  island="picker"
+  heading="Giveaway Winner Picker"
+  intro="Paste everyone who entered, hit the drumroll and reveal fair random winners plus backups. Perfect for Instagram and YouTube lives. No login needed."
+>
+  <section class="arena picker-arena" aria-label="Giveaway winner picker">
+    <div class="inputs panel">
+      <div class="entries-head">
+        <h2 class="panel-title"><label for="names">Entrants</label></h2>
+        <span id="stats" class="chip">0 entries</span>
+      </div>
+      <textarea
+        id="names"
+        rows="10"
+        spellcheck="false"
+        aria-describedby="names-hint"
+        placeholder={'@priya.k\n@rahul_s\nAnita Desai\n@cookie.crumbs'}></textarea>
+      <p id="names-hint" class="hint">One name, username or email per line. Saved only in this browser.</p>
+
+      <div class="options">
+        <div class="field">
+          <label for="winners">Winners</label>
+          <input id="winners" type="number" min="1" max="100" value="1" inputmode="numeric" />
+        </div>
+        <div class="field">
+          <label for="backups">Backups</label>
+          <input id="backups" type="number" min="0" max="20" value="0" inputmode="numeric" />
+        </div>
+      </div>
+
+      <label class="check"><input id="dedupe" type="checkbox" checked /> Count each name once</label>
+      <label class="check"><input id="dramatic" type="checkbox" checked /> Countdown and drumroll</label>
+
+      <div class="field">
+        <label for="exclude">Leave out <span class="optional">(optional)</span></label>
+        <input id="exclude" type="text" placeholder="@yourbrand, @teammate" aria-describedby="exclude-hint" />
+        <p id="exclude-hint" class="hint">Separate names with commas, for example your own account.</p>
+      </div>
+
+      <p id="error" class="error" role="alert"></p>
+      <div class="btn-row actions">
+        <button id="pick" class="btn btn-play btn-lg" type="button">Start the draw</button>
+        <button id="clear" class="btn" type="button"><span aria-hidden="true">🧹</span> Clear</button>
+      </div>
+    </div>
+
+    <div id="stage" class="stage">
+      <div class="spotlight" aria-hidden="true"></div>
+
+      <div id="idle" class="idle">
+        <Island kind="picker" uid="stage-gift" class="idle-art" />
+        <p class="idle-title">Ready for the draw?</p>
+        <p class="idle-sub"><b id="stage-count">0</b> entrants on the island</p>
+      </div>
+
+      <p id="countdown" class="countdown" aria-hidden="true" hidden></p>
+      <p id="drum" class="drum" aria-hidden="true" hidden></p>
+
+      <div id="result" class="result" hidden>
+        <div class="rays" aria-hidden="true"></div>
+        <p id="winners-label" class="reward-kicker">🏆 Winner</p>
+        <ol id="winner-list" class="winner-list"></ol>
+        <div id="backup-block" hidden>
+          <p class="backup-label">Backup winners</p>
+          <ol id="backup-list" class="backup-list"></ol>
+        </div>
+        <p id="result-meta" class="meta"></p>
+        <p class="watermark">Picked on <b>winisland.in</b></p>
+        <div class="btn-row result-actions">
+          <button id="copy" class="btn btn-cyan" type="button"><span aria-hidden="true">📋</span> Copy result</button>
+          <button id="again" class="btn" type="button"><span aria-hidden="true">🔁</span> Draw again</button>
+        </div>
+        <p id="copy-status" class="hint" aria-live="polite"></p>
+      </div>
+      <p id="announce" class="sr-only" aria-live="polite"></p>
+    </div>
+  </section>
+
+  <Fragment slot="guide">
+    <section class="panel">
+      <h2>How to pick a giveaway winner</h2>
+      <ol>
+        <li>
+          Copy the names, usernames or emails of everyone who entered, from comments, a form, a spreadsheet or a chat,
+          and paste them in the Entrants box, one per line.
+        </li>
+        <li>Choose how many winners you need. Add backups in case a winner doesn't reply.</li>
+        <li>
+          Keep <strong>Count each name once</strong> ticked so someone who commented ten times still gets one chance.
+          Untick it only if your rules say every comment is a separate entry.
+        </li>
+        <li>Under <strong>Leave out</strong>, add your own account and anyone else who can't win.</li>
+        <li>
+          Press <strong>Start the draw</strong>. Screen-share or go live for the countdown, then take a screenshot or
+          press <strong>Copy result</strong> to share it.
+        </li>
+      </ol>
+    </section>
+
+    <AdSlot name="inGuide" />
+
+    <section class="panel">
+      <h2>Getting your list of entries</h2>
+      <p>
+        You don't need to connect your Instagram, YouTube or Facebook account. Copy the entrants from the post on a
+        computer, or export them with the platform's own tools, and paste them here. If the copied text includes extra
+        lines such as “Reply”, dates or like counts, paste it into a spreadsheet first and copy only the column of
+        usernames. Names are matched without capitals or a leading @, so “@Priya” and “priya” count as the same person.
+      </p>
+      <p>
+        For entries from a form, open the responses as a spreadsheet and copy the name or email column. For a small group,
+        the <a href="/spin-the-wheel/">spin the wheel</a> game is more fun to watch live.
+      </p>
+    </section>
+
+    <section class="panel">
+      <h2>Tips for a fair giveaway</h2>
+      <ul>
+        <li>
+          Write the rules before you start: how to enter, the closing date and time, how many winners, and how long a
+          winner has to reply.
+        </li>
+        <li>Close entries before you pick, and don't add anyone afterwards.</li>
+        <li>
+          Pick backup winners in the same draw. If a winner doesn't reply in time, offer the prize to backup number 1,
+          then 2, so you never need a second draw.
+        </li>
+        <li>
+          Share the result screenshot. It shows the number of entries and the time of the draw, which helps followers
+          trust the result.
+        </li>
+        <li>Follow the promotion rules of the platform you run the giveaway on.</li>
+      </ul>
+    </section>
+
+    <section class="panel faq">
+      <h2>Frequently asked questions</h2>
+      <details>
+        <summary>Is the winner picker fair?</summary>
+        <p>
+          Yes. Winners are drawn with your browser's cryptographic random number generator (the Web Crypto API) the
+          moment you press the button, so every eligible entry has the same chance. The countdown is just for show and
+          nobody, including us, can steer the result.
+        </p>
+      </details>
+      <details>
+        <summary>Can one person win twice?</summary>
+        <p>
+          No. Each person can take only one place in a draw, even if they appear on the list several times. Winners and
+          backups are always different people.
+        </p>
+      </details>
+      <details>
+        <summary>How many entries can I paste?</summary>
+        <p>Tens of thousands. Everything runs on your device, so large lists are picked in a moment.</p>
+      </details>
+      <details>
+        <summary>Do you store my list?</summary>
+        <p>
+          No. Your list never leaves your device. It is saved only in this browser so you don't lose it on a refresh;
+          press <strong>Clear</strong> to remove it.
+        </p>
+      </details>
+    </section>
+  </Fragment>
+</ToolPage>
+
+<style>
+  .picker-arena {
+    display: grid;
+    gap: 22px;
+  }
+
+  @media (min-width: 900px) {
+    .picker-arena {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+      gap: 28px;
+      align-items: stretch;
+    }
+  }
+
+  .inputs {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 18px;
+  }
+
+  .entries-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .inputs .hint,
+  .inputs .error {
+    margin: 0;
+  }
+
+  .options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .optional {
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  .actions .btn-play {
+    flex: 1 1 auto;
+  }
+
+  /* ---- Draw stage ---- */
+  .stage {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    min-height: 380px;
+    display: grid;
+    place-items: center;
+    padding: 24px 18px;
+    border-radius: 22px;
+    background: radial-gradient(ellipse at 50% 0%, #3b1f8f 0%, #170d42 55%, #0c0727 100%);
+    border: 1px solid var(--line);
+    text-align: center;
+    scroll-margin-top: 16px;
+  }
+
+  .spotlight {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: conic-gradient(from 160deg at 50% -10%, transparent 0deg, rgb(255 240 190 / 0.18) 15deg, transparent 30deg);
+    opacity: 0.6;
+  }
+
+  .drawing .spotlight {
+    opacity: 1;
+    animation: sweep 1.6s ease-in-out infinite alternate;
+  }
+
+  @keyframes sweep {
+    from {
+      transform: rotate(-12deg);
+    }
+    to {
+      transform: rotate(12deg);
+    }
+  }
+
+  .idle :global(.idle-art) {
+    width: min(240px, 70%);
+    margin: 0 auto 6px;
+    animation: bob 4s ease-in-out infinite;
+  }
+
+  @keyframes bob {
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+
+  .idle-title {
+    margin: 0;
+    font-family: var(--font-display-stack);
+    font-size: 1.7rem;
+    text-shadow: 0 3px 0 #2a1170;
+  }
+
+  .idle-sub {
+    margin: 2px 0 0;
+    color: var(--muted);
+  }
+
+  .idle-sub b {
+    color: var(--gold);
+  }
+
+  .countdown {
+    margin: 0;
+    font-family: var(--font-display-stack);
+    font-size: clamp(6rem, 4rem + 10vw, 10rem);
+    line-height: 1;
+    color: var(--gold);
+    text-shadow:
+      0 8px 0 #7a3e00,
+      0 0 50px rgb(255 207 58 / 0.7);
+  }
+
+  .countdown.tick {
+    animation: count-pop 0.7s ease-out;
+  }
+
+  @keyframes count-pop {
+    from {
+      transform: scale(2.2);
+      opacity: 0;
+    }
+    35% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    to {
+      transform: scale(0.85);
+      opacity: 0.2;
+    }
+  }
+
+  .drum {
+    margin: 0;
+    max-width: 100%;
+    font-family: var(--font-display-stack);
+    font-size: clamp(2rem, 1.4rem + 3vw, 3rem);
+    overflow-wrap: anywhere;
+    color: #fff;
+    text-shadow: 0 0 24px rgb(46 230 255 / 0.8);
+  }
+
+  .result {
+    position: relative;
+    width: 100%;
+  }
+
+  .result .rays {
+    position: absolute;
+    left: 50%;
+    top: 30%;
+    width: 700px;
+    height: 700px;
+    margin: -350px 0 0 -350px;
+    z-index: -1;
+    background: repeating-conic-gradient(from 0deg, rgb(255 207 58 / 0.13) 0deg 10deg, transparent 10deg 20deg);
+    mask-image: radial-gradient(circle, #000 20%, transparent 65%);
+    animation: spin-rays 16s linear infinite;
+  }
+
+  .winner-list,
+  .backup-list {
+    list-style: none;
+    margin: 8px 0 14px;
+    padding: 0;
+    display: grid;
+    gap: 10px;
+    justify-items: center;
+  }
+
+  .winner-list :global(li) {
+    max-width: 100%;
+    padding: 10px 22px;
+    border-radius: 18px;
+    background: linear-gradient(180deg, #ffe46b, #ffb21a);
+    color: #3a1c00;
+    font-family: var(--font-display-stack);
+    font-size: clamp(1.8rem, 1.2rem + 3vw, 2.8rem);
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+    box-shadow:
+      0 6px 0 #a35a00,
+      0 0 40px rgb(255 207 58 / 0.55);
+    animation: card-in 0.5s cubic-bezier(0.2, 1.5, 0.4, 1) backwards;
+  }
+
+  .winner-list.many :global(li) {
+    font-size: clamp(1.2rem, 1rem + 1.2vw, 1.6rem);
+    padding: 8px 18px;
+  }
+
+  .winner-list.many :global(li)::before,
+  .backup-list :global(li)::before {
+    content: counter(list-item) '. ';
+    opacity: 0.6;
+  }
+
+  .backup-label {
+    margin: 0;
+    font-weight: 900;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #d6e2ff;
+  }
+
+  .backup-list :global(li) {
+    padding: 6px 16px;
+    border-radius: 14px;
+    background: linear-gradient(180deg, #eef3ff, #b9c6e6);
+    color: #1d2240;
+    font-weight: 900;
+    font-size: 1.05rem;
+    overflow-wrap: anywhere;
+    box-shadow: 0 4px 0 #6d7aa0;
+    animation: card-in 0.5s 0.2s cubic-bezier(0.2, 1.5, 0.4, 1) backwards;
+  }
+
+  @keyframes card-in {
+    from {
+      transform: scale(0.4) rotate(-6deg);
+      opacity: 0;
+    }
+  }
+
+  .meta {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin: 0 0 4px;
+  }
+
+  .result-actions {
+    justify-content: center;
+    margin-top: 16px;
+  }
+
+  .result .hint:empty {
+    display: none;
+  }
+</style>
+
+<script>
+  import { randomInt, shuffle } from '../scripts/random.js';
+  import { load, save } from '../scripts/storage.js';
+  import { confetti, prefersReducedMotion } from '../scripts/confetti.js';
+  import { sfx } from '../scripts/sfx.js';
+  import { award } from '../scripts/player.js';
+
+  const STORE_KEY = 'winisland:picker';
+
+  const $ = (id) => document.getElementById(id);
+  const names = $('names');
+  const stats = $('stats');
+  const winnersInput = $('winners');
+  const backupsInput = $('backups');
+  const dedupe = $('dedupe');
+  const dramatic = $('dramatic');
+  const exclude = $('exclude');
+  const errorEl = $('error');
+  const pickBtn = $('pick');
+  const stage = $('stage');
+  const idle = $('idle');
+  const stageCount = $('stage-count');
+  const countdownEl = $('countdown');
+  const drum = $('drum');
+  const result = $('result');
+  const winnerList = $('winner-list');
+  const backupBlock = $('backup-block');
+  const backupList = $('backup-list');
+  const winnersLabel = $('winners-label');
+  const meta = $('result-meta');
+  const copyStatus = $('copy-status');
+  const announce = $('announce');
+
+  let picking = false;
+  let lastResult = null;
+
+  const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  // "@Priya_K " and "priya_k" are the same person.
+  const keyOf = (name) => name.trim().replace(/^@+/, '').replace(/\s+/g, ' ').toLowerCase();
+
+  const lines = (text) =>
+    text
+      .split('\n')
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+  function uniqueByKey(list) {
+    const seen = new Set();
+    return list.filter((name) => {
+      const key = keyOf(name);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+
+  function clampInt(input, min, max) {
+    const n = Math.round(Number(input.value));
+    return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : min;
+  }
+
+  /** Entries that can win, after removing duplicates (if chosen) and left-out names. */
+  function eligible() {
+    const all = lines(names.value);
+    const excluded = new Set(exclude.value.split(/[,\n]/).map(keyOf).filter(Boolean));
+    const pool = (dedupe.checked ? uniqueByKey(all) : all).filter((n) => !excluded.has(keyOf(n)));
+    return { all, pool, people: new Set(pool.map(keyOf)).size };
+  }
+
+  function updateStats() {
+    const { all, people } = eligible();
+    const entries = `${all.length.toLocaleString()} ${all.length === 1 ? 'entry' : 'entries'}`;
+    stats.textContent = people === all.length ? entries : `${entries} · ${people.toLocaleString()} can win`;
+    stageCount.textContent = people.toLocaleString();
+    pickBtn.textContent = clampInt(winnersInput, 1, 100) === 1 ? 'Start the draw' : 'Draw winners';
+  }
+
+  function persist() {
+    save(STORE_KEY, {
+      names: names.value,
+      winners: winnersInput.value,
+      backups: backupsInput.value,
+      dedupe: dedupe.checked,
+      dramatic: dramatic.checked,
+      exclude: exclude.value,
+    });
+  }
+
+  /** Draw `count` different people from the pool. */
+  function draw(pool, count) {
+    const picked = [];
+    const seen = new Set();
+    for (const name of shuffle(pool)) {
+      const key = keyOf(name);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      picked.push(name);
+      if (picked.length === count) break;
+    }
+    return picked;
+  }
+
+  function fillList(list, items) {
+    list.replaceChildren(...items.map((name) => Object.assign(document.createElement('li'), { textContent: name })));
+  }
+
+  function show(el) {
+    for (const part of [idle, countdownEl, drum, result]) part.hidden = part !== el;
+  }
+
+  async function countdown() {
+    show(countdownEl);
+    for (const n of [3, 2, 1]) {
+      countdownEl.textContent = n;
+      countdownEl.classList.remove('tick');
+      void countdownEl.offsetWidth; // restart the animation
+      countdownEl.classList.add('tick');
+      sfx.beep(n === 1);
+      await wait(700);
+    }
+  }
+
+  async function rollNames(pool) {
+    show(drum);
+    sfx.drumroll(1.7);
+    let delay = 50;
+    let elapsed = 0;
+    while (elapsed < 1700) {
+      drum.textContent = pool[randomInt(pool.length)];
+      await wait(delay);
+      elapsed += delay;
+      delay = Math.min(220, delay * 1.09);
+    }
+  }
+
+  async function pick() {
+    if (picking) return;
+    errorEl.textContent = '';
+    copyStatus.textContent = '';
+    const { all, pool, people } = eligible();
+    const winners = clampInt(winnersInput, 1, 100);
+    const backups = clampInt(backupsInput, 0, 20);
+    winnersInput.value = winners;
+    backupsInput.value = backups;
+
+    if (all.length === 0) {
+      errorEl.textContent = 'Paste at least one entrant first.';
+      names.focus();
+      return;
+    }
+    if (people < winners + backups) {
+      const asked = winners + backups;
+      errorEl.textContent = `You asked for ${asked} ${asked === 1 ? 'person' : 'people'}, but only ${people} can win.`;
+      return;
+    }
+
+    // The result is decided right now; the show below just reveals it.
+    const picked = draw(pool, winners + backups);
+
+    picking = true;
+    pickBtn.setAttribute('aria-disabled', 'true');
+    stage.classList.add('drawing');
+    stage.scrollIntoView({ block: 'nearest', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+
+    if (dramatic.checked && !prefersReducedMotion()) {
+      await countdown();
+      if (pool.length > 1) await rollNames(pool);
+    }
+
+    lastResult = {
+      winners: picked.slice(0, winners),
+      backups: picked.slice(winners),
+      entries: pool.length,
+      people,
+      when: new Date(),
+    };
+    showResult(lastResult);
+    stage.classList.remove('drawing');
+    picking = false;
+    pickBtn.removeAttribute('aria-disabled');
+  }
+
+  function formatWhen(date) {
+    return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(date);
+  }
+
+  function showResult(r) {
+    winnersLabel.textContent = r.winners.length === 1 ? '🏆 Winner' : '🏆 Winners';
+    winnerList.classList.toggle('many', r.winners.length > 1);
+    fillList(winnerList, r.winners);
+    fillList(backupList, r.backups);
+    backupBlock.hidden = r.backups.length === 0;
+    const from =
+      r.people === r.entries
+        ? `${r.entries.toLocaleString()} entries`
+        : `${r.entries.toLocaleString()} entries (${r.people.toLocaleString()} people)`;
+    meta.textContent = `Picked at random from ${from} on ${formatWhen(r.when)}`;
+    show(result);
+    announce.textContent = `${r.winners.length === 1 ? 'Winner' : 'Winners'}: ${r.winners.join(', ')}`;
+    sfx.win();
+    award('pick');
+    const box = stage.getBoundingClientRect();
+    confetti({ x: (box.left + box.width / 2) / window.innerWidth, y: Math.max(0.2, (box.top + 80) / window.innerHeight) });
+  }
+
+  function resultText(r) {
+    const numbered = (items) => items.map((name, i) => `${i + 1}. ${name}`).join('\n');
+    const parts = ['🏆 Giveaway result'];
+    parts.push(r.winners.length === 1 ? `Winner: ${r.winners[0]}` : `Winners:\n${numbered(r.winners)}`);
+    if (r.backups.length) parts.push(`Backup winners:\n${numbered(r.backups)}`);
+    parts.push(`${meta.textContent}.`);
+    parts.push('Picked on winisland.in');
+    return parts.join('\n\n');
+  }
+
+  // --- Wire up ---
+  const saved = load(STORE_KEY, null);
+  if (saved && typeof saved === 'object') {
+    names.value = saved.names ?? '';
+    winnersInput.value = saved.winners ?? 1;
+    backupsInput.value = saved.backups ?? 0;
+    dedupe.checked = saved.dedupe ?? true;
+    dramatic.checked = saved.dramatic ?? true;
+    exclude.value = saved.exclude ?? '';
+  }
+  updateStats();
+
+  for (const el of [names, winnersInput, backupsInput, dedupe, dramatic, exclude]) {
+    el.addEventListener('input', () => {
+      updateStats();
+      persist();
+    });
+  }
+
+  pickBtn.addEventListener('click', pick);
+  $('again').addEventListener('click', pick);
+
+  $('copy').addEventListener('click', async () => {
+    if (!lastResult) return;
+    try {
+      await navigator.clipboard.writeText(resultText(lastResult));
+      copyStatus.textContent = 'Copied! Paste it in your post or chat.';
+    } catch {
+      copyStatus.textContent = 'Could not copy. Take a screenshot instead.';
+    }
+  });
+
+  $('clear').addEventListener('click', () => {
+    if (!names.value.trim() || !confirm('Clear the list of entrants?')) return;
+    names.value = '';
+    persist();
+    updateStats();
+    show(idle);
+    lastResult = null;
+    names.focus();
+  });
+</script>

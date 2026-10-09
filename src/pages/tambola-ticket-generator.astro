@@ -1,0 +1,371 @@
+---
+import ToolPage from '../layouts/ToolPage.astro';
+import AdSlot from '../components/AdSlot.astro';
+---
+
+<ToolPage
+  title="Tambola Ticket Generator – Free Printable Housie Tickets | winisland"
+  description="Make free printable tambola (housie) tickets: full sheets of 6, numbered or with player names, 6 or 12 tickets per A4 page. Print or save as PDF."
+  island="tickets"
+  heading="Tambola Ticket Generator"
+  intro="Make real housie tickets in seconds. Numbered or with names, 6 or 12 to an A4 page, ready to print or save as a PDF."
+>
+  <section class="arena gen-arena" aria-label="Ticket generator">
+    <div class="gen-options panel">
+      <fieldset class="seg">
+        <legend>Make tickets</legend>
+        <div class="seg-options">
+          <label><input type="radio" name="mode" value="numbers" checked /><span>Numbered</span></label>
+          <label><input type="radio" name="mode" value="names" /><span>With names</span></label>
+        </div>
+      </fieldset>
+
+      <div id="opt-numbers" class="field">
+        <label for="count">How many tickets?</label>
+        <input id="count" type="number" min="1" max="600" value="12" inputmode="numeric" />
+        <p class="hint">Every 6 tickets make a full sheet that uses each number from 1 to 90 once.</p>
+      </div>
+
+      <div id="opt-names" class="field" hidden>
+        <label for="names">Player names, one per line</label>
+        <textarea id="names" rows="6" spellcheck="false" placeholder={'Priya\nRahul\nMeena Aunty'}></textarea>
+        <fieldset class="seg">
+          <legend>Tickets per player</legend>
+          <div class="seg-options">
+            {
+              [1, 2, 3, 6].map((k) => (
+                <label>
+                  <input type="radio" name="per-player" value={k} checked={k === 1} />
+                  <span>{k === 6 ? '6 · full sheet' : k}</span>
+                </label>
+              ))
+            }
+          </div>
+        </fieldset>
+      </div>
+
+      <fieldset class="seg">
+        <legend>Per A4 page</legend>
+        <div class="seg-options">
+          <label><input type="radio" name="layout" value="6" checked /><span>6 · large</span></label>
+          <label><input type="radio" name="layout" value="12" /><span>12 · compact</span></label>
+        </div>
+      </fieldset>
+
+      <div class="field">
+        <label for="event">Event name <span class="optional">(optional)</span></label>
+        <input id="event" type="text" maxlength="40" placeholder="Diwali Tambola Night" />
+      </div>
+
+      <div class="room-line">
+        <span>Room <b id="gen-code"></b></span>
+        <button id="gen-new" class="btn" type="button">New code</button>
+      </div>
+      <p class="hint">
+        The room code is printed on every ticket. <a id="use-caller" href="/tambola-number-caller/">Open the caller with
+        this room</a> to check claims by ticket number or name.
+      </p>
+
+      <p id="gen-error" class="error" role="alert"></p>
+      <button id="print" class="btn btn-play btn-lg" type="button"><span aria-hidden="true">🖨️</span> Print tickets</button>
+      <p class="hint">To get a PDF, choose “Save as PDF” in the print window.</p>
+    </div>
+
+    <div class="gen-preview">
+      <div class="preview-head">
+        <h2 class="panel-title">Preview</h2>
+        <span id="preview-count" class="chip"></span>
+      </div>
+      <div id="preview" class="preview-list"></div>
+      <p id="preview-more" class="hint"></p>
+    </div>
+  </section>
+
+  <Fragment slot="guide">
+    <section class="panel">
+      <h2>How to make tambola tickets</h2>
+      <ol>
+        <li>
+          Choose <strong>Numbered</strong> for a stack of tickets to hand out, or <strong>With names</strong> to put
+          each player's name on their tickets.
+        </li>
+        <li>Pick how many tickets, and whether you want 6 large or 12 compact tickets on each A4 page.</li>
+        <li>Add an event name if you like, then press <strong>Print tickets</strong>. Choose “Save as PDF” to share them.</li>
+        <li>
+          Call the numbers with the <a href="/tambola-number-caller/">tambola number caller</a>. Open it with this room
+          and you can check any claim by typing the ticket number or the player's name.
+        </li>
+      </ol>
+    </section>
+
+    <AdSlot name="inGuide" />
+
+    <section class="panel">
+      <h2>Are these real tambola tickets?</h2>
+      <p>
+        Yes. Every ticket follows the standard housie layout: 3 rows and 9 columns with 15 numbers, 5 in each row. The
+        first column holds 1 to 9, the second 10 to 19, and so on up to 80 to 90, and the numbers in each column go from
+        smallest to largest. Tickets are made in full sheets of 6, and each sheet uses every number from 1 to 90 exactly
+        once, so with 6 tickets in play every called number appears on exactly one ticket.
+      </p>
+    </section>
+
+    <section class="panel">
+      <h2>Printing tips</h2>
+      <ul>
+        <li>Use A4 or Letter paper in portrait. The 6-per-page layout has big numbers that are easy to mark.</li>
+        <li>Turn on “Background graphics” in the print settings to keep the shaded empty boxes.</li>
+        <li>Print one extra copy for the host, so you can check claims on paper too.</li>
+        <li>Themed party? Add the event name, such as “Diwali Night” or “New Year Kitty Party”, and it prints on every ticket.</li>
+      </ul>
+    </section>
+
+    <section class="panel faq">
+      <h2>Frequently asked questions</h2>
+      <details>
+        <summary>How many tickets can I make?</summary>
+        <p>Up to 600 numbered tickets, or up to 100 players with up to 6 tickets each.</p>
+      </details>
+      <details>
+        <summary>What is a full sheet?</summary>
+        <p>
+          A full sheet is 6 tickets that together contain every number from 1 to 90 once. Choose 6 tickets per player to
+          give each player a full sheet, so they are sure to mark every number that is called.
+        </p>
+      </details>
+      <details>
+        <summary>Can players get their tickets on their phones instead?</summary>
+        <p>
+          Yes. Create a room on the <a href="/tambola-number-caller/">tambola caller</a> and share the invite link. A
+          player who joins with the same name gets the same tickets as the printed ones with their name.
+        </p>
+      </details>
+      <details>
+        <summary>Is it free?</summary>
+        <p>Yes, completely free with no sign-up. Tickets are made in your browser and nothing is uploaded.</p>
+      </details>
+    </section>
+  </Fragment>
+</ToolPage>
+
+<style>
+  .gen-arena {
+    display: grid;
+    gap: 24px;
+  }
+
+  @media (min-width: 900px) {
+    .gen-arena {
+      grid-template-columns: minmax(300px, 380px) minmax(0, 1fr);
+      gap: 30px;
+      align-items: start;
+    }
+  }
+
+  .gen-options {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 18px;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .field[hidden] {
+    display: none;
+  }
+
+  .field .hint,
+  .gen-options > .hint {
+    margin: 0;
+  }
+
+  .optional {
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  .room-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    border: 1px solid rgb(255 207 58 / 0.45);
+    background: rgb(255 207 58 / 0.08);
+    font-weight: 800;
+  }
+
+  .room-line b {
+    font-family: var(--font-display-stack);
+    font-weight: 400;
+    font-size: 1.4rem;
+    letter-spacing: 0.1em;
+    color: var(--gold);
+  }
+
+  .room-line .btn {
+    min-height: 38px;
+    font-size: 0.85rem;
+  }
+
+  .gen-preview {
+    min-width: 0;
+  }
+
+  .preview-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .preview-list {
+    display: grid;
+    gap: 20px;
+  }
+
+  @media (min-width: 1100px) {
+    .preview-list {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+</style>
+
+<script>
+  import { load, save } from '../scripts/storage.js';
+  import { award } from '../scripts/player.js';
+  import { sfx } from '../scripts/sfx.js';
+  import {
+    cleanPerPlayer,
+    cleanRoomCode,
+    newRoomCode,
+    normalizeName,
+    ticketByNumber,
+    ticketsForName,
+  } from '../scripts/tickets.js';
+  import { printTicket, printTickets, ticketCard } from '../scripts/ticket-view.js';
+
+  const ROOM_KEY = 'winisland:tambola-room'; // shared with the caller, so claims can be checked there
+  const MAX_TICKETS = 600;
+  const MAX_PLAYERS = 100;
+  const PREVIEW = 6;
+
+  const $ = (id) => document.getElementById(id);
+  const countInput = $('count');
+  const namesInput = $('names');
+  const eventInput = $('event');
+  const errorEl = $('gen-error');
+  const preview = $('preview');
+  const previewCount = $('preview-count');
+  const previewMore = $('preview-more');
+  const checked = (name) => document.querySelector(`input[name="${name}"]:checked`)?.value;
+
+  // Use the room from the link, else the caller's current room, else a new one.
+  const params = new URLSearchParams(location.search);
+  const saved = load(ROOM_KEY, null);
+  let room = {
+    code: cleanRoomCode(params.get('r')) || cleanRoomCode(saved?.code) || newRoomCode(),
+    perPlayer: cleanPerPlayer(params.get('k') ?? saved?.perPlayer ?? 1),
+  };
+  if (params.get('r')) {
+    document.querySelector('input[name="mode"][value="names"]').checked = true;
+    history.replaceState(null, '', location.pathname);
+  }
+  document.querySelectorAll('input[name="per-player"]').forEach((input) => {
+    input.checked = Number(input.value) === room.perPlayer;
+  });
+
+  /** The tickets to make, or an error message. */
+  function plan() {
+    const event = eventInput.value.trim();
+    const tag = `Room ${room.code}`;
+    if (checked('mode') === 'names') {
+      const names = namesInput.value
+        .split('\n')
+        .map((n) => n.trim().replace(/\s+/g, ' '))
+        .filter(Boolean);
+      if (!names.length) return { error: 'Add at least one player name.' };
+      if (names.length > MAX_PLAYERS) return { error: `Up to ${MAX_PLAYERS} players at a time.` };
+      const seen = new Map();
+      for (const name of names) {
+        const key = normalizeName(name);
+        if (seen.has(key)) return { error: `“${name}” is on the list twice. Add an initial so they get different tickets.` };
+        seen.set(key, true);
+      }
+      const k = Number(checked('per-player'));
+      return {
+        items: names.flatMap((name) =>
+          ticketsForName(room.code, name, k).map((ticket, i) => ({
+            ticket,
+            title: [name, k > 1 ? `${i + 1} of ${k}` : '', event].filter(Boolean).join(' · '),
+            tag,
+          })),
+        ),
+      };
+    }
+    const count = Math.round(Number(countInput.value));
+    if (!Number.isFinite(count) || count < 1) return { error: 'Choose at least 1 ticket.' };
+    if (count > MAX_TICKETS) return { error: `Up to ${MAX_TICKETS} tickets at a time.` };
+    return {
+      items: Array.from({ length: count }, (_, i) => ({
+        ticket: ticketByNumber(room.code, i + 1),
+        title: [`Ticket #${i + 1}`, event].filter(Boolean).join(' · '),
+        tag,
+      })),
+    };
+  }
+
+  function update() {
+    const mode = checked('mode');
+    $('opt-numbers').hidden = mode !== 'numbers';
+    $('opt-names').hidden = mode !== 'names';
+    room.perPlayer = Number(checked('per-player'));
+    save(ROOM_KEY, room);
+    $('gen-code').textContent = room.code;
+    $('use-caller').href = `/tambola-number-caller/?room=${room.code}&k=${room.perPlayer}`;
+
+    const { items, error } = plan();
+    errorEl.textContent = error ?? '';
+    if (error) {
+      preview.replaceChildren();
+      previewCount.textContent = '';
+      previewMore.textContent = '';
+      return;
+    }
+    previewCount.textContent = `${items.length} ${items.length === 1 ? 'ticket' : 'tickets'} · ${Math.ceil(items.length / Number(checked('layout')))} pages`;
+    preview.replaceChildren(...items.slice(0, PREVIEW).map(({ ticket, title, tag }) => ticketCard(ticket, { title, tag })));
+    previewMore.textContent = items.length > PREVIEW ? `+ ${items.length - PREVIEW} more in the printout` : '';
+  }
+
+  for (const el of [countInput, namesInput, eventInput]) el.addEventListener('input', update);
+  document.querySelectorAll('input[type="radio"]').forEach((input) => input.addEventListener('change', update));
+
+  $('gen-new').addEventListener('click', () => {
+    if (!confirm('Make a new room code? All tickets will change.')) return;
+    room = { ...room, code: newRoomCode() };
+    sfx.sparkle();
+    update();
+  });
+
+  $('print').addEventListener('click', () => {
+    const { items, error } = plan();
+    if (error) {
+      errorEl.textContent = error;
+      return;
+    }
+    award('tickets');
+    printTickets(
+      items.map(({ ticket, title, tag }) => printTicket(ticket, { title, tag: `${tag} · winisland.in` })),
+      Number(checked('layout')),
+    );
+  });
+
+  update();
+</script>

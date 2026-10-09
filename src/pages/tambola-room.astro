@@ -1,0 +1,334 @@
+---
+import ToolPage from '../layouts/ToolPage.astro';
+---
+
+<ToolPage
+  title="Join a Tambola Room – Get Your Ticket | winisland"
+  description="Join your host's tambola room, get your own random housie ticket and mark numbers on your phone."
+  island="tambola"
+  kicker="Tambola room"
+  heading="Your tambola tickets"
+  intro="Type your name to get your tickets for this room. Mark numbers as the host calls them, and shout when you win!"
+  noindex
+>
+  <section class="arena player-arena" aria-label="Your tambola tickets">
+    <div id="no-room" class="no-room" hidden>
+      <p class="big">This link is missing its room code.</p>
+      <p>
+        Ask your host to share the room link again, or <a href="/tambola-number-caller/">host your own tambola game</a>.
+      </p>
+    </div>
+
+    <form id="join" class="join" hidden>
+      <p class="room-pill">Room <b id="join-code"></b> · <span id="join-count"></span></p>
+      <label for="player-name" class="join-label">What's your name?</label>
+      <input id="player-name" type="text" maxlength="40" autocomplete="name" required />
+      <p class="hint">Use the name your host knows you by. They'll check your ticket with it.</p>
+      <button class="btn btn-play btn-lg" type="submit">Get my tickets</button>
+    </form>
+
+    <div id="mine" class="mine" hidden>
+      <div class="mine-head">
+        <div>
+          <p class="room-pill">Room <b id="mine-code"></b></p>
+          <h2 id="hello" class="panel-title"></h2>
+          <p class="hint">Tap a number when the host calls it. Only mark called numbers: the host checks every claim.</p>
+        </div>
+        <div class="btn-row">
+          <button id="print-mine" class="btn" type="button"><span aria-hidden="true">🖨️</span> Print</button>
+          <button id="clear-marks" class="btn" type="button">Clear marks</button>
+          <button id="change-name" class="btn" type="button">Not you?</button>
+        </div>
+      </div>
+      <p id="shout" class="shout" aria-live="polite" hidden></p>
+      <div id="my-tickets" class="my-tickets"></div>
+    </div>
+  </section>
+
+  <Fragment slot="guide">
+    <section class="panel">
+      <h2>How to play</h2>
+      <ol>
+        <li>Type your name and press <strong>Get my tickets</strong>. Your tickets stay the same every time you open this link.</li>
+        <li>Listen to the host call numbers. Tap each called number on your ticket to mark it.</li>
+        <li>
+          Complete a prize, like a full line or all 15 numbers, and shout to claim it. The host checks your ticket using
+          your name.
+        </li>
+      </ol>
+      <p>
+        Your marks are just a reminder for you. The host checks claims against the numbers they actually called, so a
+        number marked by mistake can't win, and claiming with one is a <strong>bogey</strong>.
+      </p>
+      <p>
+        Prefer paper? Press <strong>Print</strong> and mark your ticket with a pen. Want to run your own game?
+        <a href="/tambola-number-caller/">Open the tambola caller</a> and create a room.
+      </p>
+    </section>
+    <section class="panel">
+      <h2>Prizes</h2>
+      <ul>
+        <li><strong>Early five</strong>: the first five numbers marked anywhere on a ticket.</li>
+        <li><strong>Top, middle or bottom line</strong>: all five numbers in that row.</li>
+        <li><strong>Four corners</strong>: the first and last numbers of the top and bottom rows.</li>
+        <li><strong>Full house</strong>: all 15 numbers on the ticket.</li>
+      </ul>
+    </section>
+  </Fragment>
+</ToolPage>
+
+<style>
+  .player-arena {
+    min-height: 260px;
+  }
+
+  .no-room .big {
+    font-family: var(--font-display-stack);
+    font-size: 1.6rem;
+    margin-bottom: 6px;
+  }
+
+  .join {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 440px;
+  }
+
+  .join .hint {
+    margin: 0;
+  }
+
+  .join .btn {
+    align-self: flex-start;
+  }
+
+  .join-label {
+    font-family: var(--font-display-stack);
+    font-weight: 400;
+    font-size: 1.6rem;
+  }
+
+  .room-pill {
+    display: inline-block;
+    align-self: flex-start;
+    margin: 0;
+    padding: 4px 12px;
+    border-radius: 999px;
+    border: 1px solid rgb(255 207 58 / 0.5);
+    background: rgb(255 207 58 / 0.1);
+    color: #ffe9a8;
+    font-weight: 800;
+    font-size: 0.85rem;
+  }
+
+  .room-pill b {
+    color: var(--gold);
+    letter-spacing: 0.08em;
+  }
+
+  .mine {
+    display: grid;
+    gap: 18px;
+  }
+
+  .mine-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 14px;
+  }
+
+  .mine-head h2 {
+    margin: 8px 0 2px;
+    font-size: 1.8rem;
+  }
+
+  .mine-head .hint {
+    margin: 0;
+  }
+
+  .shout :global(small) {
+    display: block;
+    margin-top: 2px;
+    font-family: var(--font-body-stack);
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #c4f0b0;
+  }
+
+  .shout {
+    margin: 0;
+    padding: 12px 16px;
+    border-radius: 16px;
+    border: 2px solid var(--lime);
+    background: rgb(140 255 90 / 0.14);
+    color: #e2ffd3;
+    font-family: var(--font-display-stack);
+    font-size: 1.25rem;
+    animation: shout 0.6s cubic-bezier(0.2, 1.5, 0.4, 1);
+  }
+
+  @keyframes shout {
+    from {
+      transform: scale(0.85);
+    }
+  }
+
+  .my-tickets {
+    display: grid;
+    gap: 22px;
+    max-width: 620px;
+  }
+
+  .my-tickets :global(.marked-count) {
+    margin: 8px 2px 0;
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: var(--muted);
+  }
+</style>
+
+<script>
+  import { load, save } from '../scripts/storage.js';
+  import { sfx } from '../scripts/sfx.js';
+  import { confetti } from '../scripts/confetti.js';
+  import { award } from '../scripts/player.js';
+  import { cleanPerPlayer, cleanRoomCode, normalizeName, prizes, ticketsForName } from '../scripts/tickets.js';
+  import { printTicket, printTickets, ticketCard } from '../scripts/ticket-view.js';
+
+  const KEY = 'winisland:tambola-player';
+  const $ = (id) => document.getElementById(id);
+  const params = new URLSearchParams(location.search);
+  const code = cleanRoomCode(params.get('r'));
+  const perPlayer = cleanPerPlayer(params.get('k'));
+  const nameInput = $('player-name');
+  const shout = $('shout');
+  const ticketsEl = $('my-tickets');
+
+  let state = load(KEY, null);
+  if (!state || state.room !== code || !state.name) state = { room: code, name: '', marks: {} };
+  let tickets = [];
+  let won = new Set(); // prizes already celebrated, e.g. "0:top"
+
+  function wonNow() {
+    const result = new Set();
+    tickets.forEach((ticket, i) => {
+      for (const prize of prizes(ticket, state.marks[i] ?? [])) if (prize.at) result.add(`${i}:${prize.id}:${prize.name}`);
+    });
+    return result;
+  }
+
+  function renderTickets() {
+    ticketsEl.replaceChildren(
+      ...tickets.map((ticket, i) => {
+        const marks = new Set(state.marks[i] ?? []);
+        const wrap = document.createElement('div');
+        const card = ticketCard(ticket, {
+          title: state.name,
+          tag: tickets.length > 1 ? `Ticket ${i + 1} of ${tickets.length}` : `Room ${code}`,
+          marked: marks,
+          onToggle: (n, cell) => toggle(i, n, cell, count),
+        });
+        const count = Object.assign(document.createElement('p'), {
+          className: 'marked-count',
+          textContent: `Marked ${marks.size} of 15`,
+        });
+        wrap.append(card, count);
+        return wrap;
+      }),
+    );
+  }
+
+  function toggle(i, n, cell, count) {
+    const marks = new Set(state.marks[i] ?? []);
+    if (marks.has(n)) marks.delete(n);
+    else {
+      marks.add(n);
+      sfx.pop();
+    }
+    state.marks[i] = [...marks];
+    save(KEY, state);
+    cell.classList.toggle('is-marked', marks.has(n));
+    cell.setAttribute('aria-pressed', String(marks.has(n)));
+    count.textContent = `Marked ${marks.size} of 15`;
+
+    const now = wonNow();
+    const fresh = [...now].filter((key) => !won.has(key));
+    won = now;
+    if (fresh.length) {
+      const [index, , name] = fresh.at(-1).split(':');
+      const which = tickets.length > 1 ? ` on ticket ${Number(index) + 1}` : '';
+      shout.replaceChildren(
+        `🎉 ${name}${which}! Shout to claim it!`,
+        Object.assign(document.createElement('small'), { textContent: 'The host will check it against the called numbers.' }),
+      );
+      shout.hidden = false;
+      sfx.win();
+      confetti();
+    }
+  }
+
+  function showTickets() {
+    tickets = ticketsForName(code, state.name, perPlayer);
+    won = wonNow();
+    $('join').hidden = true;
+    $('mine').hidden = false;
+    $('mine-code').textContent = code;
+    $('hello').textContent = `Hi ${state.name}!`;
+    shout.hidden = true;
+    renderTickets();
+  }
+
+  if (!code) {
+    $('no-room').hidden = false;
+  } else if (state.name) {
+    showTickets();
+  } else {
+    $('join').hidden = false;
+    $('join-code').textContent = code;
+    $('join-count').textContent = perPlayer === 1 ? '1 ticket each' : `${perPlayer} tickets each`;
+  }
+
+  $('join').addEventListener('submit', (event) => {
+    event.preventDefault();
+    const name = nameInput.value.trim().replace(/\s+/g, ' ');
+    if (!name) return;
+    if (normalizeName(name) !== normalizeName(state.name)) state.marks = {};
+    state.name = name;
+    save(KEY, state);
+    sfx.sparkle();
+    showTickets();
+  });
+
+  $('change-name').addEventListener('click', () => {
+    $('mine').hidden = true;
+    $('join').hidden = false;
+    $('join-code').textContent = code;
+    $('join-count').textContent = perPlayer === 1 ? '1 ticket each' : `${perPlayer} tickets each`;
+    nameInput.value = state.name;
+    nameInput.focus();
+  });
+
+  $('clear-marks').addEventListener('click', () => {
+    if (!confirm('Clear all your marks?')) return;
+    state.marks = {};
+    save(KEY, state);
+    won = new Set();
+    shout.hidden = true;
+    renderTickets();
+  });
+
+  $('print-mine').addEventListener('click', () => {
+    award('tickets');
+    printTickets(
+      tickets.map((ticket, i) =>
+        printTicket(ticket, {
+          title: tickets.length > 1 ? `${state.name} · ${i + 1} of ${tickets.length}` : state.name,
+          tag: `Room ${code} · winisland.in`,
+        }),
+      ),
+    );
+  });
+</script>

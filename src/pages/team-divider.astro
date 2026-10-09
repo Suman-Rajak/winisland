@@ -1,0 +1,525 @@
+---
+import ToolPage from '../layouts/ToolPage.astro';
+import AdSlot from '../components/AdSlot.astro';
+---
+
+<ToolPage
+  title="Team Divider – Random Team Generator for Cricket & Football | winisland"
+  description="Split players into fair random teams in one tap. Pick the number of teams, add captains and balance by skill. Free team generator for cricket, football, quizzes and class groups."
+  island="teams"
+  heading="Team Divider"
+  intro="Drop in the players, choose how many teams, and watch them get drafted. Add captains and skill levels for perfectly fair sides."
+>
+  <section class="arena teams-arena" aria-label="Team divider">
+    <div class="team-options panel">
+      <div class="entries-head">
+        <h2 class="panel-title"><label for="players">Players</label></h2>
+        <span id="player-count" class="chip">0 players</span>
+      </div>
+      <textarea
+        id="players"
+        rows="10"
+        spellcheck="false"
+        aria-describedby="players-hint"
+        placeholder={'Virat *\nRohit 5\nPriya 4\nArjun\nSara 3\nKabir *'}></textarea>
+      <p id="players-hint" class="hint">
+        One per line. Add <b>*</b> to make someone a captain, and a number from 1 to 10 for their skill.
+      </p>
+
+      <fieldset class="seg">
+        <legend>Split by</legend>
+        <div class="seg-options">
+          <label><input type="radio" name="split" value="teams" checked /><span>Number of teams</span></label>
+          <label><input type="radio" name="split" value="size" /><span>Players per team</span></label>
+        </div>
+      </fieldset>
+      <div class="field">
+        <label for="split-n" id="split-label">Teams</label>
+        <input id="split-n" type="number" min="2" max="20" value="2" inputmode="numeric" />
+      </div>
+
+      <label class="check"><input id="balance" type="checkbox" /> Balance teams by skill</label>
+      <p id="team-error" class="error" role="alert"></p>
+      <button id="make" class="btn btn-play btn-lg" type="button">Make teams</button>
+    </div>
+
+    <div class="team-stage">
+      <div id="team-idle" class="team-idle">
+        <p class="idle-title">Ready to pick sides?</p>
+        <p class="hint">Teams appear here. Every split is random and fair.</p>
+      </div>
+      <div id="teams" class="team-grid" aria-live="polite"></div>
+      <div id="team-actions" class="team-actions" hidden>
+        <p class="watermark">Picked on <b>winisland.in</b></p>
+        <div class="btn-row">
+          <button id="copy-teams" class="btn btn-cyan" type="button"><span aria-hidden="true">📋</span> Copy teams</button>
+          <button id="again" class="btn" type="button"><span aria-hidden="true">🔁</span> Shuffle again</button>
+          <a class="btn" href="/coin-toss/"><span aria-hidden="true">🪙</span> Toss for first</a>
+        </div>
+        <p id="copy-status" class="hint" aria-live="polite"></p>
+      </div>
+    </div>
+  </section>
+
+  <Fragment slot="guide">
+    <section class="panel">
+      <h2>How to split players into teams</h2>
+      <ol>
+        <li>Type or paste the players, one per line.</li>
+        <li>Choose the number of teams, or how many players you want in each team.</li>
+        <li>Press <strong>Make teams</strong> and watch the players get drafted. Team sizes never differ by more than one.</li>
+        <li>Not happy? Press <strong>Shuffle again</strong>. Then <strong>Copy teams</strong> to paste them in your group chat.</li>
+      </ol>
+    </section>
+
+    <AdSlot name="inGuide" />
+
+    <section class="panel">
+      <h2>Captains and skill levels</h2>
+      <p>
+        Put a <strong>*</strong> after a name to make that player a captain, for example <code>Virat *</code>. Captains
+        always go to different teams, one each.
+      </p>
+      <p>
+        For evenly matched sides, add a skill number from 1 to 10 after a name, like <code>Rohit 8</code>, and tick
+        <strong>Balance teams by skill</strong>. Players are drafted strongest first, and each one joins the team with the
+        lowest total so far, so the team totals end up close. Players without a number count as 5.
+      </p>
+    </section>
+
+    <section class="panel">
+      <h2>Great for</h2>
+      <ul>
+        <li><strong>Cricket and football:</strong> fair sides for a weekend match, then use the coin toss for who bats or kicks off first.</li>
+        <li><strong>Quiz nights and party games:</strong> split guests into teams in seconds.</li>
+        <li><strong>Classrooms:</strong> random groups for projects, with no arguments about who picked whom.</li>
+        <li><strong>Office events:</strong> mix people across departments for team-building games.</li>
+      </ul>
+    </section>
+
+    <section class="panel faq">
+      <h2>Frequently asked questions</h2>
+      <details>
+        <summary>Is the team split random?</summary>
+        <p>
+          Yes. Players are shuffled with your browser's cryptographic random number generator before they are drafted,
+          so every split is fair. With skill balancing on, players of equal skill are still placed at random.
+        </p>
+      </details>
+      <details>
+        <summary>What if the players don't divide evenly?</summary>
+        <p>Some teams get one extra player. Sizes never differ by more than one.</p>
+      </details>
+      <details>
+        <summary>How many players and teams can I have?</summary>
+        <p>Up to 200 players and 20 teams.</p>
+      </details>
+      <details>
+        <summary>Is my list saved?</summary>
+        <p>Only in this browser, so your regular group is there next time. Nothing is uploaded.</p>
+      </details>
+    </section>
+  </Fragment>
+</ToolPage>
+
+<style>
+  .teams-arena {
+    display: grid;
+    gap: 24px;
+  }
+
+  @media (min-width: 900px) {
+    .teams-arena {
+      grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+      gap: 30px;
+      align-items: start;
+    }
+  }
+
+  .team-options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 18px;
+  }
+
+  .entries-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .team-options .hint,
+  .team-options .error {
+    margin: 0;
+  }
+
+  .hint b {
+    color: var(--gold);
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .team-options .btn-play {
+    margin-top: 4px;
+  }
+
+  .team-stage {
+    min-width: 0;
+    display: grid;
+    gap: 16px;
+  }
+
+  .team-idle {
+    display: grid;
+    place-items: center;
+    align-content: center;
+    min-height: 300px;
+    border-radius: 22px;
+    border: 2px dashed var(--line-strong);
+    text-align: center;
+    padding: 20px;
+  }
+
+  .team-idle[hidden] {
+    display: none;
+  }
+
+  .idle-title {
+    margin: 0;
+    font-family: var(--font-display-stack);
+    font-size: 1.7rem;
+  }
+
+  .team-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 14px;
+  }
+
+  .team-grid:empty {
+    display: none;
+  }
+
+  .team-grid :global(.team) {
+    --team: #9461ff;
+    border-radius: 18px;
+    overflow: hidden;
+    background: #170e40;
+    border: 2px solid var(--team);
+    box-shadow:
+      0 0 24px color-mix(in srgb, var(--team) 35%, transparent),
+      0 10px 24px rgb(0 0 0 / 0.4);
+  }
+
+  .team-grid :global(.team-head) {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 14px;
+    background: var(--team);
+    color: #14082e;
+  }
+
+  .team-grid :global(.team-name) {
+    margin: 0;
+    font-family: var(--font-display-stack);
+    font-size: 1.3rem;
+    line-height: 1.1;
+  }
+
+  .team-grid :global(.team-meta) {
+    font-size: 0.78rem;
+    font-weight: 900;
+    white-space: nowrap;
+  }
+
+  .team-grid :global(.team ol) {
+    list-style: none;
+    margin: 0;
+    padding: 10px 12px 12px;
+    display: grid;
+    gap: 6px;
+  }
+
+  .team-grid :global(.team li) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 10px;
+    background: rgb(255 255 255 / 0.07);
+    font-weight: 800;
+    overflow-wrap: anywhere;
+    animation: draft-in 0.35s cubic-bezier(0.2, 1.4, 0.4, 1);
+  }
+
+  .team-grid :global(.team li .cap) {
+    flex: none;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: var(--gold);
+    color: #3a1c00;
+    font-size: 0.7rem;
+    font-weight: 900;
+  }
+
+  .team-grid :global(.team li .skill) {
+    flex: none;
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+
+  @keyframes draft-in {
+    from {
+      transform: translateX(-16px) scale(0.9);
+      opacity: 0;
+    }
+  }
+
+  .team-actions {
+    display: grid;
+    gap: 10px;
+    justify-items: start;
+  }
+
+  .team-actions[hidden] {
+    display: none;
+  }
+
+  .team-actions .hint:empty {
+    display: none;
+  }
+</style>
+
+<script>
+  import { randomInt, shuffle } from '../scripts/random.js';
+  import { load, save } from '../scripts/storage.js';
+  import { prefersReducedMotion, confetti } from '../scripts/confetti.js';
+  import { sfx } from '../scripts/sfx.js';
+  import { award } from '../scripts/player.js';
+
+  const STORE_KEY = 'winisland:teams';
+  const MAX_PLAYERS = 200;
+  const MAX_TEAMS = 20;
+  const DEFAULT_SKILL = 5;
+  const TEAMS = [
+    ['Thunder', '#ffcf3a'],
+    ['Blaze', '#ff8a3d'],
+    ['Sharks', '#2ee6ff'],
+    ['Comets', '#ff5cb5'],
+    ['Titans', '#8cff5a'],
+    ['Rockets', '#b38bff'],
+    ['Vipers', '#2fe0b2'],
+    ['Falcons', '#ff5a68'],
+    ['Wolves', '#6d9bff'],
+    ['Dragons', '#ffa3d7'],
+  ];
+
+  const $ = (id) => document.getElementById(id);
+  const playersInput = $('players');
+  const splitInput = $('split-n');
+  const balanceInput = $('balance');
+  const errorEl = $('team-error');
+  const teamsEl = $('teams');
+  const makeBtn = $('make');
+  let drafting = false;
+  let lastTeams = null;
+
+  /** "Virat * 8" → { name: 'Virat', captain: true, skill: 8 } */
+  function parsePlayer(line) {
+    let rest = line.trim();
+    let captain = false;
+    let skill = null;
+    for (;;) {
+      const star = rest.match(/^(.*?)\s*\*$/);
+      const num = rest.match(/^(.*\S)\s+(\d{1,2}(?:\.\d)?)$/);
+      if (star) {
+        captain = true;
+        rest = star[1];
+      } else if (num && balanceInput.checked && skill === null) {
+        skill = Math.min(10, Math.max(0, Number(num[2])));
+        rest = num[1];
+      } else break;
+    }
+    return { name: rest.trim(), captain, skill };
+  }
+
+  const players = () =>
+    playersInput.value
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map(parsePlayer)
+      .filter((p) => p.name);
+
+  const skillOf = (p) => p.skill ?? DEFAULT_SKILL;
+  const pickRandom = (list) => list[randomInt(list.length)];
+
+  function teamCount(total) {
+    const n = Math.round(Number(splitInput.value)) || 2;
+    const bySize = document.querySelector('input[name="split"]:checked').value === 'size';
+    return bySize ? Math.ceil(total / Math.max(1, n)) : n;
+  }
+
+  /** Split into `count` teams: captains first, then everyone else (strongest first when balancing). */
+  function divide(list, count) {
+    const names = shuffle(TEAMS).slice(0, Math.min(count, TEAMS.length));
+    const teams = Array.from({ length: count }, (_, i) => ({
+      name: names[i]?.[0] ?? String(i + 1),
+      color: names[i]?.[1] ?? TEAMS[i % TEAMS.length][1],
+      players: [],
+      total: 0,
+    }));
+    const join = (team, p) => {
+      team.players.push(p);
+      team.total += skillOf(p);
+    };
+
+    const shuffled = shuffle(list);
+    const captains = shuffled.filter((p) => p.captain).slice(0, count);
+    shuffle(teams).forEach((team, i) => captains[i] && join(team, captains[i]));
+
+    let rest = shuffled.filter((p) => !captains.includes(p)).map((p) => (p.captain ? { ...p, captain: false } : p));
+    if (balanceInput.checked) rest = [...rest].sort((a, b) => skillOf(b) - skillOf(a));
+
+    for (const p of rest) {
+      const fewest = Math.min(...teams.map((t) => t.players.length));
+      let open = teams.filter((t) => t.players.length === fewest);
+      if (balanceInput.checked) {
+        const lowest = Math.min(...open.map((t) => t.total));
+        open = open.filter((t) => t.total === lowest);
+      }
+      join(pickRandom(open), p);
+    }
+    return teams;
+  }
+
+  function teamCard(team) {
+    const card = document.createElement('section');
+    card.className = 'team';
+    card.style.setProperty('--team', team.color);
+    const head = document.createElement('div');
+    head.className = 'team-head';
+    const title = Object.assign(document.createElement('h3'), { className: 'team-name', textContent: `Team ${team.name}` });
+    const meta = Object.assign(document.createElement('span'), { className: 'team-meta' });
+    head.append(title, meta);
+    const list = document.createElement('ol');
+    card.append(head, list);
+    return { card, list, meta };
+  }
+
+  function playerItem(p) {
+    const li = document.createElement('li');
+    li.append(Object.assign(document.createElement('span'), { textContent: p.name }));
+    if (p.captain) li.append(Object.assign(document.createElement('span'), { className: 'cap', textContent: 'C' , title: 'Captain' }));
+    else if (balanceInput.checked) li.append(Object.assign(document.createElement('span'), { className: 'skill', textContent: `★${skillOf(p)}` }));
+    return li;
+  }
+
+  function metaText(team, shown) {
+    const size = `${shown} ${shown === 1 ? 'player' : 'players'}`;
+    return balanceInput.checked ? `${size} · ★${team.players.slice(0, shown).reduce((s, p) => s + skillOf(p), 0)}` : size;
+  }
+
+  async function make() {
+    if (drafting) return;
+    errorEl.textContent = '';
+    const list = players();
+    const count = teamCount(list.length);
+    if (list.length < 2) return void (errorEl.textContent = 'Add at least two players.');
+    if (list.length > MAX_PLAYERS) return void (errorEl.textContent = `Up to ${MAX_PLAYERS} players at a time.`);
+    if (count < 2) return void (errorEl.textContent = 'You need at least two teams.');
+    if (count > MAX_TEAMS) return void (errorEl.textContent = `Up to ${MAX_TEAMS} teams at a time.`);
+    if (count > list.length) return void (errorEl.textContent = `You have ${list.length} players, so at most ${list.length} teams.`);
+
+    const teams = divide(list, count);
+    lastTeams = teams;
+    drafting = true;
+    makeBtn.setAttribute('aria-disabled', 'true');
+    $('team-idle').hidden = true;
+    $('team-actions').hidden = true;
+    $('copy-status').textContent = '';
+
+    const views = teams.map(teamCard);
+    teamsEl.replaceChildren(...views.map((v) => v.card));
+    teamsEl.scrollIntoView({ block: 'nearest', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+
+    // Draft order: round by round, one player per team, like a schoolyard pick.
+    const rounds = Math.max(...teams.map((t) => t.players.length));
+    const delay = prefersReducedMotion() ? 0 : Math.max(60, Math.min(220, 2600 / list.length));
+    for (let r = 0; r < rounds; r++) {
+      for (let t = 0; t < teams.length; t++) {
+        const p = teams[t].players[r];
+        if (!p) continue;
+        views[t].list.append(playerItem(p));
+        views[t].meta.textContent = metaText(teams[t], r + 1);
+        if (delay) {
+          sfx.pop();
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+      }
+    }
+    teams.forEach((team, t) => (views[t].meta.textContent = metaText(team, team.players.length)));
+
+    drafting = false;
+    makeBtn.removeAttribute('aria-disabled');
+    $('team-actions').hidden = false;
+    sfx.win();
+    confetti();
+    award('teams');
+  }
+
+  function teamsText(teams) {
+    const blocks = teams.map(
+      (team) =>
+        `Team ${team.name}\n` + team.players.map((p, i) => `${i + 1}. ${p.name}${p.captain ? ' (C)' : ''}`).join('\n'),
+    );
+    return `${blocks.join('\n\n')}\n\nPicked on winisland.in`;
+  }
+
+  function updateCount() {
+    const n = players().length;
+    $('player-count').textContent = `${n} ${n === 1 ? 'player' : 'players'}`;
+    const bySize = document.querySelector('input[name="split"]:checked').value === 'size';
+    $('split-label').textContent = bySize ? 'Players per team' : 'Teams';
+    save(STORE_KEY, {
+      players: playersInput.value,
+      split: bySize ? 'size' : 'teams',
+      n: splitInput.value,
+      balance: balanceInput.checked,
+    });
+  }
+
+  const saved = load(STORE_KEY, null);
+  if (saved && typeof saved === 'object') {
+    playersInput.value = saved.players ?? '';
+    splitInput.value = saved.n ?? 2;
+    balanceInput.checked = Boolean(saved.balance);
+    const split = document.querySelector(`input[name="split"][value="${saved.split}"]`);
+    if (split) split.checked = true;
+  }
+  updateCount();
+
+  for (const el of [playersInput, splitInput, balanceInput]) el.addEventListener('input', updateCount);
+  document.querySelectorAll('input[name="split"]').forEach((el) => el.addEventListener('change', updateCount));
+  makeBtn.addEventListener('click', make);
+  $('again').addEventListener('click', make);
+
+  $('copy-teams').addEventListener('click', async () => {
+    if (!lastTeams) return;
+    try {
+      await navigator.clipboard.writeText(teamsText(lastTeams));
+      $('copy-status').textContent = 'Copied! Paste it in your group chat.';
+    } catch {
+      $('copy-status').textContent = 'Could not copy. Take a screenshot instead.';
+    }
+  });
+</script>

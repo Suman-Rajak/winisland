@@ -1,0 +1,251 @@
+---
+// A floating island with the tool's prop on top. `uid` keeps gradient IDs unique if the
+// same island is drawn twice on one page.
+const { kind, locked = false, uid = kind, class: className } = Astro.props;
+const id = (name) => `${uid}-${name}`;
+const url = (name) => `url(#${id(name)})`;
+
+const SLICE = (2 * Math.PI * 18) / 8;
+const wheelColors = ['#ff3fa4', '#ffcf3a', '#2ee6ff', '#8cff5a', '#ff8a3d', '#9461ff', '#2ee6ff', '#ffcf3a'];
+const bulbs = Array.from({ length: 12 }, (_, i) => {
+  const a = (i / 12) * Math.PI * 2;
+  return { x: 120 + Math.cos(a) * 37, y: 64 + Math.sin(a) * 37 };
+});
+const leaves = [-150, -110, -70, -30, 10];
+---
+
+<svg class:list={['island', { locked }, className]} viewBox="0 0 240 225" aria-hidden="true" focusable="false">
+  <defs>
+    <radialGradient id={id('glow')}>
+      <stop offset="0" stop-color={locked ? '#6b6890' : '#9461ff'} stop-opacity="0.7"></stop>
+      <stop offset="1" stop-color="#9461ff" stop-opacity="0"></stop>
+    </radialGradient>
+    <linearGradient id={id('rock')} x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8457e6"></stop>
+      <stop offset="1" stop-color="#26105a"></stop>
+    </linearGradient>
+    <linearGradient id={id('grass')} x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#a6ff7d"></stop>
+      <stop offset="1" stop-color="#28b46a"></stop>
+    </linearGradient>
+    <radialGradient id={id('ball')} cx="0.35" cy="0.3" r="0.75">
+      <stop offset="0" stop-color="#ffd9a6"></stop>
+      <stop offset="0.45" stop-color="#ff8a3d"></stop>
+      <stop offset="1" stop-color="#c2410c"></stop>
+    </radialGradient>
+    <filter id={id('dim')}>
+      <feColorMatrix type="saturate" values="0.15"></feColorMatrix>
+      <feComponentTransfer>
+        <feFuncR type="linear" slope="0.6"></feFuncR>
+        <feFuncG type="linear" slope="0.6"></feFuncG>
+        <feFuncB type="linear" slope="0.7"></feFuncB>
+      </feComponentTransfer>
+    </filter>
+  </defs>
+
+  <g filter={locked ? url('dim') : undefined}>
+  <ellipse cx="120" cy="212" rx="86" ry="11" fill={url('glow')}></ellipse>
+
+  <!-- rock -->
+  <path
+    d="M26 120c10 30 40 44 58 70l16-6 20 26 16-24 18 6c16-26 46-40 60-72z"
+    fill={url('rock')}
+  ></path>
+  <path d="M70 150l18 22M150 146l-14 28M112 160l8 30" stroke="#2a1170" stroke-width="3" stroke-linecap="round" opacity="0.5"
+  ></path>
+
+  <!-- sand and grass -->
+  <ellipse cx="120" cy="122" rx="95" ry="25" fill="#f1c47b"></ellipse>
+  <ellipse cx="120" cy="116" rx="92" ry="22" fill={url('grass')}></ellipse>
+
+  <!-- palm tree -->
+  <g transform="translate(46 0)">
+    <path d="M14 116C12 96 10 80 2 62" stroke="#9a5a2c" stroke-width="7" fill="none" stroke-linecap="round"></path>
+    {
+      leaves.map((angle) => (
+        <path
+          d="M0 0c10-10 26-12 38-4c-12-2-26 0-38 4z"
+          fill="#3bd47e"
+          stroke="#1f8a4f"
+          stroke-width="1.5"
+          transform={`translate(2 62) rotate(${angle})`}
+        />
+      ))
+    }
+  </g>
+
+  {
+    kind === 'wheel' && (
+      <g>
+        <path d="M104 116L120 82L136 116" stroke="#2a1170" stroke-width="6" fill="none" stroke-linecap="round" />
+        <circle cx="120" cy="64" r="39" fill="#2a1170" />
+        {wheelColors.map((c, i) => (
+          <circle
+            cx="120"
+            cy="64"
+            r="18"
+            fill="none"
+            stroke={c}
+            stroke-width="36"
+            stroke-dasharray={`${SLICE} ${SLICE * 7}`}
+            stroke-dashoffset={-i * SLICE}
+            transform="rotate(-90 120 64)"
+          />
+        ))}
+        <circle cx="120" cy="64" r="37" fill="none" stroke="#ffcf3a" stroke-width="5" />
+        {bulbs.map((b) => (
+          <circle cx={b.x} cy={b.y} r="2.2" fill="#fff8d0" />
+        ))}
+        <circle cx="120" cy="64" r="8" fill="#fff" stroke="#2a1170" stroke-width="3" />
+        <path d="M111 18h18l-9 15z" fill="#ffcf3a" stroke="#2a1170" stroke-width="2.5" stroke-linejoin="round" />
+      </g>
+    )
+  }
+
+  {
+    kind === 'tambola' && (
+      <g>
+        <circle cx="120" cy="72" r="36" fill={url('ball')} />
+        <circle cx="120" cy="72" r="20" fill="#fff" />
+        <text x="120" y="82" text-anchor="middle" font-size="28" fill="#2a1170" style="font-family: var(--font-display-stack)">
+          90
+        </text>
+        <circle cx="80" cy="100" r="15" fill="#ff3fa4" />
+        <circle cx="80" cy="100" r="8.5" fill="#fff" />
+        <text x="80" y="105" text-anchor="middle" font-size="13" fill="#2a1170" style="font-family: var(--font-display-stack)">
+          7
+        </text>
+        <circle cx="163" cy="102" r="13" fill="#2ee6ff" />
+        <circle cx="163" cy="102" r="7.5" fill="#fff" />
+        <text x="163" y="106.5" text-anchor="middle" font-size="10.5" fill="#2a1170" style="font-family: var(--font-display-stack)">
+          22
+        </text>
+      </g>
+    )
+  }
+
+  {
+    kind === 'picker' && (
+      <g>
+        <rect x="86" y="66" width="68" height="48" rx="6" fill="#ff3fa4" />
+        <rect x="86" y="66" width="68" height="10" fill="#c81a77" opacity="0.6" />
+        <rect x="79" y="52" width="82" height="18" rx="6" fill="#ff7cc6" />
+        <rect x="113" y="52" width="14" height="62" fill="#ffcf3a" />
+        <ellipse cx="109" cy="44" rx="14" ry="8" transform="rotate(-25 109 44)" fill="#ffcf3a" />
+        <ellipse cx="131" cy="44" rx="14" ry="8" transform="rotate(25 131 44)" fill="#ffcf3a" />
+        <circle cx="120" cy="49" r="6" fill="#ffe27a" />
+        <path d="M70 34l3 8 8 3-8 3-3 8-3-8-8-3 8-3z" fill="#2ee6ff" />
+        <path d="M168 26l2.5 6 6 2.5-6 2.5-2.5 6-2.5-6-6-2.5 6-2.5z" fill="#ffcf3a" />
+        <path d="M176 70l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="#fff" />
+      </g>
+    )
+  }
+
+  {
+    kind === 'teams' && (
+      <g>
+        <path d="M120 36a34 34 0 0 0 0 68z" fill="#2ee6ff" />
+        <path d="M120 36a34 34 0 0 1 0 68z" fill="#ff3fa4" />
+        <text x="120" y="80" text-anchor="middle" font-size="26" fill="#fff" stroke="#2a1170" stroke-width="1.5" style="font-family: var(--font-display-stack)">
+          VS
+        </text>
+      </g>
+    )
+  }
+
+  {
+    kind === 'santa' && (
+      <g>
+        <path d="M86 102C90 66 108 40 146 42c-8 10-10 22-6 36l10 24z" fill="#ff3b4f" />
+        <rect x="80" y="96" width="78" height="18" rx="9" fill="#fff" />
+        <circle cx="150" cy="70" r="10" fill="#fff" />
+      </g>
+    )
+  }
+
+  {
+    kind === 'dice' && (
+      <g>
+        <g transform="rotate(14 150 92)">
+          <rect x="128" y="70" width="44" height="44" rx="10" fill="#ff3fa4" />
+          <g fill="#fff">
+            <circle cx="140" cy="82" r="4.5" />
+            <circle cx="150" cy="92" r="4.5" />
+            <circle cx="160" cy="102" r="4.5" />
+          </g>
+        </g>
+        <g transform="rotate(-10 104 66)">
+          <rect x="76" y="38" width="56" height="56" rx="12" fill="#fff" />
+          <rect x="76" y="86" width="56" height="8" rx="4" fill="#d8d0f5" />
+          <g fill="#2a1170">
+            <circle cx="90" cy="52" r="5" />
+            <circle cx="118" cy="52" r="5" />
+            <circle cx="104" cy="66" r="5" />
+            <circle cx="90" cy="80" r="5" />
+            <circle cx="118" cy="80" r="5" />
+          </g>
+        </g>
+      </g>
+    )
+  }
+
+  {
+    kind === 'coin' && (
+      <g>
+        <ellipse cx="160" cy="106" rx="22" ry="8" fill="#b86f00" />
+        <ellipse cx="160" cy="103" rx="22" ry="8" fill="#ffcf3a" />
+        <circle cx="114" cy="70" r="38" fill="#b86f00" />
+        <circle cx="120" cy="68" r="38" fill="#ffcf3a" />
+        <circle cx="120" cy="68" r="28" fill="none" stroke="#e59a00" stroke-width="4" />
+        <path
+          d="M120 46L124.7 58.5L138.1 59.1L127.6 67.5L131.2 80.4L120 73L108.8 80.4L112.4 67.5L101.9 59.1L115.3 58.5Z"
+          fill="#fff4c2"
+        />
+        <path d="M94 50a32 32 0 0 1 18-14" stroke="#fff" stroke-width="5" stroke-linecap="round" fill="none" opacity="0.7" />
+      </g>
+    )
+  }
+
+  {
+    kind === 'tickets' && (
+      <g>
+        <g transform="rotate(9 128 60)">
+          <rect x="82" y="34" width="96" height="54" rx="7" fill="#d9fbff" stroke="#2ee6ff" stroke-width="3" />
+        </g>
+        <g transform="rotate(-6 118 76)">
+          <rect x="66" y="48" width="104" height="58" rx="7" fill="#fff7dc" stroke="#ffcf3a" stroke-width="3" />
+          <rect x="66" y="48" width="104" height="12" rx="6" fill="#ff3fa4" />
+          <g fill="#2a1170" style="font-family: var(--font-display-stack)" font-size="12" text-anchor="middle">
+            <text x="80" y="76">4</text>
+            <text x="112" y="76">37</text>
+            <text x="150" y="76">72</text>
+            <text x="96" y="97">18</text>
+            <text x="132" y="97">55</text>
+            <text x="160" y="97">90</text>
+          </g>
+        </g>
+      </g>
+    )
+  }
+
+  </g>
+
+  {
+    locked && (
+      <g transform="translate(96 46)">
+        <circle cx="24" cy="24" r="27" fill="#1b1147" stroke="#d9d2ff" stroke-width="3" />
+        <path d="M15 22v-5a9 9 0 0 1 18 0v5" fill="none" stroke="#d9d2ff" stroke-width="4.5" />
+        <rect x="11" y="21" width="26" height="19" rx="4" fill="#d9d2ff" />
+        <circle cx="24" cy="29" r="3" fill="#1b1147" />
+      </g>
+    )
+  }
+</svg>
+
+<style>
+  .island {
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+</style>

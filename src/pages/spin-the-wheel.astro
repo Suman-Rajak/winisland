@@ -1,0 +1,762 @@
+---
+import ToolPage from '../layouts/ToolPage.astro';
+import AdSlot from '../components/AdSlot.astro';
+
+const BULBS = 24;
+const bulbs = Array.from({ length: BULBS }, (_, i) => {
+  const a = -Math.PI / 2 + (i / BULBS) * Math.PI * 2;
+  return { x: (50 + Math.cos(a) * 46.6).toFixed(2), y: (50 + Math.sin(a) * 46.6).toFixed(2), odd: i % 2 === 1 };
+});
+---
+
+<ToolPage
+  title="Spin the Wheel – Free Random Name Picker Wheel | winisland"
+  description="Free spin the wheel game: add names or choices, spin the light-up wheel and get a fair random pick. No sign-up, works on phones and offline, up to 500 entries."
+  island="wheel"
+  heading="Spin the Wheel"
+  intro="Load up the names, dares or choices, smash SPIN and let the wheel decide. Fair every time, and your list stays on your device."
+>
+  <section class="arena wheel-arena" aria-label="Spin the wheel game">
+    <div class="stage">
+      <div id="wheel-box" class="wheel-box">
+        <canvas id="wheel" role="img" aria-label="Wheel"></canvas>
+        <svg class="ring" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+          <defs>
+            <linearGradient id="ring-gold" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#fff0a0"></stop>
+              <stop offset="0.5" stop-color="#e59a00"></stop>
+              <stop offset="1" stop-color="#ffd75e"></stop>
+            </linearGradient>
+          </defs>
+          <circle cx="50" cy="50" r="46.6" fill="none" stroke="url(#ring-gold)" stroke-width="6.8"></circle>
+          <circle cx="50" cy="50" r="43.2" fill="none" stroke="#2a1170" stroke-width="0.8"></circle>
+          {bulbs.map((b, i) => <circle class:list={['bulb', { odd: b.odd }]} cx={b.x} cy={b.y} r="1.5" style={`--i: ${i}`} />)}
+        </svg>
+        <svg id="pointer" class="pointer" viewBox="0 0 40 50" aria-hidden="true" focusable="false">
+          <path d="M5 5h30L20 46Z" fill="#ff3fa4" stroke="#fff" stroke-width="3" stroke-linejoin="round"></path>
+          <circle cx="20" cy="15" r="4.5" fill="#fff"></circle>
+        </svg>
+        <button id="spin" class="hub" type="button">Spin</button>
+      </div>
+
+      <p class="spin-hint">Tap <strong>SPIN</strong> or the wheel · <span class="xp">+10 XP</span> per spin</p>
+
+      <div id="history-wrap" class="history" hidden>
+        <span class="history-label">Last picks</span>
+        <ol id="history"></ol>
+      </div>
+      <p id="announce" class="sr-only" aria-live="polite"></p>
+    </div>
+
+    <div class="players panel">
+      <div class="players-head">
+        <h2 class="panel-title">Players</h2>
+        <span id="count" class="chip">0 entries</span>
+      </div>
+      <label for="entries" class="sr-only">Wheel entries, one per line</label>
+      <textarea id="entries" rows="11" spellcheck="false" aria-describedby="entries-hint wheel-error"></textarea>
+      <p id="entries-hint" class="hint">One per line, up to 500. Saved in this browser.</p>
+      <p id="wheel-error" class="error" role="alert"></p>
+      <div class="btn-row">
+        <button id="shuffle" class="btn" type="button"><span aria-hidden="true">🔀</span> Shuffle</button>
+        <button id="sort" class="btn" type="button"><span aria-hidden="true">🔤</span> Sort A–Z</button>
+        <button id="clear" class="btn" type="button"><span aria-hidden="true">🧹</span> Clear</button>
+      </div>
+    </div>
+  </section>
+
+  <dialog id="win" class="reward" aria-labelledby="win-label win-name">
+    <div class="rays" aria-hidden="true"></div>
+    <form method="dialog"><button class="reward-close" aria-label="Close">✕</button></form>
+    <p id="win-label" class="reward-kicker">🏆 The wheel picked</p>
+    <p id="win-name" class="reward-name"></p>
+    <p class="reward-xp">+10 XP</p>
+    <p class="watermark">Picked on <b>winisland.in</b></p>
+    <div class="btn-row">
+      <button id="win-again" class="btn btn-play btn-lg" type="button" autofocus>Spin again</button>
+      <button id="win-remove" class="btn" type="button">Remove from wheel</button>
+    </div>
+  </dialog>
+
+  <Fragment slot="guide">
+    <section class="panel">
+      <h2>How to use the spin wheel</h2>
+      <ol>
+        <li>Type or paste your entries in the Players box, one per line: names, prizes, dares, places to eat, anything.</li>
+        <li>Press the gold <strong>SPIN</strong> button in the middle of the wheel, or tap anywhere on the wheel.</li>
+        <li>The lights chase, the wheel slows down, and the pointer at the top lands on the pick.</li>
+        <li>
+          Choose <strong>Spin again</strong>, or <strong>Remove from wheel</strong> to take that entry out first. Repeat
+          to pick several winners or to set a running order.
+        </li>
+      </ol>
+      <p>
+        Your entries are saved in this browser, so they are still there next time. <strong>Shuffle</strong> mixes up the
+        slices and <strong>Sort A–Z</strong> tidies a long list. Every spin earns XP towards your next level.
+      </p>
+    </section>
+
+    <AdSlot name="inGuide" />
+
+    <section class="panel">
+      <h2>Ideas for the wheel</h2>
+      <ul>
+        <li><strong>Classroom:</strong> pick who answers next, or the order for presentations.</li>
+        <li><strong>Parties:</strong> who goes first, truth or dare prompts, forfeits for party games.</li>
+        <li><strong>Home:</strong> whose turn it is to do the dishes, what to cook, which film to watch.</li>
+        <li><strong>Work:</strong> the order for a stand-up meeting, or who chooses the next team lunch.</li>
+        <li>
+          <strong>Small giveaways:</strong> for a few dozen names. For hundreds of entries, use the
+          <a href="/giveaway-winner-picker/">giveaway winner picker</a>.
+        </li>
+      </ul>
+    </section>
+
+    <section class="panel">
+      <h2>Is the wheel really random?</h2>
+      <p>
+        Yes. When you press Spin, the winner is chosen with your browser's cryptographic random number generator (the Web
+        Crypto API), and every slice has exactly the same chance. The spinning animation then lands on that pick. Nothing
+        about the order of your list, earlier spins or the speed of your device changes the odds.
+      </p>
+    </section>
+
+    <section class="panel faq">
+      <h2>Frequently asked questions</h2>
+      <details>
+        <summary>How many entries can I add?</summary>
+        <p>
+          Up to 500. Labels get small after about 100 entries, but every slice still has the same chance and the winner
+          is always shown in big letters.
+        </p>
+      </details>
+      <details>
+        <summary>Can I give someone a bigger chance?</summary>
+        <p>
+          Yes. Each line is one slice, so a name that appears on two lines has twice the chance. If you want everyone to
+          be equal, check the list for duplicates first.
+        </p>
+      </details>
+      <details>
+        <summary>Is my list private?</summary>
+        <p>
+          Yes. The wheel runs entirely in your browser. Your entries are not sent to us or anyone else; they are only
+          saved on this device so you don't have to type them again.
+        </p>
+      </details>
+      <details>
+        <summary>Does it work without internet?</summary>
+        <p>
+          Yes. After you have opened winisland.in once, the games are stored on your device and keep working offline,
+          which is handy at parties with patchy Wi-Fi. You can also add the site to your home screen.
+        </p>
+      </details>
+      <details>
+        <summary>How do I turn off the sound or the animation?</summary>
+        <p>
+          Tap the speaker button at the top of the page to switch sound effects off. If your phone or computer is set to
+          reduce motion, the wheel skips the long spin and shows the result straight away.
+        </p>
+      </details>
+      <details>
+        <summary>What are XP and badges?</summary>
+        <p>
+          Just for fun: every spin, pick and tambola call earns XP, and you level up and unlock badges as you play. Tap
+          your level at the top of the page to see your trophy room. It's saved on your device; no account needed.
+        </p>
+      </details>
+    </section>
+  </Fragment>
+</ToolPage>
+
+<style>
+  .wheel-arena {
+    display: grid;
+    gap: 22px;
+  }
+
+  @media (min-width: 900px) {
+    .wheel-arena {
+      grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr);
+      align-items: start;
+      gap: 30px;
+    }
+  }
+
+  .stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+  }
+
+  .wheel-box {
+    position: relative;
+    width: 100%;
+    max-width: 540px;
+    aspect-ratio: 1;
+    margin-top: 16px;
+  }
+
+  /* Neon glow behind the wheel */
+  .wheel-box::before {
+    content: '';
+    position: absolute;
+    inset: -4%;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgb(148 97 255 / 0.55) 40%, rgb(46 230 255 / 0.15) 62%, transparent 72%);
+    z-index: 0;
+  }
+
+  canvas,
+  .ring {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  canvas {
+    z-index: 1;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+
+  .ring {
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  .bulb {
+    fill: #fff6c9;
+    animation: bulb-idle 1.6s steps(1) infinite;
+  }
+
+  .bulb.odd {
+    animation-delay: -0.8s;
+  }
+
+  .spinning .bulb {
+    animation: bulb-chase 0.6s linear infinite;
+    animation-delay: calc(var(--i) * 0.025s);
+  }
+
+  .won .bulb {
+    animation: bulb-flash 0.24s steps(1) infinite;
+  }
+
+  .won .bulb.odd {
+    animation-delay: -0.12s;
+  }
+
+  @keyframes bulb-idle {
+    0% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.3;
+    }
+  }
+
+  @keyframes bulb-chase {
+    0%,
+    60% {
+      opacity: 0.25;
+    }
+    75% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0.25;
+    }
+  }
+
+  @keyframes bulb-flash {
+    0% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.15;
+    }
+  }
+
+  .pointer {
+    position: absolute;
+    z-index: 3;
+    top: -5%;
+    left: 44%;
+    width: 12%;
+    transform-origin: 50% 25%;
+    filter: drop-shadow(0 4px 4px rgb(0 0 0 / 0.5));
+  }
+
+  .hub {
+    position: absolute;
+    z-index: 3;
+    left: 50%;
+    top: 50%;
+    width: 23%;
+    aspect-ratio: 1;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    border: 4px solid #fff3b0;
+    background: radial-gradient(circle at 35% 28%, #fff4b0, #ffc21a 55%, #e08300);
+    color: #3a1c00;
+    font-family: var(--font-display-stack);
+    font-size: clamp(1rem, 0.6rem + 2.4vw, 1.75rem);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: pointer;
+    box-shadow:
+      0 6px 0 #9a5200,
+      0 12px 26px rgb(0 0 0 / 0.55);
+    transition:
+      transform 0.08s,
+      box-shadow 0.08s;
+  }
+
+  .hub::before {
+    content: '';
+    position: absolute;
+    inset: -12%;
+    border-radius: 50%;
+    border: 3px solid rgb(255 207 58 / 0.75);
+    animation: hub-pulse 1.8s ease-out infinite;
+    pointer-events: none;
+  }
+
+  @keyframes hub-pulse {
+    from {
+      transform: scale(0.9);
+      opacity: 0.9;
+    }
+    to {
+      transform: scale(1.4);
+      opacity: 0;
+    }
+  }
+
+  .hub:active {
+    transform: translate(-50%, calc(-50% + 4px));
+    box-shadow:
+      0 2px 0 #9a5200,
+      0 6px 14px rgb(0 0 0 / 0.5);
+  }
+
+  .spinning .hub {
+    cursor: progress;
+  }
+
+  .spinning .hub::before {
+    animation: none;
+    opacity: 0;
+  }
+
+  .spin-hint {
+    margin: 4px 0 0;
+    color: var(--muted);
+    font-size: 0.95rem;
+    text-align: center;
+  }
+
+  .spin-hint .xp {
+    color: var(--lime);
+    font-weight: 900;
+  }
+
+  .history {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    max-width: 540px;
+  }
+
+  .history[hidden] {
+    display: none;
+  }
+
+  .history-label {
+    font-size: 0.8rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+  }
+
+  .history ol {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .history :global(li) {
+    max-width: 14ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.08);
+    border: 1px solid var(--line);
+    font-weight: 800;
+    font-size: 0.85rem;
+  }
+
+  .history :global(li:first-child) {
+    border-color: var(--gold);
+    color: var(--gold);
+  }
+
+  .players {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 18px;
+  }
+
+  .players-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .players .hint,
+  .players .error {
+    margin: 0;
+  }
+
+  .players .btn-row {
+    margin-top: 4px;
+  }
+
+  .players .btn {
+    flex: 1 1 auto;
+  }
+</style>
+
+<script>
+  import { randomFloat, randomInt, shuffle } from '../scripts/random.js';
+  import { load, save } from '../scripts/storage.js';
+  import { confetti, prefersReducedMotion } from '../scripts/confetti.js';
+  import { sfx } from '../scripts/sfx.js';
+  import { award } from '../scripts/player.js';
+
+  const STORE_KEY = 'winisland:wheel';
+  const MAX_ENTRIES = 500;
+  const DEFAULT_ENTRIES = ['Ali', 'Beatriz', 'Chen', 'Divya', 'Emma', 'Femi', 'Kabir', 'Sofia'];
+  const COLORS = ['#ff3fa4', '#ffb81f', '#19c8e6', '#5fd93a', '#ff7a2f', '#8a55ff', '#ff4f5e', '#14c9a0'];
+  const FACE = 0.44; // wheel radius as a share of the box; the gold ring covers the rest
+  const TAU = Math.PI * 2;
+  const POINTER_ANGLE = -Math.PI / 2; // the pointer sits at the top
+  const FONT = getComputedStyle(document.documentElement).getPropertyValue('--font-display').trim() || 'Arial Black, sans-serif';
+
+  const $ = (id) => document.getElementById(id);
+  const box = $('wheel-box');
+  const canvas = $('wheel');
+  const ctx = canvas.getContext('2d');
+  const pointer = $('pointer');
+  const spinBtn = $('spin');
+  const textarea = $('entries');
+  const countEl = $('count');
+  const errorEl = $('wheel-error');
+  const announce = $('announce');
+  const dialog = $('win');
+  const winName = $('win-name');
+  const historyWrap = $('history-wrap');
+  const historyEl = $('history');
+
+  let entries = [];
+  let rotation = 0;
+  let spinning = false;
+  let lastWinner = -1;
+  let size = 0;
+  let face = null; // the wheel drawn once at rotation 0, then rotated while spinning
+  const history = [];
+
+  const parse = (text) =>
+    text
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+  function sliceColor(i, n) {
+    let c = i % COLORS.length;
+    // Keep the last slice from matching the first slice it touches.
+    if (n > 1 && i === n - 1 && c === 0) c = 2;
+    return COLORS[c];
+  }
+
+  function fitText(c, text, maxWidth) {
+    if (c.measureText(text).width <= maxWidth) return text;
+    let lo = 0;
+    let hi = text.length;
+    while (lo < hi) {
+      const mid = Math.ceil((lo + hi) / 2);
+      if (c.measureText(text.slice(0, mid) + '…').width <= maxWidth) lo = mid;
+      else hi = mid - 1;
+    }
+    return text.slice(0, lo) + '…';
+  }
+
+  function renderFace() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    const off = document.createElement('canvas');
+    off.width = off.height = Math.round(size * dpr);
+    const c = off.getContext('2d');
+    face = off;
+    c.scale(dpr, dpr);
+    c.translate(size / 2, size / 2);
+
+    const radius = size * FACE;
+    const n = entries.length;
+
+    if (n === 0) {
+      c.beginPath();
+      c.arc(0, 0, radius, 0, TAU);
+      c.fillStyle = '#1b1147';
+      c.fill();
+      c.fillStyle = '#bdb5e2';
+      c.font = `${Math.max(14, radius * 0.08)}px ${FONT}`;
+      c.textAlign = 'center';
+      c.fillText('Add players to spin', 0, radius * 0.5);
+      return;
+    }
+
+    const slice = TAU / n;
+    for (let i = 0; i < n; i++) {
+      c.beginPath();
+      c.moveTo(0, 0);
+      c.arc(0, 0, radius, i * slice, (i + 1) * slice);
+      c.closePath();
+      c.fillStyle = sliceColor(i, n);
+      c.fill();
+    }
+
+    // Shading for a rounded, glossy look.
+    const shade = c.createRadialGradient(0, 0, radius * 0.1, 0, 0, radius);
+    shade.addColorStop(0, 'rgba(255,255,255,0.25)');
+    shade.addColorStop(0.5, 'rgba(255,255,255,0)');
+    shade.addColorStop(1, 'rgba(30,0,70,0.35)');
+    c.fillStyle = shade;
+    c.beginPath();
+    c.arc(0, 0, radius, 0, TAU);
+    c.fill();
+
+    if (n > 1 && n <= 120) {
+      c.strokeStyle = 'rgba(255,255,255,0.55)';
+      c.lineWidth = Math.max(1, radius * 0.008);
+      for (let i = 0; i < n; i++) {
+        c.beginPath();
+        c.moveTo(0, 0);
+        c.lineTo(Math.cos(i * slice) * radius, Math.sin(i * slice) * radius);
+        c.stroke();
+      }
+    }
+
+    const fontSize = Math.min(radius * 0.1, slice * radius * 0.5, 34);
+    if (fontSize >= 6) {
+      c.font = `${fontSize}px ${FONT}`;
+      c.textAlign = 'right';
+      c.textBaseline = 'middle';
+      c.lineJoin = 'round';
+      c.lineWidth = Math.max(2, fontSize * 0.22);
+      c.strokeStyle = 'rgba(30, 8, 70, 0.75)';
+      c.fillStyle = '#ffffff';
+      const maxWidth = radius * 0.62; // leave room for the hub
+      for (let i = 0; i < n; i++) {
+        c.save();
+        c.rotate((i + 0.5) * slice);
+        const label = fitText(c, entries[i], maxWidth);
+        const x = radius - fontSize * 0.6;
+        c.strokeText(label, x, 0);
+        c.fillText(label, x, 0);
+        c.restore();
+      }
+    }
+  }
+
+  function paint() {
+    const half = size / 2;
+    ctx.clearRect(0, 0, size, size);
+    ctx.save();
+    ctx.translate(half, half);
+    ctx.rotate(rotation);
+    ctx.drawImage(face, -half, -half, size, size);
+    ctx.restore();
+  }
+
+  function redraw() {
+    if (!size) return;
+    renderFace();
+    paint();
+  }
+
+  function resize() {
+    const next = canvas.clientWidth;
+    if (!next || next === size) return;
+    size = next;
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    canvas.width = canvas.height = Math.round(size * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    redraw();
+  }
+
+  function updateEntries() {
+    const all = parse(textarea.value);
+    entries = all.slice(0, MAX_ENTRIES);
+    const label = `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}`;
+    countEl.textContent = label;
+    errorEl.textContent = all.length > MAX_ENTRIES ? `Only the first ${MAX_ENTRIES} entries fit on the wheel.` : '';
+    canvas.setAttribute('aria-label', `Wheel with ${label}`);
+    save(STORE_KEY, textarea.value);
+    lastWinner = -1;
+    redraw();
+  }
+
+  function setText(lines) {
+    textarea.value = lines.join('\n');
+    updateEntries();
+  }
+
+  function renderHistory() {
+    historyWrap.hidden = history.length === 0;
+    historyEl.replaceChildren(
+      ...history.map((name) => Object.assign(document.createElement('li'), { textContent: name, title: name })),
+    );
+  }
+
+  // --- Spinning ---
+  const easeOut = (t) => 1 - Math.pow(1 - t, 4);
+
+  function sliceAtPointer(rot) {
+    const n = entries.length;
+    const angle = (((POINTER_ANGLE - rot) % TAU) + TAU) % TAU;
+    return Math.min(n - 1, Math.floor(angle / (TAU / n)));
+  }
+
+  function flap() {
+    if (prefersReducedMotion()) return;
+    pointer.animate([{ transform: 'rotate(-22deg)' }, { transform: 'rotate(0deg)' }], { duration: 160, easing: 'ease-out' });
+  }
+
+  function spin() {
+    if (spinning) return;
+    if (entries.length < 2) {
+      errorEl.textContent = 'Add at least two players to spin.';
+      textarea.focus();
+      return;
+    }
+    if (dialog.open) dialog.close();
+    errorEl.textContent = '';
+    spinning = true;
+    box.classList.remove('won');
+    box.classList.add('spinning');
+    spinBtn.setAttribute('aria-disabled', 'true');
+    textarea.readOnly = true;
+
+    // Pick the winner first, fairly, then animate the wheel to land on it.
+    const n = entries.length;
+    const slice = TAU / n;
+    const winner = randomInt(n);
+    const landAt = (winner + 0.1 + 0.8 * randomFloat()) * slice;
+    const reduced = prefersReducedMotion();
+    const turns = reduced ? 0 : 5 + randomInt(3);
+    let target = POINTER_ANGLE - landAt;
+    target += TAU * Math.ceil((rotation + turns * TAU - target) / TAU);
+
+    const from = rotation;
+    const duration = reduced ? 0 : 4300 + randomInt(1500);
+    const start = performance.now();
+    let current = sliceAtPointer(from);
+
+    function frame(now) {
+      const t = duration ? Math.min(1, (now - start) / duration) : 1;
+      rotation = from + (target - from) * easeOut(t);
+      paint();
+      const at = sliceAtPointer(rotation);
+      if (at !== current) {
+        current = at;
+        sfx.tick();
+        flap();
+      }
+      if (t < 1) requestAnimationFrame(frame);
+      else finish(winner);
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function finish(winner) {
+    rotation %= TAU;
+    spinning = false;
+    lastWinner = winner;
+    box.classList.remove('spinning');
+    box.classList.add('won');
+    spinBtn.removeAttribute('aria-disabled');
+    textarea.readOnly = false;
+
+    const name = entries[winner];
+    history.unshift(name);
+    history.length = Math.min(history.length, 8);
+    renderHistory();
+    announce.textContent = `The wheel picked ${name}`;
+    sfx.win();
+
+    setTimeout(() => {
+      winName.textContent = name;
+      dialog.showModal();
+      confetti({ x: 0.5, y: 0.35 });
+      award('spin'); // after the dialog opens, so badge and level toasts show above it
+    }, prefersReducedMotion() ? 0 : 450);
+    setTimeout(() => box.classList.remove('won'), 2400);
+  }
+
+  // --- Wire up ---
+  textarea.value = load(STORE_KEY, DEFAULT_ENTRIES.join('\n'));
+  updateEntries();
+  new ResizeObserver(resize).observe(canvas);
+  document.fonts?.load(`20px ${FONT}`).then(redraw, () => {});
+
+  spinBtn.addEventListener('click', spin);
+  canvas.addEventListener('click', spin);
+  textarea.addEventListener('input', updateEntries);
+
+  $('win-again').addEventListener('click', () => {
+    dialog.close();
+    spin();
+  });
+
+  $('win-remove').addEventListener('click', () => {
+    if (lastWinner >= 0) {
+      const all = parse(textarea.value);
+      all.splice(lastWinner, 1);
+      setText(all);
+    }
+    dialog.close();
+    spinBtn.focus();
+  });
+
+  $('shuffle').addEventListener('click', () => {
+    if (!spinning) setText(shuffle(parse(textarea.value)));
+  });
+
+  $('sort').addEventListener('click', () => {
+    if (spinning) return;
+    setText(parse(textarea.value).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base', numeric: true })));
+  });
+
+  $('clear').addEventListener('click', () => {
+    if (spinning || !textarea.value.trim()) return;
+    if (confirm('Clear all players from the wheel?')) {
+      setText([]);
+      textarea.focus();
+    }
+  });
+</script>

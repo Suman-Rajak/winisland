@@ -1,0 +1,78 @@
+// Live tools ("islands"). Header, footer, home page and the "more islands" box read this list.
+export const tools = [
+  {
+    id: 'wheel',
+    href: '/spin-the-wheel/',
+    name: 'Spin the Wheel',
+    short: 'Spin Wheel',
+    island: 'Wheel Island',
+    blurb: 'Load up names or dares, smash SPIN and let the light-up wheel decide.',
+    tags: ['Up to 500 names', 'Sound effects', 'Remove winners'],
+  },
+  {
+    id: 'tambola',
+    href: '/tambola-number-caller/',
+    name: 'Tambola Number Caller',
+    short: 'Tambola',
+    island: 'Tambola Island',
+    blurb: 'A talking housie machine with rooms: everyone gets a ticket and you check claims in one tap.',
+    tags: ['Voice caller', 'Rooms', 'Claim checker'],
+  },
+  {
+    id: 'tickets',
+    href: '/tambola-ticket-generator/',
+    name: 'Tambola Ticket Generator',
+    short: 'Tickets',
+    island: 'Ticket Island',
+    blurb: 'Print real housie tickets, 6 or 12 to an A4 page, numbered or with names.',
+    tags: ['Printable', 'Full sheets', 'Save as PDF'],
+  },
+  {
+    id: 'picker',
+    href: '/giveaway-winner-picker/',
+    name: 'Giveaway Winner Picker',
+    short: 'Giveaway',
+    island: 'Lucky Draw Island',
+    blurb: 'Paste your entries, hit the drumroll and reveal fair winners plus backups.',
+    tags: ['Countdown reveal', 'Backup winners', 'No login'],
+  },
+  {
+    id: 'teams',
+    href: '/team-divider/',
+    name: 'Team Divider',
+    short: 'Teams',
+    island: 'Team Island',
+    blurb: 'Split players into fair teams with captains and skill balancing, for cricket, football and quiz nights.',
+    tags: ['Captains', 'Skill balance', 'Any team size'],
+  },
+  {
+    id: 'santa',
+    href: '/secret-santa-generator/',
+    name: 'Secret Santa Generator',
+    short: 'Secret Santa',
+    island: 'Santa Island',
+    blurb: 'Draw names, set a budget and send everyone a private reveal link. Nobody needs to sign up.',
+    tags: ['Private links', 'Exclusions', 'Print slips'],
+  },
+  {
+    id: 'coin',
+    href: '/coin-toss/',
+    name: 'Coin Toss',
+    short: 'Coin Toss',
+    island: 'Coin Island',
+    blurb: 'Flip a shiny 3D coin, call heads or tails and keep score.',
+    tags: ['3D flip', 'Call it', 'Score board'],
+  },
+  {
+    id: 'dice',
+    href: '/dice-roller/',
+    name: 'Dice Roller',
+    short: 'Dice',
+    island: 'Dice Island',
+    blurb: 'Roll up to six tumbling 3D dice, or D4 to D20 for board games and RPGs.',
+    tags: ['3D dice', 'D4 to D20', 'Totals'],
+  },
+];
+
+// Shown as locked islands on the home page.
+export const comingSoon = [];

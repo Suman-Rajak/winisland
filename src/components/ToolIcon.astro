@@ -1,0 +1,152 @@
+---
+// Small game icons. Flat colours only (no gradient IDs) so many can share a page.
+const { kind, size = 28, class: className } = Astro.props;
+const SLICE = (2 * Math.PI * 9) / 8;
+const wheelColors = ['#ff3fa4', '#ffcf3a', '#2ee6ff', '#8cff5a', '#ff3fa4', '#ffcf3a', '#2ee6ff', '#8cff5a'];
+---
+
+<svg class={className} width={size} height={size} viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+  {
+    kind === 'wheel' && (
+      <>
+        <circle cx="24" cy="26" r="20" fill="#2a1170" />
+        {wheelColors.map((c, i) => (
+          <circle
+            cx="24"
+            cy="26"
+            r="9"
+            fill="none"
+            stroke={c}
+            stroke-width="18"
+            stroke-dasharray={`${SLICE} ${SLICE * 7}`}
+            stroke-dashoffset={-i * SLICE}
+            transform="rotate(-90 24 26)"
+          />
+        ))}
+        <circle cx="24" cy="26" r="18.5" fill="none" stroke="#9461ff" stroke-width="3" />
+        <circle cx="24" cy="26" r="4.5" fill="#fff" stroke="#2a1170" stroke-width="2" />
+        <path d="M18.5 2.5h11L24 12z" fill="#ffcf3a" stroke="#2a1170" stroke-width="1.6" stroke-linejoin="round" />
+      </>
+    )
+  }
+  {
+    kind === 'tambola' && (
+      <>
+        <circle cx="24" cy="24" r="20" fill="#ff8a3d" />
+        <circle cx="24" cy="24" r="20" fill="none" stroke="#2a1170" stroke-width="2" />
+        <circle cx="17" cy="15" r="6" fill="#ffd08a" opacity="0.7" />
+        <circle cx="24" cy="24" r="11.5" fill="#fff" />
+        <text x="24" y="29" text-anchor="middle" font-size="14" fill="#2a1170" style="font-family: var(--font-display-stack)">
+          90
+        </text>
+      </>
+    )
+  }
+  {
+    kind === 'picker' && (
+      <>
+        <rect x="9" y="21" width="30" height="22" rx="3" fill="#ff3fa4" />
+        <rect x="6" y="14" width="36" height="9" rx="3" fill="#ff7cc6" />
+        <rect x="21" y="14" width="6" height="29" fill="#ffcf3a" />
+        <ellipse cx="18" cy="10.5" rx="6.5" ry="4" transform="rotate(-25 18 10.5)" fill="#ffcf3a" />
+        <ellipse cx="30" cy="10.5" rx="6.5" ry="4" transform="rotate(25 30 10.5)" fill="#ffcf3a" />
+        <circle cx="24" cy="13" r="3" fill="#ffe27a" />
+      </>
+    )
+  }
+  {
+    kind === 'teams' && (
+      <>
+        <path d="M24 4a20 20 0 0 0 0 40z" fill="#2ee6ff" />
+        <path d="M24 4a20 20 0 0 1 0 40z" fill="#ff3fa4" />
+        <text x="24" y="30" text-anchor="middle" font-size="16" fill="#fff" stroke="#2a1170" stroke-width="1" style="font-family: var(--font-display-stack)">
+          VS
+        </text>
+      </>
+    )
+  }
+  {
+    kind === 'santa' && (
+      <>
+        <path d="M9 34C11 18 20 8 33 9c-3 4-4 9-3 14l4 11z" fill="#ff3b4f" />
+        <rect x="6" y="32" width="32" height="9" rx="4.5" fill="#fff" />
+        <circle cx="35" cy="22" r="5" fill="#fff" />
+      </>
+    )
+  }
+  {
+    kind === 'dice' && (
+      <>
+        <rect x="22" y="22" width="22" height="22" rx="5" fill="#ff3fa4" transform="rotate(12 33 33)" />
+        <g fill="#fff" transform="rotate(12 33 33)">
+          <circle cx="28" cy="28" r="2.4" />
+          <circle cx="38" cy="38" r="2.4" />
+        </g>
+        <rect x="4" y="4" width="28" height="28" rx="7" fill="#fff" transform="rotate(-8 18 18)" />
+        <g fill="#2a1170" transform="rotate(-8 18 18)">
+          <circle cx="11" cy="11" r="2.6" />
+          <circle cx="25" cy="11" r="2.6" />
+          <circle cx="18" cy="18" r="2.6" />
+          <circle cx="11" cy="25" r="2.6" />
+          <circle cx="25" cy="25" r="2.6" />
+        </g>
+      </>
+    )
+  }
+  {
+    kind === 'coin' && (
+      <>
+        <circle cx="24" cy="25" r="20" fill="#b86f00" />
+        <circle cx="24" cy="23" r="20" fill="#ffcf3a" />
+        <circle cx="24" cy="23" r="14.5" fill="none" stroke="#e59a00" stroke-width="2" />
+        <path d="M24 13.5L26.35 19.76L33.04 20.06L27.8 24.24L29.58 30.69L24 27L18.42 30.69L20.2 24.24L14.96 20.06L21.65 19.76Z" fill="#fff4c2" />
+      </>
+    )
+  }
+  {
+    kind === 'tickets' && (
+      <>
+        <rect x="10" y="6" width="34" height="22" rx="4" fill="#2ee6ff" transform="rotate(10 27 17)" />
+        <rect x="3" y="16" width="38" height="26" rx="4" fill="#fff7dc" stroke="#ffcf3a" stroke-width="2" />
+        <rect x="3" y="16" width="38" height="6" rx="3" fill="#ff3fa4" />
+        <g fill="#2a1170">
+          <rect x="8" y="26" width="5" height="4" rx="1" />
+          <rect x="20" y="26" width="5" height="4" rx="1" />
+          <rect x="31" y="26" width="5" height="4" rx="1" />
+          <rect x="14" y="33" width="5" height="4" rx="1" />
+          <rect x="26" y="33" width="5" height="4" rx="1" />
+        </g>
+      </>
+    )
+  }
+  {
+    kind === 'trophy' && (
+      <>
+        <path d="M14 6h20v10a10 10 0 0 1-20 0z" fill="#ffcf3a" />
+        <path d="M14 9H7a7 7 0 0 0 8 9M34 9h7a7 7 0 0 1-8 9" fill="none" stroke="#ffcf3a" stroke-width="3" />
+        <rect x="21" y="25" width="6" height="8" fill="#e5a400" />
+        <rect x="14" y="33" width="20" height="7" rx="2" fill="#ffcf3a" />
+        <path d="M19 9v7" stroke="#fff4c2" stroke-width="2.5" stroke-linecap="round" />
+      </>
+    )
+  }
+  {
+    kind === 'sound' && (
+      <>
+        <path d="M8 18h8l10-8v28l-10-8H8z" fill="currentColor" />
+        <path class="wave" d="M32 17a9 9 0 0 1 0 14M36 12a15 15 0 0 1 0 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" />
+        <path class="mute" d="M32 18l10 12M42 18L32 30" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" />
+      </>
+    )
+  }
+  {
+    kind === 'lock' && (
+      <>
+        <path d="M15 21v-6a9 9 0 0 1 18 0v6" fill="none" stroke="#d9d2ff" stroke-width="5" />
+        <rect x="9" y="20" width="30" height="23" rx="5" fill="#d9d2ff" />
+        <circle cx="24" cy="30" r="3.5" fill="#2a1170" />
+        <rect x="22.5" y="31" width="3" height="7" rx="1.5" fill="#2a1170" />
+      </>
+    )
+  }
+</svg>

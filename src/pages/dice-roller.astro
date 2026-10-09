@@ -1,0 +1,563 @@
+---
+import ToolPage from '../layouts/ToolPage.astro';
+import AdSlot from '../components/AdSlot.astro';
+
+const SIDES = [6, 4, 8, 10, 12, 20];
+---
+
+<ToolPage
+  title="Dice Roller – Roll 3D Dice Online (D6 to D20) | winisland"
+  description="Roll dice online with tumbling 3D dice. Roll 1 to 6 dice at once, use D4, D6, D8, D10, D12 or D20, and see the total instantly. Free and fair, for board games and RPGs."
+  island="dice"
+  heading="Dice Roller"
+  intro="Shake, roll and watch the dice tumble. Roll up to six at once, switch to D4 through D20 for RPGs, and get the total instantly."
+>
+  <section class="arena dice-arena" aria-label="Dice roller">
+    <div class="dice-controls">
+      <div class="count-control">
+        <span class="label" id="count-label">Dice</span>
+        <div class="stepper" role="group" aria-labelledby="count-label">
+          <button id="fewer" class="btn step" type="button" aria-label="Fewer dice">−</button>
+          <output id="count" class="count" aria-live="polite">2</output>
+          <button id="more" class="btn step" type="button" aria-label="More dice">+</button>
+        </div>
+      </div>
+      <fieldset class="seg">
+        <legend>Type</legend>
+        <div class="seg-options">
+          {
+            SIDES.map((s) => (
+              <label>
+                <input type="radio" name="sides" value={s} checked={s === 6} />
+                <span>D{s}</span>
+              </label>
+            ))
+          }
+        </div>
+      </fieldset>
+    </div>
+
+    <div id="tray" class="tray" aria-hidden="true"></div>
+
+    <div class="dice-result">
+      <p id="total" class="total" aria-live="polite">Tap ROLL</p>
+      <p id="detail" class="detail"></p>
+      <button id="roll" class="btn btn-play btn-xl roll-btn" type="button">Roll</button>
+      <p class="watermark">Rolled on <b>winisland.in</b></p>
+    </div>
+
+    <div class="dice-history panel">
+      <h2 class="panel-title">Recent rolls</h2>
+      <ol id="history" class="history"></ol>
+    </div>
+  </section>
+
+  <Fragment slot="guide">
+    <section class="panel">
+      <h2>How to roll dice online</h2>
+      <ol>
+        <li>Choose how many dice to roll, from 1 to 6, with the <strong>−</strong> and <strong>+</strong> buttons.</li>
+        <li>Pick the dice type. D6 is the normal six-sided die; D4 to D20 are for role-playing and strategy games.</li>
+        <li>Press <strong>Roll</strong> or tap the dice. The total and each die's number appear underneath.</li>
+      </ol>
+      <p>Your last rolls are listed under Recent rolls, so nobody can argue about what they rolled.</p>
+    </section>
+
+    <AdSlot name="inGuide" />
+
+    <section class="panel">
+      <h2>Which dice do I need?</h2>
+      <ul>
+        <li><strong>1 × D6:</strong> Ludo, snakes and ladders, and most family board games.</li>
+        <li><strong>2 × D6:</strong> Monopoly, Catan, backgammon and craps-style party games.</li>
+        <li><strong>5 × D6:</strong> Yahtzee and other dice-scoring games.</li>
+        <li><strong>D20:</strong> attack rolls and skill checks in Dungeons &amp; Dragons.</li>
+        <li><strong>D4, D8, D10, D12:</strong> damage rolls and other role-playing game mechanics.</li>
+      </ul>
+    </section>
+
+    <section class="panel">
+      <h2>Are online dice fair?</h2>
+      <p>
+        Yes. Every die uses your browser's cryptographic random number generator, so each face has exactly the same chance,
+        and no roll depends on the one before. Real dice can be slightly uneven from wear or manufacturing; these can't.
+      </p>
+      <p>
+        With two six-sided dice, 7 is the most common total (1 in 6 rolls) because it can be made in the most ways: 1+6,
+        2+5, 3+4, 4+3, 5+2 and 6+1. Totals of 2 and 12 are the rarest, at 1 in 36.
+      </p>
+    </section>
+
+    <section class="panel faq">
+      <h2>Frequently asked questions</h2>
+      <details>
+        <summary>Can I roll more than six dice?</summary>
+        <p>Up to six at a time keeps the dice big enough to read on a phone. Roll again for more.</p>
+      </details>
+      <details>
+        <summary>What are snake eyes?</summary>
+        <p>Rolling two ones with two six-sided dice. It happens once every 36 rolls on average, and it unlocks a badge here.</p>
+      </details>
+      <details>
+        <summary>Does it work offline?</summary>
+        <p>Yes. After your first visit, the dice roller works without internet, so it's handy for game night anywhere.</p>
+      </details>
+    </section>
+  </Fragment>
+</ToolPage>
+
+<style>
+  .dice-arena {
+    display: grid;
+    gap: 20px;
+  }
+
+  @media (min-width: 900px) {
+    .dice-arena {
+      grid-template-columns: minmax(0, 1fr) 300px;
+      grid-template-areas:
+        'controls history'
+        'tray history'
+        'result history';
+      column-gap: 28px;
+    }
+
+    .dice-controls {
+      grid-area: controls;
+    }
+
+    .tray {
+      grid-area: tray;
+    }
+
+    .dice-result {
+      grid-area: result;
+    }
+
+    .dice-history {
+      grid-area: history;
+      align-self: start;
+    }
+  }
+
+  .dice-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 16px 28px;
+  }
+
+  .label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 800;
+  }
+
+  .stepper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .step {
+    width: 46px;
+    padding: 0;
+    font-size: 1.5rem;
+  }
+
+  .count {
+    min-width: 2ch;
+    font-family: var(--font-display-stack);
+    font-size: 2rem;
+    text-align: center;
+  }
+
+  .tray {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(18px, 4vw, 34px);
+    min-height: clamp(200px, 40vw, 260px);
+    padding: 26px 16px;
+    border-radius: 24px;
+    background:
+      radial-gradient(ellipse at 50% 40%, rgb(46 230 255 / 0.18), transparent 70%),
+      repeating-linear-gradient(45deg, rgb(255 255 255 / 0.025) 0 10px, transparent 10px 20px),
+      #12093a;
+    border: 1px solid var(--line);
+    box-shadow: inset 0 8px 30px rgb(0 0 0 / 0.5);
+    perspective: 700px;
+    cursor: pointer;
+  }
+
+  /* --- 3D six-sided die --- */
+  .tray :global(.die-wrap) {
+    --size: clamp(58px, 16vw, 92px);
+    width: var(--size);
+    height: var(--size);
+    perspective: 420px;
+  }
+
+  .tray :global(.die) {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transform-style: preserve-3d;
+    transition: transform 1.2s cubic-bezier(0.18, 0.85, 0.3, 1);
+  }
+
+  .tray :global(.face) {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+    padding: 13%;
+    border-radius: 18%;
+    background: radial-gradient(circle at 30% 25%, #fff, var(--die, #f3efff) 70%);
+    box-shadow:
+      inset 0 0 0 2px rgb(0 0 0 / 0.08),
+      inset 0 -6px 12px rgb(0 0 0 / 0.15);
+    backface-visibility: hidden;
+  }
+
+  .tray :global(.pip) {
+    width: 72%;
+    aspect-ratio: 1;
+    place-self: center;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #5a3fb0, #1a0838);
+  }
+
+  .tray :global(.f1 .pip) {
+    width: 90%;
+    background: radial-gradient(circle at 35% 30%, #ff7cc6, #b0105f);
+  }
+
+  .tray :global(.f1) {
+    transform: translateZ(calc(var(--size) / 2));
+  }
+
+  .tray :global(.f6) {
+    transform: rotateY(180deg) translateZ(calc(var(--size) / 2));
+  }
+
+  .tray :global(.f3) {
+    transform: rotateY(90deg) translateZ(calc(var(--size) / 2));
+  }
+
+  .tray :global(.f4) {
+    transform: rotateY(-90deg) translateZ(calc(var(--size) / 2));
+  }
+
+  .tray :global(.f2) {
+    transform: rotateX(90deg) translateZ(calc(var(--size) / 2));
+  }
+
+  .tray :global(.f5) {
+    transform: rotateX(-90deg) translateZ(calc(var(--size) / 2));
+  }
+
+  /* --- Other dice: a gem with the number --- */
+  .tray :global(.gem) {
+    position: relative;
+    width: clamp(70px, 18vw, 104px);
+    aspect-ratio: 1;
+    display: grid;
+    place-items: center;
+  }
+
+  .tray :global(.gem svg) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 8px 10px rgb(0 0 0 / 0.45));
+  }
+
+  .tray :global(.gem-num) {
+    position: relative;
+    font-family: var(--font-display-stack);
+    font-size: clamp(1.5rem, 1rem + 2vw, 2.2rem);
+    color: #fff;
+    text-shadow: 0 3px 0 rgb(0 0 0 / 0.35);
+  }
+
+  .dice-result {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    text-align: center;
+  }
+
+  .total {
+    margin: 0;
+    font-family: var(--font-display-stack);
+    font-size: clamp(2.2rem, 1.6rem + 3vw, 3.4rem);
+    line-height: 1;
+    color: var(--gold);
+    text-shadow:
+      0 5px 0 #7a3e00,
+      0 0 30px rgb(255 207 58 / 0.5);
+  }
+
+  .total.pop {
+    animation: total-pop 0.45s cubic-bezier(0.2, 1.6, 0.4, 1);
+  }
+
+  @keyframes total-pop {
+    from {
+      transform: scale(0.5);
+    }
+  }
+
+  .detail {
+    margin: 0;
+    min-height: 1.5em;
+    font-weight: 900;
+    font-size: 1.1rem;
+    color: var(--muted);
+  }
+
+  .detail.special {
+    color: var(--lime);
+  }
+
+  .roll-btn {
+    width: min(100%, 360px);
+    margin-top: 6px;
+  }
+
+  .dice-history {
+    padding: 18px;
+  }
+
+  .history {
+    list-style: none;
+    margin: 12px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 6px;
+  }
+
+  .history:empty::after {
+    content: 'No rolls yet.';
+    color: var(--muted);
+  }
+
+  .history :global(li) {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 6px 10px;
+    border-radius: 10px;
+    background: rgb(255 255 255 / 0.05);
+    font-size: 0.9rem;
+    color: var(--muted);
+  }
+
+  .history :global(li b) {
+    color: var(--text);
+  }
+</style>
+
+<script>
+  import { randomInt } from '../scripts/random.js';
+  import { load, save } from '../scripts/storage.js';
+  import { sfx } from '../scripts/sfx.js';
+  import { confetti, prefersReducedMotion } from '../scripts/confetti.js';
+  import { award } from '../scripts/player.js';
+
+  const STORE_KEY = 'winisland:dice';
+  const MAX_DICE = 6;
+  const ROLL_MS = 1200;
+  // Cube angles that bring each face to the front: [rotateX, rotateY]
+  const FACE_ANGLE = { 1: [0, 0], 2: [-90, 0], 3: [0, -90], 4: [0, 90], 5: [90, 0], 6: [0, 180] };
+  const PIPS = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
+  const DIE_COLORS = ['#f3efff', '#ffe0f1', '#dcfaff', '#fff3c4', '#e3ffd6', '#ffe6d6'];
+  const GEM_COLORS = { 4: '#ff3fa4', 8: '#2ee6ff', 10: '#8cff5a', 12: '#ff8a3d', 20: '#9461ff' };
+  const GEM_SHAPES = {
+    4: '<polygon points="50,6 96,88 4,88" />',
+    8: '<polygon points="50,3 95,50 50,97 5,50" /><path d="M5 50h90" opacity=".25" stroke="#000" stroke-width="2" />',
+    10: '<polygon points="50,3 93,40 50,97 7,40" /><path d="M7 40l43 14 43-14M50 54v43" opacity=".25" stroke="#000" stroke-width="2" fill="none" />',
+    12: '<polygon points="50,4 95,37 78,92 22,92 5,37" />',
+    20: '<polygon points="50,3 92,27 92,73 50,97 8,73 8,27" /><path d="M50 3L22 62h56zM22 62L8 27M78 62l14-35M22 62L50 97l28-35" opacity=".25" stroke="#000" stroke-width="2" fill="none" />',
+  };
+
+  const $ = (id) => document.getElementById(id);
+  const tray = $('tray');
+  const totalEl = $('total');
+  const detailEl = $('detail');
+  const rollBtn = $('roll');
+  const countEl = $('count');
+
+  const saved = load(STORE_KEY, null);
+  let count = Math.min(MAX_DICE, Math.max(1, Number(saved?.count) || 2));
+  let sides = [4, 6, 8, 10, 12, 20].includes(Number(saved?.sides)) ? Number(saved.sides) : 6;
+  let history = Array.isArray(saved?.history) ? saved.history.slice(0, 10) : [];
+  let dice = []; // { el, inner, x, y } for each die on screen
+  let rolling = false;
+
+  const persist = () => save(STORE_KEY, { count, sides, history });
+
+  function cubeDie(i) {
+    const wrap = document.createElement('div');
+    wrap.className = 'die-wrap';
+    const cube = document.createElement('div');
+    cube.className = 'die';
+    cube.style.setProperty('--die', DIE_COLORS[i % DIE_COLORS.length]);
+    for (let v = 1; v <= 6; v++) {
+      const face = document.createElement('div');
+      face.className = `face f${v}`;
+      for (let cell = 0; cell < 9; cell++) {
+        const slot = document.createElement('span');
+        if (PIPS[v].includes(cell)) slot.className = 'pip';
+        face.append(slot);
+      }
+      cube.append(face);
+    }
+    wrap.append(cube);
+    return { el: wrap, inner: cube, x: 0, y: 0 };
+  }
+
+  function gemDie() {
+    const wrap = document.createElement('div');
+    wrap.className = 'gem';
+    wrap.innerHTML = `<svg viewBox="0 0 100 100" fill="${GEM_COLORS[sides]}">${GEM_SHAPES[sides]}</svg>`;
+    const num = Object.assign(document.createElement('span'), { className: 'gem-num', textContent: sides });
+    wrap.append(num);
+    return { el: wrap, inner: num };
+  }
+
+  function buildTray() {
+    dice = Array.from({ length: count }, (_, i) => (sides === 6 ? cubeDie(i) : gemDie()));
+    tray.replaceChildren(...dice.map((d) => d.el));
+    countEl.textContent = count;
+    $('fewer').disabled = count <= 1;
+    $('more').disabled = count >= MAX_DICE;
+    persist();
+  }
+
+  /** Spin a cube several turns so it ends showing `value` at the front. */
+  function turnCube(die, value) {
+    const [fx, fy] = FACE_ANGLE[value];
+    const next = (current, face) => {
+      const base = Math.ceil(current / 360) * 360;
+      return base + 360 * (2 + randomInt(2)) + ((face + 360) % 360);
+    };
+    die.x = next(die.x, fx);
+    die.y = next(die.y, fy);
+    die.inner.style.transform = `rotateX(${die.x}deg) rotateY(${die.y}deg)`;
+  }
+
+  function renderHistory() {
+    $('history').replaceChildren(
+      ...history.map((h) => {
+        const li = document.createElement('li');
+        li.append(
+          Object.assign(document.createElement('span'), { textContent: `${h.values.length}×D${h.sides}: ${h.values.join(' + ')}` }),
+          Object.assign(document.createElement('b'), { textContent: h.total }),
+        );
+        return li;
+      }),
+    );
+  }
+
+  function describe(values) {
+    const same = values.length > 1 && values.every((v) => v === values[0]);
+    if (sides === 6 && values.length === 2 && values[0] === 1 && values[1] === 1) return 'Snake eyes! 🐍';
+    if (values.every((v) => v === sides) && values.length > 1) return 'Max roll! 🔥';
+    if (same) return ['', '', 'Doubles!', 'Triples!', 'Four of a kind!', 'Five of a kind!', 'Six of a kind!'][values.length];
+    return '';
+  }
+
+  async function roll() {
+    if (rolling) return;
+    rolling = true;
+    rollBtn.setAttribute('aria-disabled', 'true');
+    totalEl.classList.remove('pop');
+    detailEl.className = 'detail';
+    detailEl.textContent = '';
+
+    const values = dice.map(() => 1 + randomInt(sides));
+    const quick = prefersReducedMotion();
+    if (!quick) sfx.rattle(0.5);
+
+    dice.forEach((die, i) => {
+      if (sides === 6) {
+        if (quick) die.inner.style.transition = 'none';
+        turnCube(die, values[i]);
+      } else if (!quick) {
+        let flicks = 0;
+        const timer = setInterval(() => {
+          die.inner.textContent = 1 + randomInt(sides);
+          if (++flicks > 12) clearInterval(timer);
+        }, 70);
+      }
+      if (!quick) {
+        die.el.animate(
+          [
+            { transform: 'translateY(0) rotate(0)' },
+            { transform: `translateY(-55px) rotate(${randomInt(2) ? 200 : -200}deg)`, offset: 0.35 },
+            { transform: 'translateY(0) rotate(360deg)', offset: 0.75 },
+            { transform: 'translateY(-10px) rotate(360deg)', offset: 0.87 },
+            { transform: 'translateY(0) rotate(360deg)' },
+          ],
+          { duration: ROLL_MS, delay: i * 70, easing: 'ease-out' },
+        );
+      }
+    });
+
+    if (!quick) await new Promise((resolve) => setTimeout(resolve, ROLL_MS + (dice.length - 1) * 70));
+    dice.forEach((die, i) => {
+      if (sides !== 6) die.inner.textContent = values[i];
+    });
+    sfx.thud();
+
+    const total = values.reduce((a, b) => a + b, 0);
+    totalEl.textContent = values.length > 1 ? `Total ${total}` : `${total}`;
+    totalEl.classList.add('pop');
+    const special = describe(values);
+    detailEl.textContent = special || (values.length > 1 ? values.join(' + ') : `D${sides}`);
+    if (special) {
+      detailEl.classList.add('special');
+      sfx.win();
+      confetti({ y: 0.45, count: 100 });
+    }
+
+    history.unshift({ sides, values, total });
+    history = history.slice(0, 10);
+    persist();
+    renderHistory();
+    rolling = false;
+    rollBtn.removeAttribute('aria-disabled');
+    const snakeEyes = sides === 6 && values.length === 2 && total === 2;
+    award('roll', snakeEyes ? { snakeEyes: true } : {});
+  }
+
+  $('fewer').addEventListener('click', () => {
+    if (rolling || count <= 1) return;
+    count -= 1;
+    buildTray();
+  });
+  $('more').addEventListener('click', () => {
+    if (rolling || count >= MAX_DICE) return;
+    count += 1;
+    buildTray();
+  });
+  document.querySelectorAll('input[name="sides"]').forEach((input) => {
+    input.checked = Number(input.value) === sides;
+    input.addEventListener('change', () => {
+      if (rolling) return;
+      sides = Number(input.value);
+      buildTray();
+    });
+  });
+  rollBtn.addEventListener('click', roll);
+  tray.addEventListener('click', roll);
+
+  buildTray();
+  renderHistory();
+</script>

@@ -1,0 +1,106 @@
+---
+import Logo from './Logo.astro';
+import { tools } from '../data/tools.js';
+
+const year = new Date().getFullYear();
+---
+
+<footer class="site-footer">
+  <div class="container footer-grid">
+    <div class="about">
+      <a class="brand" href="/" aria-label="winisland home">
+        <Logo size={34} />
+        <span class="wordmark">win<span>island</span></span>
+      </a>
+      <p>
+        Free party games for friends, families, classrooms and creators. Everything runs in your browser: no sign-up,
+        and your lists never leave your device.
+      </p>
+    </div>
+    <nav aria-label="Footer">
+      <p class="col-title">Islands</p>
+      <ul>
+        {
+          tools.map((tool) => (
+            <li>
+              <a href={tool.href}>{tool.name}</a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+  </div>
+  <div class="container legal">© {year} winisland.in · Made for parties</div>
+</footer>
+
+<style>
+  .site-footer {
+    margin-top: 64px;
+    padding-block: 36px 28px;
+    background: linear-gradient(180deg, rgb(10 6 32 / 0.4), rgb(10 6 32 / 0.95));
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 0.95rem;
+  }
+
+  .footer-grid {
+    display: grid;
+    gap: 24px;
+  }
+
+  @media (min-width: 720px) {
+    .footer-grid {
+      grid-template-columns: 2fr 1fr;
+    }
+  }
+
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    text-decoration: none;
+    color: var(--text);
+  }
+
+  .wordmark {
+    font-family: var(--font-display-stack);
+    font-size: 1.5rem;
+  }
+
+  .wordmark span {
+    color: var(--gold);
+  }
+
+  .about p {
+    max-width: 52ch;
+    margin: 0;
+  }
+
+  .col-title {
+    margin: 0 0 8px;
+    font-family: var(--font-display-stack);
+    font-size: 1.1rem;
+    color: var(--text);
+  }
+
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 6px;
+  }
+
+  a {
+    color: var(--text);
+    font-weight: 700;
+  }
+
+  .legal {
+    margin-top: 28px;
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+    font-size: 0.85rem;
+  }
+</style>

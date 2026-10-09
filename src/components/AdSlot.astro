@@ -1,0 +1,95 @@
+---
+// One AdSense display unit. Renders nothing until src/data/ads.js has a publisher ID and a
+// slot ID for this position (in `npm run dev` it shows a dashed placeholder instead).
+// Ads always sit outside the tool area so they never cover it or invite accidental clicks.
+import { ADSENSE_CLIENT, AD_SLOTS } from '../data/ads.js';
+
+const { name, desktopOnly = false, class: className } = Astro.props;
+const slot = AD_SLOTS[name];
+const live = Boolean(ADSENSE_CLIENT && slot);
+const placeholder = !live && import.meta.env.DEV;
+---
+
+{
+  (live || placeholder) && (
+    <aside class:list={['ad', `ad-${name}`, { 'desktop-only': desktopOnly }, className]} aria-label="Advertisement">
+      <span class="ad-label">Advertisement</span>
+      {live ? (
+        <>
+          <ins
+            class="adsbygoogle"
+            style="display:block"
+            data-ad-client={ADSENSE_CLIENT}
+            data-ad-slot={slot}
+            data-ad-format={name === 'sidebar' ? 'vertical' : 'auto'}
+            data-full-width-responsive="true"
+          />
+          <script is:inline>(window.adsbygoogle = window.adsbygoogle || []).push({});</script>
+        </>
+      ) : (
+        <div class="ad-placeholder">Ad slot: {name}</div>
+      )}
+    </aside>
+  )
+}
+
+<style>
+  .ad {
+    margin-block: 28px;
+    text-align: center;
+  }
+
+  .ad-label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #8d84b8;
+  }
+
+  /* Reserve space so the page doesn't jump when the ad loads. */
+  .ad-home,
+  .ad-belowTool {
+    min-height: 130px;
+  }
+
+  .ad-inGuide {
+    min-height: 280px;
+  }
+
+  .ad-sidebar {
+    position: sticky;
+    top: 20px;
+    min-height: 620px;
+    margin-block: 0;
+  }
+
+  .ad-placeholder {
+    display: grid;
+    place-items: center;
+    min-height: inherit;
+    height: 100%;
+    min-height: 100px;
+    border: 2px dashed var(--line-strong);
+    border-radius: 16px;
+    color: var(--muted);
+    font-weight: 800;
+  }
+
+  .ad-sidebar .ad-placeholder {
+    min-height: 600px;
+  }
+
+  .ad-inGuide .ad-placeholder {
+    min-height: 250px;
+  }
+
+  /* AdSense doesn't request an ad for units hidden with display:none. */
+  @media (max-width: 1023px) {
+    .desktop-only {
+      display: none;
+    }
+  }
+</style>

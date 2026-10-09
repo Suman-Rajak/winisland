@@ -1,0 +1,124 @@
+---
+import Base from './Base.astro';
+import AdSlot from '../components/AdSlot.astro';
+import Island from '../components/Island.astro';
+import ToolIcon from '../components/ToolIcon.astro';
+import { tools } from '../data/tools.js';
+
+const { title, description, island, heading, intro, kicker, noindex = false } = Astro.props;
+const index = tools.findIndex((t) => t.id === island);
+const tool = tools[index];
+// The next four islands in the list, so every page links to a different set.
+const others = [...tools.slice(index + 1), ...tools.slice(0, index)].slice(0, 4);
+---
+
+<Base title={title} description={description} noindex={noindex}>
+  <div class="container" data-island={island}>
+    <header class="level-head">
+      <p class="kicker"><ToolIcon kind={island} size={26} /> {kicker ?? tool.island}</p>
+      <h1>{heading}</h1>
+      <p class="intro">{intro}</p>
+    </header>
+
+    <slot />
+
+    <AdSlot name="belowTool" />
+
+    <div class="content-grid">
+      <article class="guide">
+        <slot name="guide" />
+      </article>
+
+      <aside class="side" aria-label="More games">
+        <section class="panel more">
+          <h2 class="panel-title">Hop to another island</h2>
+          <ul>
+            {
+              others.map((t) => (
+                <li>
+                  <a href={t.href} class="more-card">
+                    <Island kind={t.id} uid={`side-${t.id}`} class="more-art" />
+                    <span>
+                      <strong>{t.name}</strong>
+                      <span class="more-blurb">{t.blurb}</span>
+                    </span>
+                  </a>
+                </li>
+              ))
+            }
+          </ul>
+        </section>
+        <AdSlot name="sidebar" desktopOnly />
+      </aside>
+    </div>
+  </div>
+</Base>
+
+<style>
+  .side {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .more {
+    padding: 20px;
+  }
+
+  .more ul {
+    list-style: none;
+    margin: 14px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 12px;
+  }
+
+  .more-card {
+    display: grid;
+    grid-template-columns: 84px 1fr;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    border-radius: 16px;
+    border: 1px solid var(--line);
+    background: rgb(0 0 0 / 0.18);
+    color: var(--text);
+    text-decoration: none;
+    transition:
+      border-color 0.15s,
+      transform 0.15s;
+  }
+
+  .more-card:hover {
+    border-color: var(--cyan);
+    transform: translateY(-2px);
+    color: var(--text);
+  }
+
+  .more-card :global(.more-art) {
+    width: 84px;
+  }
+
+  .more-card strong {
+    display: block;
+    font-family: var(--font-display-stack);
+    font-weight: 400;
+    font-size: 1.1rem;
+    line-height: 1.2;
+  }
+
+  .more-blurb {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+</style>
+
+<script>
+  import { visit } from '../scripts/player.js';
+
+  const island = document.querySelector('[data-island]')?.dataset.island;
+  // Wait until the header HUD is listening so it can show the "new island" toast.
+  window.addEventListener('DOMContentLoaded', () => visit(island));
+</script>

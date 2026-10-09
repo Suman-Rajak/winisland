@@ -1,0 +1,40 @@
+---
+import Base from '../layouts/Base.astro';
+import Island from '../components/Island.astro';
+import { tools } from '../data/tools.js';
+---
+
+<Base title="Lost at sea | winisland" description="This page doesn't exist. Hop back to one of the winisland party games." noindex>
+  <div class="container lost">
+    <Island kind="dice" locked uid="lost" class="lost-art" />
+    <p class="kicker">Error 404</p>
+    <h1>Lost at sea!</h1>
+    <p>This island doesn't exist. Hop back to one of these:</p>
+    <div class="btn-row">
+      {
+        tools.map((tool, i) => (
+          <a class:list={['btn', { 'btn-play': i === 0 }]} href={tool.href}>
+            {tool.name}
+          </a>
+        ))
+      }
+    </div>
+  </div>
+</Base>
+
+<style>
+  .lost {
+    padding-block: 40px;
+    text-align: center;
+  }
+
+  .lost :global(.lost-art) {
+    width: min(240px, 60%);
+    margin: 0 auto 12px;
+  }
+
+  .lost .btn-row {
+    justify-content: center;
+    margin-top: 20px;
+  }
+</style>

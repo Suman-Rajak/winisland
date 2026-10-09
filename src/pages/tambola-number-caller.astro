@@ -1,0 +1,1238 @@
+---
+import ToolPage from '../layouts/ToolPage.astro';
+import AdSlot from '../components/AdSlot.astro';
+
+const numbers = Array.from({ length: 90 }, (_, i) => i + 1);
+---
+
+<ToolPage
+  title="Tambola Number Caller with Voice – Free Housie Caller | winisland"
+  description="Free tambola (housie) number caller that reads numbers 1 to 90 aloud, with traditional calls, auto-call and a live board. Works offline, no app or sign-up."
+  island="tambola"
+  heading="Tambola Number Caller"
+  intro="A talking housie machine: it picks numbers 1 to 90 at random and reads them out loud. Put it on a phone, laptop or TV while everyone marks their tickets."
+>
+  <section id="tambola" class="arena tambola-arena" aria-label="Tambola number caller">
+    <div class="machine">
+      <div class="ball-stage">
+        <svg class="ring" viewBox="0 0 120 120" aria-hidden="true" focusable="false">
+          <circle class="ring-track" cx="60" cy="60" r="55"></circle>
+          <circle id="ring" class="ring-meter" cx="60" cy="60" r="55" pathLength="90"></circle>
+        </svg>
+        <div id="ball" class="ball">
+          <span id="current">?</span>
+        </div>
+      </div>
+
+      <p id="call-text" class="call-text" aria-live="polite">Press “Call next number” to start.</p>
+      <p class="progress"><b id="called-count">0</b> / 90 called</p>
+
+      <div class="recent-wrap">
+        <span class="recent-label">Previous</span>
+        <ol id="recent" class="recent" aria-label="Previous numbers, most recent first"></ol>
+      </div>
+
+      <button id="next" class="btn btn-play btn-xl next" type="button">Call next number</button>
+      <div class="btn-row controls">
+        <button id="auto" class="btn auto" type="button" aria-pressed="false">
+          <span class="led" aria-hidden="true"></span><span id="auto-label">Auto call</span>
+        </button>
+        <button id="undo" class="btn" type="button"><span aria-hidden="true">↩️</span> Undo</button>
+        <button id="new-game" class="btn" type="button"><span aria-hidden="true">🔄</span> New game</button>
+        <button id="fullscreen" class="btn" type="button" hidden><span aria-hidden="true">📺</span> <span id="fs-label">TV mode</span></button>
+      </div>
+
+      <details class="settings">
+        <summary>Voice and speed</summary>
+        <div class="settings-body">
+          <label class="check"><input id="voice-on" type="checkbox" checked /> Read numbers aloud</label>
+          <label class="check"><input id="traditional" type="checkbox" checked /> Traditional calls (“Kelly’s eye, 1”)</label>
+          <div class="field">
+            <label for="voice">Voice</label>
+            <select id="voice"></select>
+          </div>
+          <div class="field">
+            <label for="rate">Speaking speed <span id="rate-value" class="value"></span></label>
+            <input id="rate" type="range" min="0.6" max="1.4" step="0.1" value="0.9" />
+          </div>
+          <div class="field">
+            <label for="interval">Auto call pause</label>
+            <select id="interval">
+              <option value="3">3 seconds</option>
+              <option value="5" selected>5 seconds</option>
+              <option value="7">7 seconds</option>
+              <option value="10">10 seconds</option>
+              <option value="15">15 seconds</option>
+            </select>
+          </div>
+          <p id="voice-hint" class="hint"></p>
+        </div>
+      </details>
+    </div>
+
+    <div class="board-wrap">
+      <div class="board-head">
+        <h2 class="panel-title">Board</h2>
+        <p class="watermark">Picked on <b>winisland.in</b></p>
+      </div>
+      <ol id="board" class="board" aria-label="Board, numbers 1 to 90">
+        {
+          numbers.map((n) => (
+            <li data-n={n} style={`--ball: var(--g${Math.floor((n - 1) / 10)})`}>
+              {n}
+              <span class="sr-only" />
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+  </section>
+
+  <section id="room" class="arena room-arena" aria-labelledby="room-title">
+    <div class="room-head">
+      <h2 id="room-title" class="panel-title"><span aria-hidden="true">🎟️</span> Play with tickets</h2>
+      <p>
+        Create a room and everyone gets their own random ticket, on their phone or on paper. You call the numbers above
+        and check any claim in one tap.
+      </p>
+    </div>
+
+    <div id="room-empty" class="btn-row">
+      <button id="create-room" class="btn btn-pink btn-lg" type="button">Create a room</button>
+      <a class="btn btn-lg" href="/tambola-ticket-generator/">Just print tickets</a>
+    </div>
+
+    <div id="room-live" class="room-live" hidden>
+      <div class="room-grid">
+        <div class="room-card panel">
+          <p class="label">Room code</p>
+          <p id="room-code" class="room-code">------</p>
+          <fieldset class="seg">
+            <legend>Tickets per player</legend>
+            <div class="seg-options">
+              {
+                [1, 2, 3, 6].map((k) => (
+                  <label>
+                    <input type="radio" name="per-player" value={k} />
+                    <span>{k === 6 ? '6 · full sheet' : k}</span>
+                  </label>
+                ))
+              }
+            </div>
+          </fieldset>
+          <p class="hint">Choose this before you share the link.</p>
+        </div>
+
+        <div class="room-card panel">
+          <label class="label" for="invite">Invite link</label>
+          <input id="invite" type="text" readonly />
+          <div class="btn-row">
+            <button id="share-invite" class="btn btn-cyan" type="button" hidden>
+              <span aria-hidden="true">📤</span> Share
+            </button>
+            <a id="wa-invite" class="btn btn-cyan" target="_blank" rel="noopener">WhatsApp</a>
+            <button id="copy-invite" class="btn" type="button"><span aria-hidden="true">📋</span> Copy</button>
+          </div>
+          <p id="invite-status" class="hint" aria-live="polite"></p>
+          <div class="btn-row">
+            <a id="print-room" class="btn"><span aria-hidden="true">🖨️</span> Print tickets</a>
+            <button id="new-room" class="btn" type="button">New room</button>
+          </div>
+        </div>
+      </div>
+
+      <form id="claim-form" class="claim-form">
+        <label for="claim-who">Check a claim</label>
+        <div class="claim-row">
+          <input id="claim-who" type="text" placeholder="Player's name or ticket number" autocomplete="off" />
+          <button class="btn btn-play" type="submit">Check</button>
+        </div>
+        <p class="hint">Type the name the player joined with, or the number printed on a paper ticket.</p>
+      </form>
+      <div id="claim-result" class="claim-result" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <Fragment slot="guide">
+    <section class="panel">
+      <h2>How to use the tambola caller</h2>
+      <ol>
+        <li>Give each player one or more tambola tickets, or create a room so they get tickets on their phones.</li>
+        <li>
+          Press <strong>Call next number</strong>. The machine picks a random number from 1 to 90, reads it aloud and
+          lights it up on the board.
+        </li>
+        <li>
+          Switch on <strong>Auto call</strong> to keep calling by itself, with the pause you choose in
+          <strong>Voice and speed</strong>. Press it again to pause.
+        </li>
+        <li>
+          When someone claims a prize, pause and check their ticket against the board. The newest number glows white.
+        </li>
+        <li>Pressed by mistake? <strong>Undo</strong> takes back the last number. <strong>New game</strong> clears the board.</li>
+      </ol>
+      <p>
+        The game is saved on your device, so an accidental refresh won't lose it, and on most phones the screen stays on
+        while a game is running. For a big room, use <strong>TV mode</strong> on a laptop or smart TV and connect a
+        Bluetooth speaker.
+      </p>
+    </section>
+
+    <AdSlot name="inGuide" />
+
+    <section class="panel">
+      <h2>Playing online or over a video call</h2>
+      <ol>
+        <li>Press <strong>Create a room</strong> and choose how many tickets each player gets.</li>
+        <li>
+          Share the invite link in your WhatsApp group. Each player opens it, types their name and gets their own
+          tickets, which they can mark on their phone or print.
+        </li>
+        <li>Share your screen or keep the caller on speaker, and call the numbers as usual.</li>
+        <li>
+          When someone claims, type their name under <strong>Check a claim</strong>. You'll see their ticket with the
+          called numbers marked, which prizes it has won, and on which call it won them, so you know who was first.
+        </li>
+      </ol>
+      <p>
+        Tickets are made from the room code and the player's name, so the same name always gets the same tickets, and
+        nobody needs an account. For a party at home, use <strong>Print tickets</strong> instead.
+      </p>
+      <h3>What if a player marks a number that wasn't called?</h3>
+      <p>
+        It can't win them anything. The claim check ignores what players tap on their phones and compares their ticket
+        with the numbers you have actually called. A wrong claim, called a <strong>bogey</strong>, shows as
+        “Nothing complete yet”, with the numbers that are still missing, so you can tell the player exactly what
+        happened. Agree before you start whether a bogey just means the game carries on, or whether that player sits
+        out the prize.
+      </p>
+    </section>
+
+    <section class="panel">
+      <h2>Tambola rules in short</h2>
+      <p>
+        Tambola, also called housie, is a numbers game much like 90-ball bingo. Each ticket has 3 rows and 9 columns
+        holding 15 numbers, 5 in every row. The first column has numbers 1 to 9, the second 10 to 19, and so on up to 80
+        to 90 in the last column. As numbers are called, players mark them on their tickets. The first player to finish a
+        pattern calls out, and the host checks the ticket before awarding the prize.
+      </p>
+      <p>Popular prizes are:</p>
+      <ul>
+        <li><strong>Early five</strong> (quick five): the first five numbers marked anywhere on a ticket.</li>
+        <li><strong>Top line, middle line, bottom line</strong>: all five numbers in that row.</li>
+        <li><strong>Four corners</strong>: the first and last numbers of the top and bottom rows.</li>
+        <li><strong>Full house</strong>: all 15 numbers on the ticket.</li>
+      </ul>
+      <p>Agree on the prizes before you start. Small gifts and bragging rights keep it fun for all ages.</p>
+    </section>
+
+    <section class="panel">
+      <h2>What are traditional calls?</h2>
+      <p>
+        Callers often add a nickname to a number, such as “Kelly’s eye” for 1, “Two little ducks” for 22 (the digits look
+        like ducks) or “Top of the house” for 90. With <strong>Traditional calls</strong> on, the caller uses the
+        best-known nicknames. Numbers without one are read as “2 and 3, 23” so nobody mishears. Turn it off for plain
+        calls.
+      </p>
+    </section>
+
+    <section class="panel faq">
+      <h2>Frequently asked questions</h2>
+      <details>
+        <summary>Are the numbers really random?</summary>
+        <p>
+          Yes. At the start of each game, the numbers 1 to 90 are shuffled with your browser's cryptographic random number
+          generator. Every number is called exactly once, in an order nobody can predict.
+        </p>
+      </details>
+      <details>
+        <summary>Why can't I hear the numbers?</summary>
+        <p>
+          Check that the volume is up and the phone is not on silent (an iPhone's silent switch also mutes the voice).
+          Open <strong>Voice and speed</strong> and try another voice. Chrome, Edge and Safari have the best choice of
+          voices.
+        </p>
+      </details>
+      <details>
+        <summary>Does it work without internet?</summary>
+        <p>
+          Yes. After your first visit the caller is saved on your device and works offline. Voices marked “online” need
+          internet, so pick one without that label before the party.
+        </p>
+      </details>
+      <details>
+        <summary>Will I lose the game if I close the page?</summary>
+        <p>
+          No. The called numbers stay saved on this device until you press <strong>New game</strong>, even if you close
+          the tab.
+        </p>
+      </details>
+      <details>
+        <summary>Can I use it for 90-ball bingo?</summary>
+        <p>Yes. It calls the same numbers, 1 to 90, so it works for bingo nights too.</p>
+      </details>
+    </section>
+  </Fragment>
+</ToolPage>
+
+<style>
+  .tambola-arena {
+    --g0: #ff5a68;
+    --g1: #ff8a3d;
+    --g2: #ffcf3a;
+    --g3: #8cff5a;
+    --g4: #2fe0b2;
+    --g5: #2ee6ff;
+    --g6: #6d9bff;
+    --g7: #b38bff;
+    --g8: #ff5cb5;
+    display: grid;
+    gap: 24px;
+  }
+
+  @media (min-width: 900px) {
+    .tambola-arena {
+      grid-template-columns: minmax(300px, 370px) minmax(0, 1fr);
+      gap: 34px;
+      align-items: start;
+    }
+  }
+
+  .tambola-arena:fullscreen {
+    overflow: auto;
+    border-radius: 0;
+    padding: 28px 36px;
+    align-content: center;
+    background: radial-gradient(circle at 30% 20%, #2a1570, #0b0722 70%);
+  }
+
+  .machine {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    text-align: center;
+  }
+
+  .ball-stage {
+    --ball: #9461ff;
+    position: relative;
+    width: clamp(170px, 50vw, 230px);
+    aspect-ratio: 1;
+    display: grid;
+    place-items: center;
+  }
+
+  .ball-stage::before {
+    content: '';
+    position: absolute;
+    inset: -10%;
+    border-radius: 50%;
+    background: radial-gradient(circle, color-mix(in srgb, var(--ball, #9461ff) 55%, transparent) 30%, transparent 68%);
+  }
+
+  .ring {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+  }
+
+  .ring-track {
+    fill: none;
+    stroke: rgb(255 255 255 / 0.1);
+    stroke-width: 6;
+  }
+
+  .ring-meter {
+    fill: none;
+    stroke: var(--cyan);
+    stroke-width: 6;
+    stroke-linecap: round;
+    stroke-dasharray: 0 90;
+    filter: drop-shadow(0 0 4px var(--cyan));
+    transition: stroke-dasharray 0.5s ease;
+  }
+
+  .ball {
+    position: relative;
+    width: 78%;
+    aspect-ratio: 1;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: radial-gradient(
+      circle at 32% 26%,
+      #fff 0%,
+      var(--ball) 34%,
+      color-mix(in srgb, var(--ball), #12002e 45%) 100%
+    );
+    box-shadow:
+      inset -10px -14px 24px rgb(0 0 0 / 0.3),
+      0 14px 30px rgb(0 0 0 / 0.5);
+  }
+
+  .ball span {
+    display: grid;
+    place-items: center;
+    width: 60%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: #fffaf2;
+    color: #1a0838;
+    font-family: var(--font-display-stack);
+    font-size: clamp(2.8rem, 2rem + 4vw, 4.2rem);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    box-shadow: inset 0 -4px 8px rgb(0 0 0 / 0.15);
+  }
+
+  .ball.drop {
+    animation: ball-drop 0.6s cubic-bezier(0.3, 1.5, 0.5, 1);
+  }
+
+  @keyframes ball-drop {
+    from {
+      transform: translateY(-60px) scale(0.5) rotate(-120deg);
+      opacity: 0;
+    }
+    60% {
+      opacity: 1;
+    }
+  }
+
+  .call-text {
+    margin: 4px 0 0;
+    min-height: 1.3em;
+    font-family: var(--font-display-stack);
+    font-size: clamp(1.35rem, 1.1rem + 1vw, 1.7rem);
+    line-height: 1.2;
+    text-shadow: 0 3px 0 #2a1170;
+  }
+
+  .progress {
+    margin: 0;
+    color: var(--muted);
+    font-weight: 700;
+  }
+
+  .progress b {
+    color: var(--cyan);
+    font-size: 1.15rem;
+  }
+
+  .recent-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 40px;
+  }
+
+  .recent-label {
+    font-size: 0.78rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+  }
+
+  .recent {
+    display: flex;
+    gap: 6px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .recent :global(li) {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #fff 0%, var(--ball) 40%, color-mix(in srgb, var(--ball), #12002e 40%));
+    color: #1a0838;
+    font-family: var(--font-display-stack);
+    font-size: 0.95rem;
+    box-shadow: 0 3px 8px rgb(0 0 0 / 0.4);
+  }
+
+  .next {
+    width: 100%;
+    margin-top: 6px;
+  }
+
+  .controls {
+    justify-content: center;
+  }
+
+  .controls .btn {
+    min-height: 42px;
+    padding-inline: 0.9em;
+    font-size: 0.92rem;
+  }
+
+  .led {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #4b3d7a;
+    box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.5);
+  }
+
+  .auto[aria-pressed='true'] {
+    --btn-bg: linear-gradient(180deg, #2fe08a, #12a35c);
+    --btn-edge: #0a5a33;
+    --btn-text: #02210f;
+  }
+
+  .auto[aria-pressed='true'] .led {
+    background: #eaffd9;
+    box-shadow: 0 0 10px #8cff5a;
+    animation: led 1s ease-in-out infinite alternate;
+  }
+
+  @keyframes led {
+    to {
+      opacity: 0.4;
+    }
+  }
+
+  .settings {
+    width: 100%;
+    margin-top: 4px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    text-align: left;
+    background: rgb(0 0 0 / 0.15);
+  }
+
+  .settings summary {
+    cursor: pointer;
+    font-weight: 800;
+  }
+
+  .settings-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-top: 12px;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .value {
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  .settings .hint:empty {
+    display: none;
+  }
+
+  .board-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .board-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .board {
+    display: grid;
+    grid-template-columns: repeat(10, minmax(0, 1fr));
+    gap: clamp(3px, 0.8vw, 8px);
+    list-style: none;
+    margin: 0;
+    padding: clamp(6px, 1.4vw, 14px);
+    border-radius: 18px;
+    background: rgb(0 0 0 / 0.28);
+    border: 1px solid var(--line);
+  }
+
+  .board li {
+    display: grid;
+    place-items: center;
+    aspect-ratio: 1;
+    border-radius: 9px;
+    background: rgb(255 255 255 / 0.05);
+    border: 1px solid rgb(255 255 255 / 0.08);
+    color: #8f86bb;
+    font-family: var(--font-display-stack);
+    font-size: clamp(0.85rem, 0.55rem + 1.2vw, 1.35rem);
+    font-variant-numeric: tabular-nums;
+    transition:
+      background-color 0.3s,
+      color 0.3s,
+      box-shadow 0.3s;
+  }
+
+  .board li.called {
+    background: var(--ball);
+    border-color: transparent;
+    color: #1a0838;
+    box-shadow: 0 0 14px color-mix(in srgb, var(--ball) 60%, transparent);
+  }
+
+  .board li.latest {
+    background: #fff;
+    color: #1a0838;
+    box-shadow:
+      0 0 0 3px var(--ball),
+      0 0 26px var(--ball);
+    animation: latest 1.2s ease-in-out infinite alternate;
+  }
+
+  @keyframes latest {
+    to {
+      transform: scale(1.1);
+    }
+  }
+
+  .tambola-arena:fullscreen .board li {
+    font-size: clamp(1rem, 2.6vh, 2.2rem);
+  }
+
+  /* ---- Room ---- */
+  .room-arena {
+    margin-top: 24px;
+  }
+
+  .room-head p {
+    margin: 6px 0 16px;
+    color: var(--muted);
+    max-width: 62ch;
+  }
+
+  .room-live {
+    display: grid;
+    gap: 18px;
+  }
+
+  .room-grid {
+    display: grid;
+    gap: 16px;
+  }
+
+  @media (min-width: 760px) {
+    .room-grid {
+      grid-template-columns: 1fr 1.3fr;
+    }
+  }
+
+  .room-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 18px;
+  }
+
+  .room-card .hint,
+  .room-card p {
+    margin: 0;
+  }
+
+  .label {
+    font-size: 0.8rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .room-code {
+    font-family: var(--font-display-stack);
+    font-size: clamp(2.4rem, 1.8rem + 3vw, 3.4rem);
+    line-height: 1;
+    letter-spacing: 0.12em;
+    color: var(--gold);
+    text-shadow:
+      0 4px 0 #7a3e00,
+      0 0 24px rgb(255 207 58 / 0.5);
+  }
+
+  .claim-form label {
+    display: block;
+    margin-bottom: 6px;
+    font-family: var(--font-display-stack);
+    font-weight: 400;
+    font-size: 1.3rem;
+  }
+
+  .claim-row {
+    display: flex;
+    gap: 10px;
+  }
+
+  .claim-row input {
+    flex: 1;
+  }
+
+  .claim-result {
+    display: grid;
+    gap: 22px;
+  }
+
+  .claim-result:empty {
+    display: none;
+  }
+
+  .claim-result :global(.claim-ticket) {
+    display: grid;
+    gap: 14px;
+    max-width: 560px;
+  }
+
+  .claim-result :global(.prize-list) {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 8px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .claim-result :global(.prize-list li) {
+    padding: 8px 12px;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: rgb(0 0 0 / 0.2);
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+
+  .claim-result :global(.prize-list li strong) {
+    display: block;
+    color: var(--text);
+  }
+
+  .claim-result :global(.prize-list li.won) {
+    border-color: var(--lime);
+    background: rgb(140 255 90 / 0.12);
+    color: #d4ffc0;
+  }
+
+  .claim-result :global(.prize-list li.won strong) {
+    color: var(--lime);
+  }
+
+  .claim-result :global(.claim-verdict) {
+    margin: 0;
+    padding: 10px 14px;
+    border-radius: 14px;
+    font-family: var(--font-display-stack);
+    font-size: 1.2rem;
+    line-height: 1.25;
+  }
+
+  .claim-result :global(.claim-verdict.yes) {
+    border: 2px solid var(--lime);
+    background: rgb(140 255 90 / 0.14);
+    color: #dcffcc;
+  }
+
+  .claim-result :global(.claim-verdict.no) {
+    border: 2px solid #ff5a68;
+    background: rgb(255 90 104 / 0.14);
+    color: #ffd0d5;
+  }
+
+  .claim-result :global(.claim-error) {
+    margin: 0;
+    color: #ff8fc8;
+    font-weight: 800;
+  }
+</style>
+
+<script>
+  import { shuffle } from '../scripts/random.js';
+  import { load, save } from '../scripts/storage.js';
+  import { callFor } from '../scripts/tambola-calls.js';
+  import { award } from '../scripts/player.js';
+  import { sfx } from '../scripts/sfx.js';
+  import { confetti } from '../scripts/confetti.js';
+  import {
+    cleanPerPlayer,
+    cleanRoomCode,
+    inviteLink,
+    newRoomCode,
+    parseClaim,
+    prizes,
+    ticketByNumber,
+    ticketsForName,
+  } from '../scripts/tickets.js';
+  import { ticketCard } from '../scripts/ticket-view.js';
+
+  const TOTAL = 90;
+  const GAME_KEY = 'winisland:tambola-game';
+  const SETTINGS_KEY = 'winisland:tambola-settings';
+  const ROOM_KEY = 'winisland:tambola-room';
+
+  const $ = (id) => document.getElementById(id);
+  const tool = $('tambola');
+  const ball = $('ball');
+  const ring = $('ring');
+  const currentEl = $('current');
+  const callText = $('call-text');
+  const recentEl = $('recent');
+  const nextBtn = $('next');
+  const autoBtn = $('auto');
+  const autoLabel = $('auto-label');
+  const undoBtn = $('undo');
+  const newGameBtn = $('new-game');
+  const fsBtn = $('fullscreen');
+  const countEl = $('called-count');
+  const voiceOn = $('voice-on');
+  const traditional = $('traditional');
+  const voiceSelect = $('voice');
+  const rateInput = $('rate');
+  const rateValue = $('rate-value');
+  const intervalSelect = $('interval');
+  const voiceHint = $('voice-hint');
+  const cells = new Map([...$('board').children].map((li) => [Number(li.dataset.n), li]));
+
+  const ballColor = (n) => `var(--g${Math.floor((n - 1) / 10)})`;
+  const newGame = () => ({ order: shuffle(Array.from({ length: TOTAL }, (_, i) => i + 1)), called: 0 });
+
+  function validGame(g) {
+    return (
+      g &&
+      Array.isArray(g.order) &&
+      g.order.length === TOTAL &&
+      new Set(g.order).size === TOTAL &&
+      g.order.every((n) => Number.isInteger(n) && n >= 1 && n <= TOTAL) &&
+      Number.isInteger(g.called) &&
+      g.called >= 0 &&
+      g.called <= TOTAL
+    );
+  }
+
+  let game = load(GAME_KEY, null);
+  if (!validGame(game)) game = newGame();
+
+  const settings = {
+    voiceOn: true,
+    traditional: true,
+    voiceURI: '',
+    rate: 0.9,
+    interval: 5,
+    ...load(SETTINGS_KEY, {}),
+  };
+
+  const saveGame = () => save(GAME_KEY, game);
+  const saveSettings = () => save(SETTINGS_KEY, settings);
+
+  // --- Rendering ---
+  function render({ animate = false } = {}) {
+    const called = game.order.slice(0, game.called);
+    const latest = called.at(-1);
+
+    currentEl.textContent = latest ?? '?';
+    ball.parentElement.style.setProperty('--ball', latest ? ballColor(latest) : '#9461ff');
+    if (latest) callText.textContent = callFor(latest, settings.traditional);
+    else callText.textContent = 'Press “Call next number” to start.';
+    if (game.called === TOTAL) callText.textContent = `${callText.textContent} · All 90 called!`;
+
+    recentEl.replaceChildren(
+      ...called
+        .slice(-6, -1)
+        .reverse()
+        .map((n) => {
+          const li = Object.assign(document.createElement('li'), { textContent: n });
+          li.style.setProperty('--ball', ballColor(n));
+          return li;
+        }),
+    );
+
+    const calledSet = new Set(called);
+    for (const [n, li] of cells) {
+      const isCalled = calledSet.has(n);
+      li.classList.toggle('called', isCalled);
+      li.classList.toggle('latest', n === latest);
+      li.lastElementChild.textContent = isCalled ? ' called' : '';
+    }
+
+    countEl.textContent = game.called;
+    ring.style.strokeDasharray = `${game.called} ${TOTAL}`;
+    nextBtn.disabled = game.called === TOTAL;
+    undoBtn.disabled = game.called === 0;
+    refreshClaim();
+
+    if (animate) {
+      ball.classList.remove('drop');
+      void ball.offsetWidth; // restart the animation
+      ball.classList.add('drop');
+    }
+  }
+
+  // --- Voice ---
+  let voices = [];
+
+  function voiceScore(v) {
+    const lang = v.lang.replace('_', '-').toLowerCase();
+    const langScore = lang === 'en-in' ? 3 : lang === 'en-gb' ? 2 : lang.startsWith('en') ? 1 : 0;
+    return langScore * 2 + (v.localService ? 1 : 0);
+  }
+
+  function loadVoices() {
+    if (!('speechSynthesis' in window)) {
+      voiceHint.textContent = 'This browser cannot read numbers aloud. Numbers are still shown on screen.';
+      voiceSelect.disabled = true;
+      voiceOn.checked = false;
+      voiceOn.disabled = true;
+      return;
+    }
+    voices = speechSynthesis
+      .getVoices()
+      .slice()
+      .sort((a, b) => voiceScore(b) - voiceScore(a) || a.name.localeCompare(b.name));
+    voiceSelect.replaceChildren(
+      ...voices.map((v) =>
+        Object.assign(document.createElement('option'), {
+          value: v.voiceURI,
+          textContent: `${v.name} (${v.lang})${v.localService ? '' : ' · online'}`,
+        }),
+      ),
+    );
+    if (!voices.length) {
+      voiceHint.textContent = 'No voices found yet. If none appear, your device may not have speech voices installed.';
+      return;
+    }
+    voiceHint.textContent = '';
+    if (!voices.some((v) => v.voiceURI === settings.voiceURI)) settings.voiceURI = voices[0].voiceURI;
+    voiceSelect.value = settings.voiceURI;
+  }
+
+  /** Speak text; resolves when finished, interrupted, or after a safety timeout. */
+  function speak(text) {
+    if (!settings.voiceOn || !('speechSynthesis' in window)) return Promise.resolve();
+    speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    const voice = voices.find((v) => v.voiceURI === settings.voiceURI);
+    if (voice) utterance.voice = voice;
+    utterance.lang = voice?.lang || 'en-IN';
+    utterance.rate = settings.rate;
+    return new Promise((resolve) => {
+      const done = () => {
+        clearTimeout(timer);
+        resolve();
+      };
+      const timer = setTimeout(done, 8000);
+      utterance.onend = done;
+      utterance.onerror = done;
+      speechSynthesis.speak(utterance);
+    });
+  }
+
+  // --- Keep the screen on during a game ---
+  let wakeLock = null;
+
+  async function keepAwake() {
+    if (!('wakeLock' in navigator) || wakeLock || document.visibilityState !== 'visible') return;
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => (wakeLock = null));
+    } catch {
+      // Not allowed (battery saver, iframe, etc.). The game still works.
+    }
+  }
+
+  function letSleep() {
+    wakeLock?.release();
+    wakeLock = null;
+  }
+
+  const inProgress = () => game.called > 0 && game.called < TOTAL;
+
+  // --- Calling ---
+  function callNext() {
+    if (game.called >= TOTAL) return Promise.resolve();
+    const n = game.order[game.called];
+    game.called += 1;
+    saveGame();
+    render({ animate: true });
+    award('call');
+    if (inProgress()) keepAwake();
+    else {
+      letSleep();
+      award('fullHouse');
+      sfx.win();
+      confetti();
+    }
+    return speak(callFor(n, settings.traditional));
+  }
+
+  let autoOn = false;
+  let autoTimer = 0;
+  let autoRun = 0;
+
+  async function autoStep() {
+    const run = ++autoRun;
+    clearTimeout(autoTimer);
+    await callNext();
+    if (!autoOn || run !== autoRun) return;
+    if (game.called >= TOTAL) return setAuto(false);
+    autoTimer = setTimeout(autoStep, settings.interval * 1000);
+  }
+
+  function setAuto(on) {
+    autoOn = on;
+    autoBtn.setAttribute('aria-pressed', String(on));
+    autoLabel.textContent = on ? 'Auto on' : 'Auto call';
+    clearTimeout(autoTimer);
+    autoRun += 1;
+    if (on) autoStep();
+  }
+
+  nextBtn.addEventListener('click', () => {
+    if (autoOn) autoStep();
+    else callNext();
+  });
+
+  autoBtn.addEventListener('click', () => {
+    if (!autoOn && game.called >= TOTAL) return;
+    setAuto(!autoOn);
+  });
+
+  undoBtn.addEventListener('click', () => {
+    if (game.called === 0) return;
+    setAuto(false);
+    if ('speechSynthesis' in window) speechSynthesis.cancel();
+    const undone = game.order[game.called - 1];
+    game.called -= 1;
+    saveGame();
+    render();
+    callText.textContent = `Took back ${undone}. ${callText.textContent}`;
+  });
+
+  newGameBtn.addEventListener('click', () => {
+    if (inProgress() && !confirm('Start a new game? The board will be cleared.')) return;
+    setAuto(false);
+    if ('speechSynthesis' in window) speechSynthesis.cancel();
+    game = newGame();
+    saveGame();
+    letSleep();
+    render();
+  });
+
+  // --- Settings ---
+  voiceOn.checked = settings.voiceOn;
+  traditional.checked = settings.traditional;
+  rateInput.value = String(settings.rate);
+  rateValue.textContent = `${settings.rate}×`;
+  intervalSelect.value = String(settings.interval);
+
+  voiceOn.addEventListener('change', () => {
+    settings.voiceOn = voiceOn.checked;
+    if (!voiceOn.checked && 'speechSynthesis' in window) speechSynthesis.cancel();
+    saveSettings();
+  });
+
+  traditional.addEventListener('change', () => {
+    settings.traditional = traditional.checked;
+    saveSettings();
+    render();
+  });
+
+  voiceSelect.addEventListener('change', () => {
+    settings.voiceURI = voiceSelect.value;
+    saveSettings();
+    speak('Kelly’s eye, 1');
+  });
+
+  rateInput.addEventListener('input', () => {
+    settings.rate = Number(rateInput.value);
+    rateValue.textContent = `${settings.rate}×`;
+    saveSettings();
+  });
+
+  intervalSelect.addEventListener('change', () => {
+    settings.interval = Number(intervalSelect.value);
+    saveSettings();
+  });
+
+  // --- TV mode (full screen; not available on iPhone) ---
+  if (tool.requestFullscreen) {
+    fsBtn.hidden = false;
+    fsBtn.addEventListener('click', () => {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else tool.requestFullscreen().catch(() => {});
+    });
+    document.addEventListener('fullscreenchange', () => {
+      $('fs-label').textContent = document.fullscreenElement ? 'Exit TV mode' : 'TV mode';
+    });
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && inProgress()) keepAwake();
+  });
+
+  // --- Room: tickets for players and the claim checker ---
+  const roomEmpty = $('room-empty');
+  const roomLive = $('room-live');
+  const inviteInput = $('invite');
+  const inviteStatus = $('invite-status');
+  const claimInput = $('claim-who');
+  const claimResult = $('claim-result');
+  const shareBtn = $('share-invite');
+  const SHARE_TEXT = 'Join my tambola game on winisland! 🎟️ Open the link and type your name to get your ticket.';
+  let room = null;
+  let lastClaim = '';
+
+  function loadRoom() {
+    // The ticket generator links here with ?room=CODE&k=N so its tickets can be checked.
+    const params = new URLSearchParams(location.search);
+    const fromUrl = cleanRoomCode(params.get('room'));
+    if (fromUrl) {
+      history.replaceState(null, '', location.pathname);
+      return { code: fromUrl, perPlayer: cleanPerPlayer(params.get('k')) };
+    }
+    const saved = load(ROOM_KEY, null);
+    const code = cleanRoomCode(saved?.code);
+    return code ? { code, perPlayer: cleanPerPlayer(saved.perPlayer) } : null;
+  }
+
+  function renderRoom() {
+    roomEmpty.hidden = Boolean(room);
+    roomLive.hidden = !room;
+    if (!room) return;
+    const link = inviteLink(location.origin, room.code, room.perPlayer);
+    $('room-code').textContent = room.code;
+    document.querySelectorAll('input[name="per-player"]').forEach((input) => {
+      input.checked = Number(input.value) === room.perPlayer;
+    });
+    inviteInput.value = link;
+    $('wa-invite').href = `https://wa.me/?text=${encodeURIComponent(`${SHARE_TEXT} ${link}`)}`;
+    $('print-room').href = `/tambola-ticket-generator/?r=${room.code}&k=${room.perPlayer}`;
+  }
+
+  function setRoom(next) {
+    room = next;
+    save(ROOM_KEY, room);
+    renderRoom();
+    refreshClaim();
+  }
+
+  $('create-room').addEventListener('click', () => {
+    setRoom({ code: newRoomCode(), perPlayer: 1 });
+    award('room');
+    sfx.sparkle();
+  });
+
+  $('new-room').addEventListener('click', () => {
+    if (!confirm('Start a new room? Players will need the new link to get new tickets.')) return;
+    lastClaim = '';
+    claimInput.value = '';
+    setRoom({ code: newRoomCode(), perPlayer: room.perPlayer });
+  });
+
+  document.querySelectorAll('input[name="per-player"]').forEach((input) =>
+    input.addEventListener('change', () => setRoom({ ...room, perPlayer: Number(input.value) })),
+  );
+
+  $('copy-invite').addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(inviteInput.value);
+      inviteStatus.textContent = 'Link copied. Paste it in your group chat.';
+    } catch {
+      inviteInput.select();
+      inviteStatus.textContent = 'Select the link above and copy it.';
+    }
+  });
+
+  if (navigator.share) {
+    shareBtn.hidden = false;
+    shareBtn.addEventListener('click', () =>
+      navigator.share({ title: `Tambola room ${room.code}`, text: SHARE_TEXT, url: inviteInput.value }).catch(() => {}),
+    );
+  }
+
+  function prizeItem(prize, called) {
+    const li = document.createElement('li');
+    if (prize.at) li.className = 'won';
+    const title = Object.assign(document.createElement('strong'), {
+      textContent: `${prize.at ? '✓' : '·'} ${prize.name}`,
+    });
+    let text = `Won on call ${prize.at} (number ${called[prize.at - 1]})`;
+    if (!prize.at) {
+      text = prize.missing.length && prize.missing.length <= 5 ? `Needs ${prize.missing.join(', ')}` : `${prize.left} to go`;
+    }
+    li.append(title, Object.assign(document.createElement('span'), { textContent: text }));
+    return li;
+  }
+
+  // One-line answer for the host: is anything on this ticket complete with the numbers called?
+  function verdict(results) {
+    const won = results.filter((p) => p.at);
+    const p = document.createElement('p');
+    p.className = `claim-verdict ${won.length ? 'yes' : 'no'}`;
+    p.textContent = won.length
+      ? `✓ Complete: ${won.map((x) => `${x.name} (call ${x.at})`).join(', ')}`
+      : '✗ Nothing complete yet. A claim now is a bogey.';
+    return p;
+  }
+
+  function showClaim(text) {
+    lastClaim = text.trim();
+    if (!room || !lastClaim) {
+      claimResult.replaceChildren();
+      return;
+    }
+    const called = game.order.slice(0, game.called);
+    const claim = parseClaim(lastClaim);
+    let tickets;
+    if (claim.number) {
+      tickets = [{ ticket: ticketByNumber(room.code, claim.number), title: `Ticket #${claim.number}`, tag: `Room ${room.code}` }];
+    } else {
+      const list = ticketsForName(room.code, claim.name, room.perPlayer);
+      tickets = list.map((ticket, i) => ({
+        ticket,
+        title: claim.name,
+        tag: list.length > 1 ? `Ticket ${i + 1} of ${list.length}` : `Room ${room.code}`,
+      }));
+    }
+    const calledSet = new Set(called);
+    claimResult.replaceChildren(
+      ...tickets.map(({ ticket, title, tag }) => {
+        const wrap = Object.assign(document.createElement('div'), { className: 'claim-ticket' });
+        const results = prizes(ticket, called);
+        const list = Object.assign(document.createElement('ul'), { className: 'prize-list' });
+        list.append(...results.map((prize) => prizeItem(prize, called)));
+        wrap.append(verdict(results), ticketCard(ticket, { title, tag, marked: calledSet, latest: called.at(-1) }), list);
+        return wrap;
+      }),
+    );
+  }
+
+  // Keep a checked ticket up to date as more numbers are called.
+  function refreshClaim() {
+    if (lastClaim) showClaim(lastClaim);
+  }
+
+  $('claim-form').addEventListener('submit', (event) => {
+    event.preventDefault();
+    showClaim(claimInput.value);
+  });
+
+  room = loadRoom();
+  if (room) save(ROOM_KEY, room);
+  renderRoom();
+
+  loadVoices();
+  if ('speechSynthesis' in window) speechSynthesis.addEventListener('voiceschanged', loadVoices);
+  saveGame();
+  render();
+</script>

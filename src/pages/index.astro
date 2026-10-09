@@ -1,0 +1,504 @@
+---
+import Base from '../layouts/Base.astro';
+import AdSlot from '../components/AdSlot.astro';
+import Island from '../components/Island.astro';
+import { badges } from '../data/badges.js';
+import { comingSoon, tools } from '../data/tools.js';
+---
+
+<Base
+  title="winisland – Free Party Games: Spin Wheel, Tambola, Secret Santa & More"
+  description="Free party games: spin the wheel, tambola caller with rooms and printable tickets, giveaway picker, team divider, Secret Santa, coin toss and dice. No sign-up, works offline."
+>
+  <div class="container">
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="kicker">⭐ Free party games · No sign-up</p>
+        <h1>Pick an island.<br /><span class="glow">Start the party!</span></h1>
+        <p class="lead">
+          Spin a light-up wheel, host a tambola room, draw Secret Santa names, split teams, flip coins and roll dice.
+          Earn XP, level up and unlock badges every time you play.
+        </p>
+        <div class="btn-row hero-cta">
+          <a class="btn btn-play btn-xl" href="/spin-the-wheel/">▶ Play now</a>
+          <a class="btn btn-lg" href="#islands">Explore islands</a>
+        </div>
+        <ul class="perks">
+          <li><span aria-hidden="true">🎁</span> 100% free</li>
+          <li><span aria-hidden="true">🔒</span> Private</li>
+          <li><span aria-hidden="true">📴</span> Works offline</li>
+        </ul>
+      </div>
+
+      <div class="hero-art" aria-hidden="true">
+        <span class="planet planet-1"></span>
+        <span class="planet planet-2"></span>
+        <Island kind="tambola" uid="hero-tambola" class="float small left" />
+        <Island kind="wheel" uid="hero-wheel" class="float big" />
+        <Island kind="picker" uid="hero-picker" class="float small right" />
+      </div>
+    </section>
+
+    <section id="islands" class="islands">
+      <div class="section-head">
+        <h2>Choose your island</h2>
+        <p>{tools.length} games, all free, all in your browser.</p>
+      </div>
+      <ul class="island-grid">
+        {
+          tools.map((tool) => (
+            <li class="island-card">
+              <Island kind={tool.id} uid={`card-${tool.id}`} class="card-art" />
+              <p class="card-kicker">{tool.island}</p>
+              <h3>
+                <a href={tool.href}>{tool.name}</a>
+              </h3>
+              <p class="card-blurb">{tool.blurb}</p>
+              <ul class="tags">
+                {tool.tags.map((tag) => (
+                  <li>{tag}</li>
+                ))}
+              </ul>
+              <span class="btn btn-play card-play" aria-hidden="true">
+                Play ▶
+              </span>
+            </li>
+          ))
+        }
+        {
+          comingSoon.map((tool) => (
+            <li class="island-card locked">
+              <Island kind={tool.id} locked uid={`card-${tool.id}`} class="card-art" />
+              <p class="card-kicker">{tool.island}</p>
+              <h3>{tool.name}</h3>
+              <p class="card-blurb">
+                <span class="chip">🔒 Coming soon</span>
+              </p>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <AdSlot name="home" />
+
+    <section class="quests panel" aria-labelledby="quests-title">
+      <div class="quest-head">
+        <div>
+          <p class="kicker">🏆 Quest log</p>
+          <h2 id="quests-title">Level up while you play</h2>
+          <p>Every spin, call and draw earns XP. Unlock all {badges.length} badges and become an Island Legend.</p>
+        </div>
+        <button class="btn btn-pink btn-lg" type="button" data-open-trophies>Trophy room</button>
+      </div>
+      <ul class="badge-strip">
+        {
+          badges.map((b) => (
+            <li class="mini-badge" data-badge={b.id}>
+              <span class="b-icon" aria-hidden="true">
+                {b.icon}
+              </span>
+              <span class="b-name">{b.name}</span>
+              <span class="b-state sr-only">Locked</span>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <section class="why" aria-labelledby="why-title">
+      <h2 id="why-title">Why players love winisland</h2>
+      <ul class="why-grid">
+        <li class="panel">
+          <span class="why-icon" aria-hidden="true">🎲</span>
+          <h3>Truly fair</h3>
+          <p>
+            Every pick uses your browser's cryptographic random number generator, so every entry has exactly the same
+            chance.
+          </p>
+        </li>
+        <li class="panel">
+          <span class="why-icon" aria-hidden="true">🔒</span>
+          <h3>Private by design</h3>
+          <p>Your names and lists stay on your device. Nothing is uploaded and there's no login.</p>
+        </li>
+        <li class="panel">
+          <span class="why-icon" aria-hidden="true">📴</span>
+          <h3>Works offline</h3>
+          <p>Open winisland once and the games keep working without internet. Add it to your home screen like an app.</p>
+        </li>
+        <li class="panel">
+          <span class="why-icon" aria-hidden="true">📱</span>
+          <h3>Made for phones</h3>
+          <p>Big buttons, bold text and sound effects, built for a phone in one hand at a noisy party.</p>
+        </li>
+      </ul>
+    </section>
+  </div>
+</Base>
+
+<style>
+  /* ---- Hero ---- */
+  .hero {
+    display: grid;
+    gap: 12px;
+    align-items: center;
+    padding-block: 34px 20px;
+  }
+
+  @media (min-width: 900px) {
+    .hero {
+      grid-template-columns: 1.05fr 1fr;
+      gap: 24px;
+      padding-block: 56px 36px;
+    }
+  }
+
+  h1 {
+    font-size: clamp(2.6rem, 1.6rem + 4.6vw, 4.6rem);
+    line-height: 1.02;
+  }
+
+  .glow {
+    color: var(--gold);
+    text-shadow:
+      0 5px 0 #7a3e00,
+      0 0 34px rgb(255 207 58 / 0.6);
+  }
+
+  .lead {
+    font-size: 1.15rem;
+    color: #dcd6f7;
+    max-width: 40rem;
+  }
+
+  .hero-cta {
+    margin-top: 22px;
+  }
+
+  .perks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 18px;
+    list-style: none;
+    margin: 22px 0 0;
+    padding: 0;
+    font-weight: 800;
+    color: var(--muted);
+  }
+
+  .hero-art {
+    position: relative;
+    height: clamp(260px, 62vw, 460px);
+  }
+
+  .hero-art :global(.float) {
+    position: absolute;
+    animation: bob 5s ease-in-out infinite;
+  }
+
+  .hero-art :global(.big) {
+    width: 62%;
+    left: 19%;
+    top: 8%;
+    filter: drop-shadow(0 20px 30px rgb(0 0 0 / 0.45));
+  }
+
+  .hero-art :global(.small) {
+    width: 34%;
+  }
+
+  .hero-art :global(.left) {
+    left: 0;
+    top: 50%;
+    animation-duration: 6s;
+    animation-delay: -2s;
+  }
+
+  .hero-art :global(.right) {
+    right: 0;
+    top: 0;
+    animation-duration: 7s;
+    animation-delay: -4s;
+  }
+
+  @keyframes bob {
+    50% {
+      transform: translateY(-14px);
+    }
+  }
+
+  .planet {
+    position: absolute;
+    border-radius: 50%;
+  }
+
+  .planet-1 {
+    width: 70px;
+    height: 70px;
+    right: 8%;
+    bottom: 6%;
+    background: radial-gradient(circle at 35% 30%, #ffd1f0, #ff3fa4 60%, #8a0d55);
+    box-shadow: 0 0 40px rgb(255 63 164 / 0.5);
+  }
+
+  .planet-1::after {
+    content: '';
+    position: absolute;
+    inset: 38% -40%;
+    border-radius: 50%;
+    border: 3px solid rgb(255 207 58 / 0.7);
+    transform: rotate(-18deg);
+  }
+
+  .planet-2 {
+    width: 28px;
+    height: 28px;
+    left: 10%;
+    top: 8%;
+    background: radial-gradient(circle at 35% 30%, #d9fbff, #2ee6ff 60%, #0a6d80);
+    box-shadow: 0 0 24px rgb(46 230 255 / 0.6);
+  }
+
+  /* ---- Islands ---- */
+  .islands {
+    padding-top: 30px;
+    scroll-margin-top: 16px;
+  }
+
+  .section-head {
+    text-align: center;
+    margin-bottom: 26px;
+  }
+
+  .section-head p {
+    color: var(--muted);
+    margin: 0;
+  }
+
+  .island-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 20px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .island-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 18px 20px 22px;
+    border-radius: 24px;
+    border: 2px solid transparent;
+    background:
+      linear-gradient(180deg, #23165c, #170e40) padding-box,
+      linear-gradient(160deg, rgb(46 230 255 / 0.7), rgb(148 97 255 / 0.5), rgb(255 63 164 / 0.7)) border-box;
+    box-shadow: var(--shadow);
+    transition:
+      transform 0.2s,
+      box-shadow 0.2s;
+  }
+
+  .island-card:not(.locked):hover {
+    transform: translateY(-6px);
+    box-shadow:
+      var(--shadow),
+      0 0 40px rgb(148 97 255 / 0.5);
+  }
+
+  .island-card:focus-within {
+    outline: 3px solid var(--focus);
+    outline-offset: 3px;
+  }
+
+  .island-card :global(.card-art) {
+    width: 78%;
+    margin: -6px auto 4px;
+    transition: transform 0.3s;
+  }
+
+  .island-card:not(.locked):hover :global(.card-art) {
+    transform: translateY(-8px) scale(1.04);
+  }
+
+  .card-kicker {
+    margin: 0 0 4px;
+    font-size: 0.78rem;
+    font-weight: 900;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--cyan);
+  }
+
+  .island-card h3 {
+    font-size: 1.6rem;
+    margin-bottom: 6px;
+  }
+
+  .island-card h3 a {
+    color: var(--text);
+    text-decoration: none;
+  }
+
+  /* The whole card is clickable; the heading link stays the accessible name. */
+  .island-card h3 a::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+  }
+
+  .island-card h3 a:focus-visible {
+    outline: none;
+  }
+
+  .card-blurb {
+    color: var(--muted);
+    margin: 0 0 12px;
+  }
+
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    list-style: none;
+    margin: 0 0 18px;
+    padding: 0;
+  }
+
+  .tags li {
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.07);
+    border: 1px solid var(--line);
+    font-size: 0.8rem;
+    font-weight: 800;
+  }
+
+  .card-play {
+    margin-top: auto;
+    align-self: stretch;
+  }
+
+  .island-card.locked {
+    background:
+      linear-gradient(180deg, #1a1240, #120c30) padding-box,
+      linear-gradient(160deg, rgb(255 255 255 / 0.15), rgb(255 255 255 / 0.05)) border-box;
+  }
+
+  .island-card.locked h3,
+  .island-card.locked .card-kicker {
+    color: #8f86bb;
+  }
+
+  /* ---- Quests ---- */
+  .quests {
+    margin-top: 44px;
+    padding: 24px;
+    overflow: hidden;
+  }
+
+  @media (min-width: 720px) {
+    .quests {
+      padding: 32px;
+    }
+  }
+
+  .quest-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px 24px;
+    margin-bottom: 22px;
+  }
+
+  .quest-head p:last-child {
+    margin: 0;
+    color: var(--muted);
+  }
+
+  .badge-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .mini-badge {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 14px 8px;
+    border-radius: 18px;
+    border: 1px dashed var(--line-strong);
+    background: rgb(0 0 0 / 0.2);
+    text-align: center;
+  }
+
+  .mini-badge .b-icon {
+    font-size: 2.1rem;
+    line-height: 1.1;
+    filter: grayscale(1) brightness(0.55);
+  }
+
+  .mini-badge .b-name {
+    font-weight: 900;
+    font-size: 0.88rem;
+    line-height: 1.2;
+  }
+
+  .mini-badge.earned {
+    border: 1px solid var(--gold);
+    background: radial-gradient(circle at 50% 0%, rgb(255 207 58 / 0.25), rgb(0 0 0 / 0.15) 70%);
+  }
+
+  .mini-badge.earned .b-icon {
+    filter: none;
+  }
+
+  /* ---- Why ---- */
+  .why {
+    margin-top: 48px;
+  }
+
+  .why h2 {
+    text-align: center;
+    margin-bottom: 22px;
+  }
+
+  .why-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 16px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .why-grid li {
+    padding: 22px;
+  }
+
+  .why-icon {
+    display: block;
+    font-size: 2.2rem;
+    line-height: 1;
+    margin-bottom: 12px;
+  }
+
+  .why-grid h3 {
+    font-size: 1.35rem;
+  }
+
+  .why-grid p {
+    margin: 0;
+    color: var(--muted);
+  }
+</style>
