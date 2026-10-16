@@ -1,11 +1,14 @@
 using System.Runtime.InteropServices;
+using Microsoft.UI.Dispatching;
+using Windows.UI;
 using WinIsland.Interop;
 
 namespace WinIsland.Services;
 
 /// <summary>
-/// A frosted bar across the top of the island's display, as tall as the island at rest, with the island
-/// in it as a black notch: the Mac's menu bar round its notch. Windows keeps it as it keeps the bottom
+/// A bar across the top of the island's display, as tall as the island at rest, with the island in it as
+/// a black notch: the Mac's menu bar round its notch. It wears the colour of the app you're in, a little
+/// see-through over the blurred wallpaper. Windows keeps it as it keeps the bottom
 /// for the taskbar (it's an "app bar"), taking it out of the work area, so maximized and snapped windows
 /// (and new ones) start below it.
 /// </summary>
@@ -28,28 +31,54 @@ internal sealed class TopStrip
     private const int ACCENT_ENABLE_GRADIENT = 1;
     private const int ACCENT_ENABLE_ACRYLICBLURBEHIND = 4;
 
-    // The frost's tint over the blurred wallpaper (as 0xAABBGGRR), as the taskbar follows the Windows
-    // theme; solid when Windows' transparency effects are off.
-    private const uint DarkFrost = 0x88201C1C;
-    private const uint LightFrost = 0x99F3F3F3;
-    private const uint DarkSolid = 0xFF201C1C;
-    private const uint LightSolid = 0xFFF3F3F3;
+    // The bar wears the colour of the app you're in (see Tint), only a little see-through: mostly its
+    // colour, over the blurred wallpaper. Solid when Windows' transparency effects are off.
+    private const byte SeeThrough = 0xD9;
+
+    // Until there's an app colour, or for an app without one: the Windows theme's, as the taskbar's.
+    private static readonly Color Dark = Color.FromArgb(255, 0x1C, 0x1C, 0x20);
+    private static readonly Color Light = Color.FromArgb(255, 0xF3, 0xF3, 0xF3);
+
+    // Going from one app's colour to the next: a short fade.
+    private const int FadeSteps = 8;
+    private const int FadeStepMs = 25;
 
     private static readonly uint s_taskbarCreated = RegisterWindowMessage("TaskbarCreated");
 
     // Painted black, which the frost treats as see-through (and if Windows won't frost it, it's simply black).
     private readonly MessageWindow _window = new("TopStrip", topLevel: true, background: GetStockObject(BLACK_BRUSH));
+    private readonly DispatcherQueueTimer _fade;
     private bool _registered;
     private bool _loggedFailure;
+    private bool _loggedColour;
     private Native.RECT _monitor;
     private int _height;
     private Native.RECT _bar;
-    private uint _frost;
+    private Color? _app;   // the app's colour, if there is one
+    private bool? _clear;  // frosted (transparency effects on) or solid, as last applied
+    private Color _shown, _from, _to;
+    private int _step;
 
     public TopStrip()
     {
         _window.MessageReceived += OnMessage;
         Native.SetDwmInt(Handle, Native.DWMWA_WINDOW_CORNER_PREFERENCE, Native.DWMWCP_DONOTROUND);
+        _fade = DispatcherQueue.GetForCurrentThread().CreateTimer();
+        _fade.Interval = TimeSpan.FromMilliseconds(FadeStepMs);
+        _fade.Tick += (_, _) => FadeStep();
+    }
+
+    /// <summary>
+    /// The bar takes on the colour of the app you're in (see <see cref="AppColors"/>), as a phone's status
+    /// bar does; null goes back to the Windows theme's.
+    /// </summary>
+    public void Tint(Color? app)
+    {
+        _app = app;
+        if (Native.IsWindowVisible(Handle))
+        {
+            Frost();
+        }
     }
 
     /// <summary>The bar's window: under the island, it's the island's, not an app's (see <see cref="WindowsBelow"/>).</summary>
@@ -134,23 +163,61 @@ internal sealed class TopStrip
         }
     }
 
-    /// <summary>Frosts the bar to suit the Windows theme, when that changed.</summary>
+    /// <summary>Colours the bar: the app's colour, or the Windows theme's; fading over when it changes.</summary>
     private void Frost()
     {
         using var personalize = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
         bool light = personalize?.GetValue("SystemUsesLightTheme") is int l && l != 0;
         bool clear = personalize?.GetValue("EnableTransparency") is not int t || t != 0;
-        uint frost = clear ? (light ? LightFrost : DarkFrost) : (light ? LightSolid : DarkSolid);
-        if (frost == _frost)
-        {
-            return;
-        }
+        var colour = _app ?? (light ? Light : Dark);
 
-        _frost = frost;
+        if (clear != _clear)
+        {
+            _clear = clear; // (the first time, or transparency switched: straight there)
+            _fade.Stop();
+            _shown = _to = colour;
+            Apply(colour);
+        }
+        else if (colour != _to)
+        {
+            _from = _shown;
+            _to = colour;
+            _step = 0;
+            if (Motion.Enabled)
+            {
+                _fade.Start();
+            }
+            else
+            {
+                _step = FadeSteps;
+                FadeStep();
+            }
+        }
+    }
+
+    private void FadeStep()
+    {
+        _step = Math.Min(_step + 1, FadeSteps);
+        float t = _step / (float)FadeSteps;
+        t = 1 - (1 - t) * (1 - t); // (easing out)
+        _shown = Color.FromArgb(255,
+            (byte)Math.Round(_from.R + (_to.R - _from.R) * t),
+            (byte)Math.Round(_from.G + (_to.G - _from.G) * t),
+            (byte)Math.Round(_from.B + (_to.B - _from.B) * t));
+        Apply(_shown);
+        if (_step >= FadeSteps)
+        {
+            _fade.Stop();
+        }
+    }
+
+    private void Apply(Color colour)
+    {
+        uint alpha = _clear == true ? SeeThrough : 0xFFu;
         var accent = new AccentPolicy
         {
-            AccentState = clear ? ACCENT_ENABLE_ACRYLICBLURBEHIND : ACCENT_ENABLE_GRADIENT,
-            GradientColor = frost,
+            AccentState = _clear == true ? ACCENT_ENABLE_ACRYLICBLURBEHIND : ACCENT_ENABLE_GRADIENT,
+            GradientColor = alpha << 24 | (uint)colour.B << 16 | (uint)colour.G << 8 | colour.R, // (0xAABBGGRR)
         };
         var data = new WindowCompositionAttributeData
         {
@@ -162,9 +229,10 @@ internal sealed class TopStrip
         {
             Marshal.StructureToPtr(accent, pointer, false);
             data.Data = pointer;
-            if (!SetWindowCompositionAttribute(Handle, ref data))
+            if (!SetWindowCompositionAttribute(Handle, ref data) && !_loggedColour)
             {
-                Log.Info("Couldn't frost the bar at the top; it stays black");
+                _loggedColour = true;
+                Log.Info("Couldn't colour the bar at the top; it stays black");
             }
         }
         finally

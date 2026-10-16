@@ -79,6 +79,8 @@ public sealed partial class IslandWindow : Window
     private readonly ExpressionAnimation _bubbleFollow;
     private readonly Dictionary<FrameworkElement, bool> _layerVisible = [];
     private readonly TopStrip _strip = new(); // (before the activities: they can change while being set up)
+    private readonly ForegroundApp _foreground = new(); // the app you're in, for the bar's colour and the menu bar
+    private readonly DispatcherQueueTimer _tintSoon;    // a moment after you switch apps, once the new one's drawn
     private MenuBarWindow? _menuBar;
     private bool _started;
     private ExpressionAnimation _pillPlace = null!; // (set up with the pill)
@@ -243,6 +245,16 @@ public sealed partial class IslandWindow : Window
         _timer = DispatcherQueue.CreateTimer();
         _timer.Interval = TimeSpan.FromMilliseconds(PointerTickMs);
         _timer.Tick += OnTick;
+
+        _tintSoon = DispatcherQueue.CreateTimer();
+        _tintSoon.Interval = TimeSpan.FromMilliseconds(300);
+        _tintSoon.IsRepeating = false;
+        _tintSoon.Tick += (_, _) => TintBar();
+        _foreground.Changed += () =>
+        {
+            _tintSoon.Stop();
+            _tintSoon.Start();
+        };
 
         Closed += (_, _) =>
         {
@@ -678,11 +690,35 @@ public sealed partial class IslandWindow : Window
     {
         if (_menuBar is null)
         {
-            _menuBar = new MenuBarWindow();
+            _menuBar = new MenuBarWindow(_foreground);
             _menuBar.SettingsRequested += () => SettingsRequested?.Invoke();
             _menuBar.TalkRequested += _assistant.Toggle;
+            TintBar();
         }
         return _menuBar;
+    }
+
+    /// <summary>
+    /// The bar at the top wears the colour of the app you're in: its title bar's, read off the screen just
+    /// below the bar (see AppColors). Not while one of the menu bar's menus is open over it.
+    /// </summary>
+    private void TintBar()
+    {
+        if (_strip.Bounds is not { } bar || !Native.IsWindowVisible(_strip.Handle) || _menuBar is { IsMenuOpen: true })
+        {
+            return;
+        }
+
+        var island = new Native.RECT
+        {
+            Left = _origin.X,
+            Top = _origin.Y,
+            Right = _origin.X + (int)Math.Ceiling(StageWidth * _scale),
+            Bottom = _origin.Y + (int)Math.Ceiling(StageHeight * _scale),
+        };
+        var colour = AppColors.TopOf(_foreground.Window, bar.Bottom, island);
+        _strip.Tint(colour);
+        _menuBar?.ShowBarColour(colour);
     }
 
     /// <summary>
@@ -744,6 +780,10 @@ public sealed partial class IslandWindow : Window
             if (_menuBar is { IsShown: true })
             {
                 _menuBar.Refresh();
+            }
+            if (_tick % (SlowTickEvery * 4) == 0)
+            {
+                TintBar(); // (apps change colour too: a page loads, the theme switches)
             }
         }
 

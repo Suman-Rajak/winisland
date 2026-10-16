@@ -28,7 +28,7 @@ public sealed partial class MenuBarWindow : Window
     private static readonly Color Low = Color.FromArgb(255, 0xFF, 0x45, 0x3A);
 
     private readonly IntPtr _hwnd;
-    private readonly ForegroundApp _app = new();
+    private readonly ForegroundApp _app;
     private readonly List<FlyoutBase> _flyouts = [];
     private List<PinnedApp> _pins = [];
     private DateTime _pinsChangedAt;
@@ -40,7 +40,9 @@ public sealed partial class MenuBarWindow : Window
     private Action? _afterClose;    // done once the menu's closed and the keyboard's back where it was
     private IntPtr _menuApp;        // the app the app menu is for
     private bool _showingVolume;    // moving the slider to the volume, not you moving it
-    private bool? _light;
+    private bool? _barIsLight;      // the bar's colour (the app's), when it has one
+    private bool? _light;           // the words and icons are dark, for a light bar
+    private bool? _menusLight;      // the menus follow the Windows theme
     private int _refreshes;
 
     /// <summary>"Glyde Settings…".</summary>
@@ -49,8 +51,10 @@ public sealed partial class MenuBarWindow : Window
     /// <summary>The microphone button: talk to Glyde.</summary>
     public event Action? TalkRequested;
 
-    public MenuBarWindow()
+    /// <param name="app">The app you're in, which the island follows too.</param>
+    internal MenuBarWindow(ForegroundApp app)
     {
+        _app = app;
         InitializeComponent();
         _hwnd = WindowNative.GetWindowHandle(this);
 
@@ -93,6 +97,20 @@ public sealed partial class MenuBarWindow : Window
     public IntPtr Handle => _hwnd;
 
     public bool IsShown => _shown;
+
+    /// <summary>One of its menus is open (over the app below).</summary>
+    public bool IsMenuOpen => _open is not null;
+
+    /// <summary>
+    /// The bar's colour, the app's (see TopStrip): the words and icons go dark on a light bar, light on a
+    /// dark one. Null: the Windows theme's.
+    /// </summary>
+    internal void ShowBarColour(Color? colour)
+    {
+        _barIsLight = colour is { } c ? AppColors.Lightness(c) > 0.6 : null;
+        ShowTheme();
+        ShowBattery(); // (its fill is the words' colour)
+    }
 
     // ---------------------------------------------------------------- the window
 
@@ -238,16 +256,26 @@ public sealed partial class MenuBarWindow : Window
         }
     }
 
-    /// <summary>Light or dark, as the taskbar is (and the frost under the bar).</summary>
+    /// <summary>
+    /// The bar's words and icons suit its colour (the app's, or else the Windows theme's, as the taskbar);
+    /// the menus follow the Windows theme.
+    /// </summary>
     private void ShowTheme()
     {
         using var personalize = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
-        bool light = personalize?.GetValue("SystemUsesLightTheme") is int value && value != 0;
+        bool windowsLight = personalize?.GetValue("SystemUsesLightTheme") is int value && value != 0;
+
+        bool light = _barIsLight ?? windowsLight;
         if (light != _light)
         {
             _light = light;
-            var theme = light ? ElementTheme.Light : ElementTheme.Dark;
-            Root.RequestedTheme = theme;
+            Root.RequestedTheme = light ? ElementTheme.Light : ElementTheme.Dark;
+        }
+
+        if (windowsLight != _menusLight)
+        {
+            _menusLight = windowsLight;
+            var theme = windowsLight ? ElementTheme.Light : ElementTheme.Dark;
             foreach (var flyout in _flyouts)
             {
                 // (menus open in windows of their own, which don't inherit it)
