@@ -6,7 +6,8 @@
     <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
     <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
     <RootNamespace>WinIsland</RootNamespace>
-    <Version>0.1.0</Version>
+    <AssemblyName>Glyde</AssemblyName> <!-- the product's name (Product.cs); the code namespace keeps the working name -->
+    <Version>0.2.0</Version>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\island.ico</ApplicationIcon>
     <Platforms>x64;ARM64</Platforms>

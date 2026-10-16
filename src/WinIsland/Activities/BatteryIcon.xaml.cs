@@ -1,4 +1,7 @@
+using System.Numerics;
+using Microsoft.UI.Composition;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Hosting;
 using Microsoft.UI.Xaml.Media;
 using Windows.UI;
 
@@ -25,5 +28,25 @@ public sealed partial class BatteryIcon : UserControl
     {
         Fill.Background = new SolidColorBrush(color);
         Fill.Width = Math.Max(1.5, FillWidth * Math.Clamp(percent, 0, 100) / 100.0);
+    }
+
+    /// <summary>The charge fills up from empty to where it is, as the notice comes in.</summary>
+    internal void FillUp(double delay = 0)
+    {
+        if (!Motion.Enabled)
+        {
+            return;
+        }
+
+        var visual = ElementCompositionPreview.GetElementVisual(Fill);
+        var c = visual.Compositor;
+        visual.CenterPoint = Vector3.Zero; // (from the left)
+        var fill = c.CreateVector3KeyFrameAnimation();
+        fill.InsertKeyFrame(0f, new Vector3(0, 1, 1));
+        fill.InsertKeyFrame(1f, Vector3.One, Motion.Decelerate(c));
+        fill.Duration = Motion.Ms(700);
+        fill.DelayTime = Motion.Ms(delay);
+        fill.DelayBehavior = AnimationDelayBehavior.SetInitialValueBeforeDelay;
+        visual.StartAnimation(nameof(visual.Scale), fill);
     }
 }

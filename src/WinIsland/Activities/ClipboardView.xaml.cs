@@ -1,10 +1,11 @@
 using System.Collections.ObjectModel;
+using System.Numerics;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
 namespace WinIsland.Activities;
 
-public sealed partial class ClipboardView : UserControl
+public sealed partial class ClipboardView : UserControl, IEntrance
 {
     public ClipboardView()
     {
@@ -14,6 +15,17 @@ public sealed partial class ClipboardView : UserControl
     }
 
     public ObservableCollection<ClipboardEntry> Entries { get; } = [];
+
+    /// <summary>The rows come in one after another (or the "nothing copied" note rises in).</summary>
+    public void Enter()
+    {
+        if (Entries.Count == 0)
+        {
+            Motion.Enter(EmptyState, new Vector2(0, 8), delay: 60);
+            return;
+        }
+        Motion.Cascade(Entries.Select((_, i) => List.ContainerFromIndex(i)).OfType<UIElement>(), new Vector2(0, 10), delay: 50, step: 35);
+    }
 
     /// <summary>A row was clicked: put it back on the clipboard.</summary>
     internal event Action<ClipboardEntry>? EntryClicked;

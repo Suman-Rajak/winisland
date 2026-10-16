@@ -8,11 +8,11 @@
   xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
   IgnorableNamespaces="uap uap3 rescap desktop">
 
-  <Identity Name="WinIsland" Publisher="CN=WinIsland" Version="0.2.0.0" />
+  <Identity Name="Glyde" Publisher="CN=Glyde" Version="0.2.0.0" />
 
   <Properties>
-    <DisplayName>WinIsland</DisplayName>
-    <PublisherDisplayName>WinIsland</PublisherDisplayName>
+    <DisplayName>Glyde</DisplayName>
+    <PublisherDisplayName>Glyde</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
 
@@ -27,8 +27,8 @@
   <Applications>
     <Application Id="App" Executable="$targetnametoken$.exe" EntryPoint="$targetentrypoint$">
       <uap:VisualElements
-        DisplayName="WinIsland"
-        Description="A Dynamic Island for Windows"
+        DisplayName="Glyde"
+        Description="Voice island for Windows"
         BackgroundColor="transparent"
         Square150x150Logo="Assets\Square150x150Logo.png"
         Square44x44Logo="Assets\Square44x44Logo.png">
@@ -37,7 +37,7 @@
       <Extensions>
         <!-- "Start with Windows" for the packaged app (the unpackaged one uses the Run key). -->
         <desktop:Extension Category="windows.startupTask">
-          <desktop:StartupTask TaskId="WinIslandStartup" Enabled="false" DisplayName="WinIsland" />
+          <desktop:StartupTask TaskId="GlydeStartup" Enabled="false" DisplayName="Glyde" />
         </desktop:Extension>
       </Extensions>
     </Application>

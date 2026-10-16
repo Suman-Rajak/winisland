@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Numerics;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
@@ -44,7 +45,7 @@ public sealed class TimerRow : INotifyPropertyChanged
     internal object Item { get; }
 }
 
-public sealed partial class TimersView : UserControl
+public sealed partial class TimersView : UserControl, IEntrance
 {
     public TimersView()
     {
@@ -54,6 +55,9 @@ public sealed partial class TimersView : UserControl
     public ObservableCollection<TimerRow> Rows { get; } = [];
 
     internal event Action<TimerRow>? CancelClicked;
+
+    /// <summary>The rows come in one after another.</summary>
+    public void Enter() => Motion.Cascade(Rows.Select((_, i) => List.ContainerFromIndex(i)).OfType<UIElement>(), new Vector2(0, 10), delay: 50, step: 40);
 
     private void OnCancelClick(object sender, RoutedEventArgs e)
     {

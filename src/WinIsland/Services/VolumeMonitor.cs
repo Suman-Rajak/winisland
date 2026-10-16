@@ -78,6 +78,10 @@ internal sealed class VolumeMonitor : IAudioEndpointVolumeCallback, IMMNotificat
         }
 
         var data = Marshal.PtrToStructure<AudioVolumeNotificationData>(notifyData);
+        if (data.EventContext == SystemActions.QuietChange)
+        {
+            return 0; // the assistant turning the PC down while it listens, and back up
+        }
         _dispatcher.TryEnqueue(() => Changed?.Invoke(data.MasterVolume, data.Muted != 0));
         return 0;
     }

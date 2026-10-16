@@ -14,14 +14,19 @@ internal sealed class HotkeyListener
     private const uint VK_SPACE = 0x20;
     private const int HotkeyId = 1;
 
-    /// <summary>The shortcuts offered in Settings; the first is the default.</summary>
+    /// <summary>The talk shortcuts offered in Settings; the first is the default.</summary>
     public static readonly IReadOnlyList<string> Choices = ["Ctrl+Alt+S", "Ctrl+Alt+Space", "Ctrl+Shift+Space", "Alt+Shift+Space"];
 
-    private readonly MessageWindow _window = new("Hotkeys");
+    /// <summary>The type shortcuts offered in Settings (none shared with <see cref="Choices"/>); the first is the default.</summary>
+    public static readonly IReadOnlyList<string> TypeChoices = ["Ctrl+Alt+G", "Ctrl+Shift+G", "Alt+Shift+G"];
+
+    private readonly MessageWindow _window;
     private bool _registered;
 
-    public HotkeyListener()
+    /// <param name="name">Tells this shortcut's hidden window apart from another listener's.</param>
+    public HotkeyListener(string name)
     {
+        _window = new MessageWindow(name);
         _window.MessageReceived += (message, wParam, _) =>
         {
             if (message == WM_HOTKEY && wParam == HotkeyId)

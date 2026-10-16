@@ -213,7 +213,7 @@ internal static class MusicCatalog
         // MusicBrainz and the Cover Art Archive (served from archive.org) can take several seconds.
         var client = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
         // MusicBrainz requires an identifying user agent.
-        client.DefaultRequestHeaders.UserAgent.ParseAdd("WinIsland/0.1 (+https://github.com/Suman-Rajak/WinIsland)");
+        client.DefaultRequestHeaders.UserAgent.ParseAdd($"{Product.Name}/0.1 (+https://github.com/Suman-Rajak/WinIsland)");
         return client;
     }
 }

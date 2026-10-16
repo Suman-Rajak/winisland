@@ -12,7 +12,7 @@
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
-        <Grid Width="34" Height="34" VerticalAlignment="Center">
+        <Grid x:Name="IconHost" Width="34" Height="34" VerticalAlignment="Center">
             <Border CornerRadius="9" Background="#26FFFFFF">
                 <FontIcon Glyph="&#xEA8F;" FontSize="15" Foreground="#B3FFFFFF" />
             </Border>
@@ -23,7 +23,7 @@
             </Border>
         </Grid>
 
-        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+        <StackPanel x:Name="TextStack" Grid.Column="1" VerticalAlignment="Center" Spacing="1">
             <Grid ColumnSpacing="8">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />

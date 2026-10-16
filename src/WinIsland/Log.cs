@@ -27,7 +27,7 @@ internal static class Log
             // say why in a fallback file in %TEMP%.
             try
             {
-                File.AppendAllText(Path.Combine(Path.GetTempPath(), "WinIsland-log-failures.txt"),
+                File.AppendAllText(Path.Combine(Path.GetTempPath(), $"{Product.Name}-log-failures.txt"),
                     $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} couldn't write {s_path}: {ex.GetType().Name}: {ex.Message}{Environment.NewLine}");
             }
             catch

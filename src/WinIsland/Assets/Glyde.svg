@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <title>Glyde</title>
+  <defs>
+    <linearGradient id="body" gradientUnits="userSpaceOnUse" x1="40" y1="30" x2="216" y2="226"><stop offset="0.0" stop-color="#6E7BFF"/><stop offset="0.45" stop-color="#A66CFF"/><stop offset="1.0" stop-color="#F06AB4"/></linearGradient>
+    <radialGradient id="depth" cx="128" cy="96" r="150" gradientUnits="userSpaceOnUse">
+      <stop offset="0.55" stop-color="#1E0F46" stop-opacity="0"/><stop offset="1" stop-color="#1E0F46" stop-opacity="0.32"/>
+    </radialGradient>
+    <radialGradient id="gloss" cx="96" cy="64" r="70" gradientUnits="userSpaceOnUse" gradientTransform="translate(96 64) rotate(-28) scale(1 0.55) translate(-96 -64)">
+      <stop offset="0" stop-color="#fff" stop-opacity="0.6"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <circle cx="128" cy="128" r="118" fill="url(#body)"/>
+  <circle cx="128" cy="128" r="118" fill="url(#depth)"/>
+  <ellipse cx="96" cy="64" rx="70" ry="38.5" transform="rotate(-28 96 64)" fill="url(#gloss)"/>
+  <circle cx="128" cy="128" r="116.5" fill="none" stroke="#fff" stroke-opacity="0.22" stroke-width="3"/>
+  <rect x="80.0" y="87.0" width="28" height="50" rx="14.0" fill="#fff"/><rect x="148.0" y="87.0" width="28" height="50" rx="14.0" fill="#fff"/>
+  <path d="M90 160 Q128 194 166 160" fill="none" stroke="#fff" stroke-width="14" stroke-linecap="round"/>
+</svg>

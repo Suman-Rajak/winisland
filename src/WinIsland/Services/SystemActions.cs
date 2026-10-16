@@ -32,6 +32,16 @@ internal static class SystemActions
         return true;
     });
 
+    /// <summary>Marks the assistant's own volume changes (turning the PC down while it listens), which the island doesn't show.</summary>
+    public static readonly Guid QuietChange = new("6E0F3A4B-7C2D-4B8E-9F51-2A9D3C7E1B60");
+
+    /// <summary>Sets the volume (0 to 1) without showing it on the island or touching mute. False if there are no speakers.</summary>
+    public static bool SetVolumeQuietly(float level) => WithSpeakers(volume =>
+    {
+        var context = QuietChange;
+        return volume.SetMasterVolumeLevelScalar(Math.Clamp(level, 0, 1), ref context) == 0;
+    });
+
     public static bool SetMute(bool mute) => WithSpeakers(volume =>
     {
         var context = Guid.Empty;
@@ -143,6 +153,38 @@ internal static class SystemActions
             MediaCommand.Next => await session.TrySkipNextAsync(),
             _ => await session.TrySkipPreviousAsync(),
         };
+    }
+
+    /// <summary>Pauses everything that's playing, for a moment (the assistant is listening). Returns what it paused, to resume.</summary>
+    public static async Task<List<GlobalSystemMediaTransportControlsSession>> PausePlayingAsync()
+    {
+        var manager = await GlobalSystemMediaTransportControlsSessionManager.RequestAsync();
+        var paused = new List<GlobalSystemMediaTransportControlsSession>();
+        foreach (var session in manager.GetSessions())
+        {
+            if (session.GetPlaybackInfo()?.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing
+                && await session.TryPauseAsync())
+            {
+                paused.Add(session);
+            }
+        }
+        return paused;
+    }
+
+    /// <summary>Plays again what <see cref="PausePlayingAsync"/> paused.</summary>
+    public static async Task ResumeAsync(IEnumerable<GlobalSystemMediaTransportControlsSession> sessions)
+    {
+        foreach (var session in sessions)
+        {
+            try
+            {
+                await session.TryPlayAsync();
+            }
+            catch (Exception ex) when (ex is COMException or InvalidOperationException)
+            {
+                // the app closed meanwhile
+            }
+        }
     }
 
     // ---------------------------------------------------------------- the PC

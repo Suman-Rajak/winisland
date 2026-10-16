@@ -61,6 +61,12 @@ internal abstract class IslandActivity
     /// </summary>
     public virtual bool HoldsIsland => false;
 
+    /// <summary>The pointer is over the island (set by the island, whatever it's showing).</summary>
+    public bool IsPointerOver { get; private set; }
+
+    /// <summary>Called by the island when the pointer moves onto or off it.</summary>
+    public void SetPointerOver(bool over) => IsPointerOver = over;
+
     public event EventHandler? Changed;
 
     /// <summary>Begin watching whatever this activity is about. Called once, after the island is up.</summary>

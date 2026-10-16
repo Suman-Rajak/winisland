@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="WinIsland.GlydeFace"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    IsHitTestVisible="False">
+
+    <!--
+        Glyde's face, live: the logo (tools/make-logo.py draws the same shapes on the same 256 × 256
+        grid), scaled to whatever size it's given. The eyes are nested so their moves don't fight:
+        Gaze looks about, Eyes takes the mood's shape, Blink blinks. The mouth is a smile, or an open
+        mouth that moves with the voice while it talks. All animated in code (GlydeFace.xaml.cs).
+    -->
+    <Viewbox Stretch="Uniform">
+        <Canvas Width="256" Height="256">
+            <Ellipse x:Name="Body" Canvas.Left="10" Canvas.Top="10" Width="236" Height="236">
+                <Ellipse.Fill>
+                    <LinearGradientBrush MappingMode="Absolute" StartPoint="30,20" EndPoint="206,216">
+                        <GradientStop Offset="0" Color="#FF6E7BFF" />
+                        <GradientStop Offset="0.45" Color="#FFA66CFF" />
+                        <GradientStop Offset="1" Color="#FFF06AB4" />
+                    </LinearGradientBrush>
+                </Ellipse.Fill>
+            </Ellipse>
+            <!-- Depth: a little darker towards the edge. -->
+            <Ellipse Canvas.Left="10" Canvas.Top="10" Width="236" Height="236">
+                <Ellipse.Fill>
+                    <RadialGradientBrush Center="0.5,0.364" GradientOrigin="0.5,0.364" RadiusX="0.636" RadiusY="0.636">
+                        <GradientStop Offset="0.55" Color="#001E0F46" />
+                        <GradientStop Offset="1" Color="#521E0F46" />
+                    </RadialGradientBrush>
+                </Ellipse.Fill>
+            </Ellipse>
+            <!-- Gloss: light catching the top left, and a faint bright rim. -->
+            <Ellipse Canvas.Left="26" Canvas.Top="25.5" Width="140" Height="77" RenderTransformOrigin="0.5,0.5">
+                <Ellipse.RenderTransform>
+                    <RotateTransform Angle="-28" />
+                </Ellipse.RenderTransform>
+                <Ellipse.Fill>
+                    <RadialGradientBrush>
+                        <GradientStop Offset="0" Color="#99FFFFFF" />
+                        <GradientStop Offset="1" Color="#00FFFFFF" />
+                    </RadialGradientBrush>
+                </Ellipse.Fill>
+            </Ellipse>
+            <Ellipse Canvas.Left="11.5" Canvas.Top="11.5" Width="233" Height="233" Stroke="#38FFFFFF" StrokeThickness="3" />
+
+            <Canvas x:Name="Gaze" Width="256" Height="256">
+                <Canvas x:Name="Eyes" Width="256" Height="256">
+                    <Canvas x:Name="Blink" Width="256" Height="256">
+                        <Rectangle Canvas.Left="80" Canvas.Top="87" Width="28" Height="50" RadiusX="14" RadiusY="14" Fill="White" />
+                        <Rectangle Canvas.Left="148" Canvas.Top="87" Width="28" Height="50" RadiusX="14" RadiusY="14" Fill="White" />
+                    </Canvas>
+                </Canvas>
+            </Canvas>
+
+            <Canvas x:Name="Mouth" Width="256" Height="256">
+                <Path x:Name="Smile" Data="M90,160 Q128,194 166,160" Stroke="White" StrokeThickness="14"
+                      StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                <Ellipse x:Name="Talk" Canvas.Left="108" Canvas.Top="156" Width="40" Height="34" Fill="White" />
+            </Canvas>
+        </Canvas>
+    </Viewbox>
+</UserControl>

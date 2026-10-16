@@ -2,7 +2,8 @@
 <Application
     x:Class="WinIsland.App"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:WinIsland">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -23,6 +24,8 @@
                 <!-- The island never takes keyboard focus (its window is no-activate). -->
                 <Setter Property="IsTabStop" Value="False" />
                 <Setter Property="UseSystemFocusVisuals" Value="False" />
+                <!-- Grows a touch under the pointer, sinks when pressed (see Press). -->
+                <Setter Property="local:Press.Effect" Value="True" />
             </Style>
 
             <Style x:Key="LevelBarStyle" TargetType="Rectangle">

@@ -33,7 +33,7 @@
                     Background="#26FFFFFF" Click="OnSnoozeClick">
                 <TextBlock Text="Snooze" FontSize="12" Foreground="White" />
             </Button>
-            <Button Style="{StaticResource IslandButtonStyle}" Width="64" Height="34" CornerRadius="17"
+            <Button x:Name="StopButton" Style="{StaticResource IslandButtonStyle}" Width="64" Height="34" CornerRadius="17"
                     Background="#FFFF9F0A" Click="OnStopClick">
                 <TextBlock Text="Stop" FontSize="12" FontWeight="SemiBold" Foreground="Black" />
             </Button>

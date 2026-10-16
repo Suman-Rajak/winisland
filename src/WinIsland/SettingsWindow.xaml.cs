@@ -41,10 +41,70 @@ public sealed partial class SettingsWindow : Window
         }
 
         var version = Assembly.GetExecutingAssembly().GetName().Version;
-        VersionText.Text = $"WinIsland {version?.ToString(3)}";
+        VersionText.Text = $"{Product.Name} {version?.ToString(3)}";
 
         SizeAndCentre();
         LoadValues();
+        AddMotion();
+        ShowFace(version);
+    }
+
+    /// <summary>
+    /// The header's face: alive while the window's open, its eyes following the pointer round the
+    /// window, smiling while you point at it.
+    /// </summary>
+    private void ShowFace(Version? version)
+    {
+        HeroCaption.Text = $"Your voice island for Windows  ·  version {version?.ToString(3)}";
+        HeroFace.SetAlive(true);
+        Closed += (_, _) => HeroFace.SetAlive(false);
+
+        var root = (UIElement)Content;
+        root.AddHandler(UIElement.PointerMovedEvent, new Microsoft.UI.Xaml.Input.PointerEventHandler((_, e) =>
+        {
+            var at = e.GetCurrentPoint(HeroFace).Position;
+            HeroFace.LookAt(new System.Numerics.Vector2(
+                (float)(at.X - HeroFace.ActualWidth / 2) / 220f,
+                (float)(at.Y - HeroFace.ActualHeight / 2) / 220f));
+        }), handledEventsToo: true);
+        root.PointerExited += (_, _) => HeroFace.LookAt(System.Numerics.Vector2.Zero);
+        Hero.PointerEntered += (_, _) => HeroFace.SetMood(FaceMood.Happy);
+        Hero.PointerExited += (_, _) => HeroFace.SetMood(FaceMood.Calm);
+    }
+
+    /// <summary>
+    /// The window's motion, besides the cards rising in as it opens (ChildrenTransitions in the XAML):
+    /// cards lighten under the pointer, and rows that come and go inside them (a key box, a warning)
+    /// fade in and out rather than popping.
+    /// </summary>
+    private void AddMotion()
+    {
+        if (Application.Current.Resources.TryGetValue("CardBackgroundFillColorSecondaryBrush", out var found) && found is Brush hover)
+        {
+            foreach (var card in Cards.Children.OfType<Border>())
+            {
+                card.BackgroundTransition = new BrushTransition { Duration = TimeSpan.FromMilliseconds(160) };
+                card.PointerEntered += (_, _) => card.Background = hover;
+                card.PointerExited += (_, _) => card.ClearValue(Border.BackgroundProperty); // (back to the theme's)
+            }
+        }
+
+        foreach (var row in new UIElement[] { BrainKeyRow, CloudSpeechRow, DeepgramKeyRow, DeepgramLink, DeepgramStatusRow, WakeWordStatus,
+                     VoiceKeyRow, AzureLink, VoiceStatusRow, AccentRow })
+        {
+            Motion.CrossfadeVisibility(row, rise: 4);
+        }
+    }
+
+    /// <summary>Test is asking (a spinner by the status), or has its answer (which rises in).</summary>
+    private static void SetTesting(ProgressRing ring, TextBlock status, bool testing)
+    {
+        ring.IsActive = testing;
+        ring.Visibility = testing ? Visibility.Visible : Visibility.Collapsed;
+        if (!testing)
+        {
+            Motion.Enter(status, new System.Numerics.Vector2(0, 4));
+        }
     }
 
     private void SizeAndCentre()
@@ -82,6 +142,7 @@ public sealed partial class SettingsWindow : Window
             DistanceSlider.Value = _settings.DistanceFromTop;
             DistanceLabel.Text = $"{_settings.DistanceFromTop:0} px";
             HideIdleToggle.IsOn = _settings.HideWhenIdle;
+            StepAsideToggle.IsOn = _settings.StepAsideForApps;
 
             SpeedCombo.SelectedItem = SpeedCombo.Items.Cast<ComboBoxItem>()
                 .First(item => (string)item.Tag == _settings.AnimationSpeed.ToString());
@@ -98,29 +159,49 @@ public sealed partial class SettingsWindow : Window
             NotificationsToggle.IsOn = _settings.ShowNotifications;
             NotificationsDescription.Text = AppPaths.IsPackaged
                 ? "Show other apps' notifications on the island; hover one to read it all. Quiet while Do Not Disturb is on."
-                : "Needs the installed version of WinIsland: this copy isn't installed as a package, so Windows won't share notifications with it.";
+                : $"Needs the installed version of {Product.Name}: this copy isn't installed as a package, so Windows won't share notifications with it.";
             ArtworkToggle.IsOn = _settings.FindArtworkOnline;
 
             AssistantHeader.Text = Assistant.Name;
             AssistantTitle.Text = $"{Assistant.Name} voice assistant";
             AssistantToggle.IsOn = _settings.VoiceAssistant;
             AssistantDescription.Text =
-                "Press the shortcut below (or the mic on the expanded island) and speak: “pause”, “next song”, " +
-                "“volume 30”, “open Chrome”. Your voice is turned into text on this PC and never sent anywhere." +
-                (SpeechToText.IsModelDownloaded ? "" : " The first time, it downloads its speech model (465 MB).");
+                "Press the talk shortcut below (or the mic on the expanded island) and speak: “pause”, “next song”, " +
+                "“volume 30”, “open Chrome”. Or press the type shortcut and type it. Your voice is turned into text on this PC, " +
+                "or by Deepgram or Gemini if you choose that below." +
+                (SpeechToText.RequestModel.IsDownloaded ? "" : $" The first time, it downloads its speech model ({SpeechToText.RequestModel.Size}).");
             ShortcutCombo.ItemsSource = HotkeyListener.Choices;
             ShortcutCombo.SelectedItem = HotkeyListener.Choices.Contains(_settings.AssistantShortcut)
                 ? _settings.AssistantShortcut
                 : HotkeyListener.Choices[0];
+            TypeShortcutCombo.ItemsSource = HotkeyListener.TypeChoices;
+            TypeShortcutCombo.SelectedItem = HotkeyListener.TypeChoices.Contains(_settings.TypeShortcut)
+                ? _settings.TypeShortcut
+                : HotkeyListener.TypeChoices[0];
             UpdateShortcutDescription();
+
+            LanguagesCombo.ItemsSource = new[] { "English", "English and Hindi" }; // in SpeechLanguages order
+            LanguagesCombo.SelectedIndex = (int)_settings.SpeechLanguages;
+            LanguagesDescription.Text =
+                $"What you talk to {Assistant.Name} in. With Hindi too, each request is first checked for which " +
+                "language it is, and that check sometimes takes English for Hindi, so leave it on English unless you speak Hindi to it.";
 
             WakeWordTitle.Text = $"Listen for “{Assistant.WakePhrase}”";
             WakeWordDescription.Text =
                 $"Say “{Assistant.WakePhrase}” instead of pressing the shortcut, or say it with your request: “{Assistant.WakePhrase}, next song”. " +
                 "The microphone stays on (Windows shows its mic icon in the taskbar). Only the first moment of each thing said near the PC " +
-                "is checked for the name, on this PC; nothing is kept or sent anywhere. A Bluetooth headset's microphone is never used for this.";
+                "is checked for the name, on this PC; nothing is kept or sent anywhere. A Bluetooth headset's microphone is never used for this. " +
+                "It can now and then wake when you didn't call it; leave this off to keep the microphone closed until you press a shortcut.";
             WakeWordToggle.IsOn = _settings.WakeWord;
             UpdateWakeWordStatus();
+
+            FollowUpsToggle.IsOn = _settings.FollowUps;
+            FollowUpsDescription.Text =
+                $"After answering out loud, {Assistant.Name} listens 5 seconds more, so you can just ask the next thing: “and tomorrow?”, " +
+                "“what about Delhi?”. Either way it remembers the last few questions for 3 minutes, so a follow-up with the shortcut works too.";
+            LoadBrain();
+            LoadDeepgram();
+            LoadVoice();
         }
         finally
         {
@@ -161,7 +242,7 @@ public sealed partial class SettingsWindow : Window
         {
             result = await StartupRegistration.SetEnabledAsync(wanted);
             StartupDescription.Text = result == wanted
-                ? "Open WinIsland when you sign in."
+                ? $"Open {Product.Name} when you sign in."
                 : "Windows has this turned off. Turn it back on in Task Manager → Startup apps.";
         }
         catch (Exception ex)
@@ -187,6 +268,8 @@ public sealed partial class SettingsWindow : Window
         DistanceLabel.Text = $"{e.NewValue:0} px";
         Update(s => s.DistanceFromTop = e.NewValue);
     }
+
+    private void OnStepAsideToggled(object sender, RoutedEventArgs e) => Update(s => s.StepAsideForApps = StepAsideToggle.IsOn);
 
     private void OnHideIdleToggled(object sender, RoutedEventArgs e) =>
         Update(s => s.HideWhenIdle = HideIdleToggle.IsOn);
@@ -234,6 +317,9 @@ public sealed partial class SettingsWindow : Window
         Update(s => s.VoiceAssistant = AssistantToggle.IsOn);
         UpdateShortcutDescription();
         UpdateWakeWordStatus();
+        UpdateBrainEnabled();
+        UpdateDeepgramEnabled();
+        UpdateVoiceEnabled();
     }
 
     private async void OnWakeWordToggled(object sender, RoutedEventArgs e)
@@ -244,6 +330,270 @@ public sealed partial class SettingsWindow : Window
         // The microphone opens in the background; say how that went.
         await Task.Delay(1500);
         UpdateWakeWordStatus();
+    }
+
+    private void LoadBrain()
+    {
+        BrainTitle.Text = $"{Assistant.Name}'s brain (Google Gemini)";
+        BrainDescription.Text =
+            $"For what {Assistant.Name} can't do on the PC: questions, Hindi, writing emails and WhatsApp messages (you review and send them), " +
+            "and “translate / summarise this” on copied text. Only those requests (and the copied text, when you say “this”) go to Google. " +
+            "On Gemini's free tier, Google may use them to improve its products.";
+        BrainToggle.IsOn = _settings.AiProvider == AiProvider.Gemini;
+        bool hasKey = SecretStore.Get(GeminiBrain.KeyName) is { Length: > 0 };
+        GeminiKeyBox.Password = "";
+        GeminiKeyBox.PlaceholderText = hasKey ? "Saved (type a new key to replace it)" : "Gemini API key";
+        BrainStatus.Text = hasKey ? "" : "No key yet: paste one from Google AI Studio (free, no card needed), then Save.";
+        CloudSpeechToggle.IsOn = _settings.CloudSpeech;
+        CloudSpeechDescription.Text =
+            "Much more accurate with Indian accents, names and Hinglish than the PC's own speech recognition. What you say after the " +
+            $"shortcut or “{Assistant.WakePhrase}” is sent to Google (listening for “{Assistant.WakePhrase}” itself stays on this PC). " +
+            "Off, or when Gemini is busy or offline, your voice is turned into text on this PC.";
+        UpdateBrainEnabled();
+    }
+
+    private void UpdateBrainEnabled()
+    {
+        bool on = _settings.VoiceAssistant && _settings.AiProvider == AiProvider.Gemini;
+        BrainToggle.IsEnabled = _settings.VoiceAssistant;
+        BrainKeyRow.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
+        CloudSpeechRow.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void OnCloudSpeechToggled(object sender, RoutedEventArgs e) => Update(s => s.CloudSpeech = CloudSpeechToggle.IsOn);
+
+    private void OnBrainToggled(object sender, RoutedEventArgs e)
+    {
+        Update(s => s.AiProvider = BrainToggle.IsOn ? AiProvider.Gemini : AiProvider.Off);
+        UpdateBrainEnabled();
+    }
+
+    private void OnSaveKeyClick(object sender, RoutedEventArgs e)
+    {
+        if (GeminiKeyBox.Password.Trim() is not { Length: > 0 } key)
+        {
+            return;
+        }
+        SecretStore.Set(GeminiBrain.KeyName, key);
+        GeminiKeyBox.Password = "";
+        GeminiKeyBox.PlaceholderText = "Saved (type a new key to replace it)";
+        BrainStatus.Text = "Saved. Press Test to check it works.";
+    }
+
+    private async void OnTestBrainClick(object sender, RoutedEventArgs e)
+    {
+        if (GeminiKeyBox.Password.Trim() is { Length: > 0 })
+        {
+            OnSaveKeyClick(sender, e); // test what's typed
+        }
+        if (Brains.Current is not { } brain)
+        {
+            BrainStatus.Text = "Paste a key and press Save first.";
+            return;
+        }
+
+        TestBrainButton.IsEnabled = false;
+        BrainStatus.Text = "Asking Gemini…";
+        SetTesting(BrainTesting, BrainStatus, true);
+        try
+        {
+            var reply = await brain.AskAsync("Say hello in five words or fewer.", null, [], CancellationToken.None);
+            BrainStatus.Text = reply is BrainAnswer answer ? $"Works! Gemini says: “{answer.Text}”" : "Works!";
+        }
+        catch (BrainException ex)
+        {
+            BrainStatus.Text = ex.Message;
+        }
+        finally
+        {
+            TestBrainButton.IsEnabled = true;
+            SetTesting(BrainTesting, BrainStatus, false);
+        }
+    }
+
+    private void LoadDeepgram()
+    {
+        DeepgramDescription.Text =
+            "Your words show as you speak, and are understood as soon as you stop, with no wait for Gemini to hear them. " +
+            $"What you say after the shortcut or “{Assistant.WakePhrase}” is streamed to Deepgram (listening for “{Assistant.WakePhrase}” itself " +
+            "stays on this PC). New Deepgram accounts get free credit, no card needed. If Deepgram can't be reached, Gemini or this PC steps in.";
+        DeepgramToggle.IsOn = _settings.DeepgramSpeech;
+        bool hasKey = DeepgramStream.Key is not null;
+        DeepgramKeyBox.Password = "";
+        DeepgramKeyBox.PlaceholderText = hasKey ? "Saved (type a new key to replace it)" : "Deepgram API key";
+        DeepgramStatus.Text = hasKey ? "" : "No key yet: sign up at Deepgram (free credit, no card), create an API key, paste it here, then Save.";
+        UpdateDeepgramEnabled();
+    }
+
+    private void UpdateDeepgramEnabled()
+    {
+        bool on = _settings.VoiceAssistant && _settings.DeepgramSpeech;
+        DeepgramToggle.IsEnabled = _settings.VoiceAssistant;
+        foreach (var part in new FrameworkElement[] { DeepgramKeyRow, DeepgramLink, DeepgramStatusRow })
+        {
+            part.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
+        }
+    }
+
+    private void OnDeepgramToggled(object sender, RoutedEventArgs e)
+    {
+        Update(s => s.DeepgramSpeech = DeepgramToggle.IsOn);
+        UpdateDeepgramEnabled();
+    }
+
+    private void OnSaveDeepgramKeyClick(object sender, RoutedEventArgs e)
+    {
+        if (DeepgramKeyBox.Password.Trim() is not { Length: > 0 } key)
+        {
+            return;
+        }
+        SecretStore.Set(DeepgramStream.KeyName, key);
+        DeepgramKeyBox.Password = "";
+        DeepgramKeyBox.PlaceholderText = "Saved (type a new key to replace it)";
+        DeepgramStatus.Text = "Saved. Press Test to check it works.";
+    }
+
+    private async void OnTestDeepgramClick(object sender, RoutedEventArgs e)
+    {
+        if (DeepgramKeyBox.Password.Trim() is { Length: > 0 })
+        {
+            OnSaveDeepgramKeyClick(sender, e); // test what's typed
+        }
+        if (DeepgramStream.Key is not { } key)
+        {
+            DeepgramStatus.Text = "Paste a key and press Save first.";
+            return;
+        }
+
+        TestDeepgramButton.IsEnabled = false;
+        DeepgramStatus.Text = "Connecting to Deepgram…";
+        SetTesting(DeepgramTesting, DeepgramStatus, true);
+        try
+        {
+            DeepgramStatus.Text = await DeepgramStream.TestAsync(key) is { } problem
+                ? problem
+                : $"Works! {Assistant.Name} will hear your requests with Deepgram.";
+        }
+        finally
+        {
+            TestDeepgramButton.IsEnabled = true;
+            SetTesting(DeepgramTesting, DeepgramStatus, false);
+        }
+    }
+
+    // ---------------------------------------------------------------- the voice it answers in
+
+    private static readonly Windows.Media.Playback.MediaPlayer s_voiceSample = new() { AudioCategory = Windows.Media.Playback.MediaPlayerAudioCategory.Speech };
+
+    private void LoadVoice()
+    {
+        VoiceDescription.Text =
+            $"{Assistant.Name} answers in a natural Microsoft voice instead of Windows' own, with an Indian, American or British accent " +
+            "(and in Hindi when it answers in Hindi). Free for half a million characters a month with your own Azure Speech key " +
+            "(the Azure sign-up asks for a card to check it's you). What it says is sent to Microsoft to be spoken; what you say isn't. " +
+            "Off, or when Azure can't be reached, Windows' voice answers.";
+        AccentDescription.Text =
+            "Match mine: Gemini hears the start of each spoken request to tell your accent (so that goes to Google too).";
+        VoiceToggle.IsOn = _settings.NaturalVoice;
+        bool hasKey = AzureVoice.Key is not null;
+        AzureKeyBox.Password = "";
+        AzureKeyBox.PlaceholderText = hasKey ? "Saved (type a new key to replace it)" : "Azure Speech key";
+        AzureRegionBox.Text = _settings.AzureRegion ?? "";
+        VoiceStatus.Text = hasKey ? "" : "No key yet: create a Speech resource in the Azure portal (the free F0 tier), then copy Key 1 and its Region from Keys and Endpoint.";
+        AccentCombo.SelectedItem = AccentCombo.Items.Cast<ComboBoxItem>().FirstOrDefault(i => (string)i.Tag == _settings.ReplyAccent.ToString()) ?? AccentCombo.Items[0];
+        VoiceGenderCombo.SelectedIndex = _settings.MaleVoice ? 1 : 0;
+        UpdateVoiceEnabled();
+    }
+
+    private void UpdateVoiceEnabled()
+    {
+        bool on = _settings.VoiceAssistant && _settings.NaturalVoice;
+        VoiceToggle.IsEnabled = _settings.VoiceAssistant;
+        foreach (var part in new FrameworkElement[] { VoiceKeyRow, AzureLink, VoiceStatusRow })
+        {
+            part.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
+        }
+        AccentRow.Visibility = _settings.VoiceAssistant ? Visibility.Visible : Visibility.Collapsed; // (Windows' voices take the accent too)
+    }
+
+    private void OnVoiceToggled(object sender, RoutedEventArgs e)
+    {
+        Update(s => s.NaturalVoice = VoiceToggle.IsOn);
+        UpdateVoiceEnabled();
+    }
+
+    private void OnAccentChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (AccentCombo.SelectedItem is ComboBoxItem { Tag: string tag } && Enum.TryParse<AccentChoice>(tag, out var accent))
+        {
+            Update(s => s.ReplyAccent = accent);
+        }
+    }
+
+    private void OnVoiceGenderChanged(object sender, SelectionChangedEventArgs e) =>
+        Update(s => s.MaleVoice = VoiceGenderCombo.SelectedIndex == 1);
+
+    /// <summary>Saves what's typed: a new key (if one's typed) and the region. False (with a note) when there's no region.</summary>
+    private bool SaveAzure()
+    {
+        string region = AzureVoice.NormalizeRegion(AzureRegionBox.Text);
+        if (!AzureVoice.IsRegion(region))
+        {
+            VoiceStatus.Text = "Type your Speech resource's region (shown under Keys and Endpoint), like centralindia or eastus.";
+            return false;
+        }
+        AzureRegionBox.Text = region;
+        Update(s => s.AzureRegion = region);
+        if (AzureKeyBox.Password.Trim() is { Length: > 0 } key)
+        {
+            SecretStore.Set(AzureVoice.KeyName, key);
+            AzureKeyBox.Password = "";
+            AzureKeyBox.PlaceholderText = "Saved (type a new key to replace it)";
+        }
+        return true;
+    }
+
+    private void OnSaveAzureClick(object sender, RoutedEventArgs e)
+    {
+        if (SaveAzure())
+        {
+            VoiceStatus.Text = AzureVoice.Key is null ? "Region saved. Paste the key too." : "Saved. Press Test to hear it.";
+        }
+    }
+
+    /// <summary>Says a line in the voice chosen (Match mine: the accent heard last, else Indian), so you hear it as it'll answer.</summary>
+    private async void OnTestVoiceClick(object sender, RoutedEventArgs e)
+    {
+        if (!SaveAzure())
+        {
+            return;
+        }
+        if (AzureVoice.Key is not { } key)
+        {
+            VoiceStatus.Text = "Paste the key and press Save first.";
+            return;
+        }
+
+        string voice = AzureVoice.VoiceFor("", Speaker.ReplyAccent, _settings.MaleVoice);
+        TestVoiceButton.IsEnabled = false;
+        VoiceStatus.Text = "Asking Azure…";
+        SetTesting(VoiceTesting, VoiceStatus, true);
+        try
+        {
+            var wav = await AzureVoice.SynthesizeAsync($"Hi, I'm {Assistant.Name}. This is how I'll answer you.", voice, key, _settings.AzureRegion!, CancellationToken.None);
+            s_voiceSample.Source = await AzureVoice.ToMediaSourceAsync(wav);
+            s_voiceSample.Play();
+            VoiceStatus.Text = $"Works! That was {voice}.";
+        }
+        catch (AzureVoiceException ex)
+        {
+            VoiceStatus.Text = ex.Message;
+        }
+        finally
+        {
+            TestVoiceButton.IsEnabled = true;
+            SetTesting(VoiceTesting, VoiceStatus, false);
+        }
     }
 
     private void UpdateWakeWordStatus()
@@ -263,9 +613,39 @@ public sealed partial class SettingsWindow : Window
         }
     }
 
-    /// <summary>The island registers the shortcut as soon as the setting changes, so whether it got it is known right away.</summary>
+    private void OnFollowUpsToggled(object sender, RoutedEventArgs e) => Update(s => s.FollowUps = FollowUpsToggle.IsOn);
+
+    private void OnLanguagesChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (LanguagesCombo.SelectedIndex >= 0)
+        {
+            Update(s => s.SpeechLanguages = (SpeechLanguages)LanguagesCombo.SelectedIndex);
+        }
+    }
+
+    private void OnTypeShortcutChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (TypeShortcutCombo.SelectedItem is string shortcut)
+        {
+            Update(s => s.TypeShortcut = shortcut);
+            UpdateShortcutDescription();
+        }
+    }
+
+    /// <summary>The island registers the shortcuts as soon as the setting changes, so whether it got them is known right away.</summary>
     private void UpdateShortcutDescription()
     {
+        TypeShortcutCombo.IsEnabled = _settings.VoiceAssistant;
+        LanguagesCombo.IsEnabled = _settings.VoiceAssistant;
+        FollowUpsToggle.IsEnabled = _settings.VoiceAssistant;
+        bool typeWorks = !_settings.VoiceAssistant || AssistantActivity.TypeShortcutWorks;
+        TypeShortcutDescription.Text = typeWorks
+            ? "Type a request instead of speaking; the answer is shown, not spoken. Enter asks, Esc closes."
+            : $"Another app already uses {_settings.TypeShortcut}, so it does nothing here. Pick another.";
+        TypeShortcutDescription.Foreground = typeWorks
+            ? (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"]
+            : (Brush)Application.Current.Resources["SystemFillColorCautionBrush"];
+
         ShortcutCombo.IsEnabled = _settings.VoiceAssistant;
         ShortcutDescription.Text = !_settings.VoiceAssistant || AssistantActivity.ShortcutWorks
             ? "Works in any app. Press it again to stop early."

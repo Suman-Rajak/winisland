@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Numerics;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
@@ -7,7 +8,7 @@ using Windows.UI;
 
 namespace WinIsland.Activities;
 
-public sealed partial class ShelfView : UserControl
+public sealed partial class ShelfView : UserControl, IEntrance
 {
     private static readonly SolidColorBrush Idle = new(Color.FromArgb(0x40, 255, 255, 255));
     private static readonly SolidColorBrush Hot = new(Color.FromArgb(0xCC, 255, 255, 255));
@@ -26,11 +27,28 @@ public sealed partial class ShelfView : UserControl
 
     internal event Action<ShelfItem>? ItemRemoved;
 
-    /// <summary>Highlights the drop zone while files are being dragged over the island.</summary>
+    /// <summary>Highlights the drop zone while files are being dragged over the island: it brightens and gently swells, ready to catch them.</summary>
     public void SetDragOver(bool dragOver)
     {
+        bool changed = dragOver != _dragOver;
         _dragOver = dragOver;
         UpdateDropZone();
+        if (changed)
+        {
+            DropZone.UpdateLayout(); // (it may have just appeared: its size, to swell about its middle)
+            Motion.Breathe(DropOutline, dragOver, peak: 1.02f, period: 1200);
+        }
+    }
+
+    /// <summary>The tiles come in one after another (or the "drop files here" note rises in).</summary>
+    public void Enter()
+    {
+        if (Items.Count == 0)
+        {
+            Motion.Enter(EmptyText, new Vector2(0, 8), delay: 60);
+            return;
+        }
+        Motion.Cascade(Items.Select((_, i) => Tiles.ContainerFromIndex(i)).OfType<UIElement>(), new Vector2(0, 10), delay: 50, step: 35);
     }
 
     private void UpdateDropZone()

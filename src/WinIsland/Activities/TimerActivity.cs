@@ -77,6 +77,9 @@ internal sealed class TimerActivity : IslandActivity
 
     public override FrameworkElement ExpandedView => _list;
 
+    /// <summary>The ringing bell's loops run only while the island shows it.</summary>
+    public override void OnShown(bool compact, bool expanded) => _compact.SetShown(compact);
+
     public override Task StartAsync()
     {
         RebuildRows();
@@ -98,7 +101,7 @@ internal sealed class TimerActivity : IslandActivity
 
     private void OnDue(TimerItem item, bool missed)
     {
-        Log.Info($"{item.Kind} due{(missed ? " (missed: WinIsland wasn't running or the PC was asleep)" : "")}");
+        Log.Info($"{item.Kind} due{(missed ? $" (missed: {Product.Name} wasn't running or the PC was asleep)" : "")}");
         UpdateCompact();
 
         if (missed)

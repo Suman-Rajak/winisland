@@ -183,7 +183,7 @@ internal static partial class AppCatalog
             }
             done.SetResult(apps);
         })
-        { IsBackground = true, Name = "WinIsland app list" };
+        { IsBackground = true, Name = $"{Product.Name} app list" };
         thread.SetApartmentState(ApartmentState.STA);
         thread.Start();
         return done.Task;

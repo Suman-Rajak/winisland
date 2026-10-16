@@ -5,7 +5,8 @@ namespace WinIsland.Services;
 
 /// <param name="Reply">What to show (and say).</param>
 /// <param name="Speak">Say it out loud too. Not for music commands: you'd hear it over the song.</param>
-internal sealed record CommandResult(string Reply, bool Speak = true);
+/// <param name="Understood">False when no local command matched: then the AI brain gets a go.</param>
+internal sealed record CommandResult(string Reply, bool Speak = true, bool Understood = true);
 
 /// <summary>
 /// Understands simple spoken commands and carries them out on the spot, without going online:
@@ -48,7 +49,7 @@ internal static partial class VoiceCommands
             return timers;
         }
 
-        if (Has(text, @"\b(what|tell me)\b.*\btime\b|\btime is it\b"))
+        if (Has(text, @"\b(what|tell me)\b.*\btime\b|\btime is it\b") && !Has(text, @"\btime (in|at|zone)\b"))
         {
             return new CommandResult($"It's {DateTime.Now.ToString("h:mm tt", CultureInfo.InvariantCulture)}.");
         }
@@ -85,7 +86,7 @@ internal static partial class VoiceCommands
         }
 
         Log.Info($"No command for \"{text}\"");
-        return new CommandResult("I can't do that yet.");
+        return new CommandResult("I can't do that yet.", Understood: false);
     }
 
     // ---------------------------------------------------------------- timers, alarms and reminders
@@ -228,6 +229,12 @@ internal static partial class VoiceCommands
 
     // ---------------------------------------------------------------- music
 
+    /// <summary>"Pause", "stop the music": the request is to pause what's playing.</summary>
+    public static bool AsksToPause(string heard) => MediaCommandIn(Normalize(heard)) == MediaCommand.Pause;
+
+    /// <summary>"Next song", "play", "pause": the request is about what's playing.</summary>
+    public static bool ControlsMedia(string heard) => MediaCommandIn(Normalize(heard)) is not null;
+
     private static MediaCommand? MediaCommandIn(string text)
     {
         // Only short phrases: "pause", "next song", "skip this track", "play the music".
@@ -350,14 +357,14 @@ internal static partial class VoiceCommands
     {
         return await AppCatalog.OpenAsync(target) is { } opened
             ? new CommandResult($"Opening {opened}.")
-            : new CommandResult($"I couldn't find an app called {target}.");
+            : new CommandResult($"I couldn't find an app called {target}.", Understood: target.Split(' ').Length < 3); // "open whatsapp and message mom" isn't an app
     }
 
     // ---------------------------------------------------------------- understanding
 
     /// <summary>
     /// Lower-case, punctuation gone, the wake phrase and politeness stripped:
-    /// "Hey Siro, could you please open Chrome?" → "open chrome".
+    /// "Hey Glyde, could you please open Chrome?" → "open chrome".
     /// </summary>
     private static string Normalize(string text)
     {
@@ -407,7 +414,7 @@ internal static partial class VoiceCommands
     private static bool Has(string text, string pattern) => Regex.IsMatch(text, pattern);
 
     /// <summary>
-    /// "hey siro", "siro", "ok zero" at the start (a real word like "zero" only after a greeting). "Hey" is
+    /// "hey glyde", "glyde", "hey clyde" at the start (a real word like "clyde" only after a greeting). "Hey" is
     /// sometimes heard as "it's", "say" or "a".
     /// </summary>
     private static readonly Regex s_wakePattern = new(

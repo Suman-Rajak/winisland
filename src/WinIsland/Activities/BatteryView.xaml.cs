@@ -1,3 +1,4 @@
+using System.Numerics;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 
@@ -11,7 +12,7 @@ internal enum BatteryMoment
     Critical,
 }
 
-public sealed partial class BatteryView : UserControl
+public sealed partial class BatteryView : UserControl, IEntrance
 {
     public BatteryView()
     {
@@ -35,5 +36,14 @@ public sealed partial class BatteryView : UserControl
         PercentText.Text = $"{percent}%";
         PercentText.Foreground = brush;
         Battery.Show(percent, color);
+    }
+
+    /// <summary>The bolt (or warning) pops in, the words slide in, and the battery fills up to its charge.</summary>
+    public void Enter()
+    {
+        Motion.Pop(Glyph, delay: 30, from: 0.3f);
+        Motion.Enter(Label, new Vector2(-10, 0), delay: 70);
+        Motion.Enter(PercentText, new Vector2(10, 0), delay: 120);
+        Battery.FillUp(delay: 140);
     }
 }

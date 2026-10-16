@@ -2,14 +2,27 @@
 <UserControl
     x:Class="WinIsland.Activities.AssistantView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:WinIsland">
+
+    <UserControl.Resources>
+        <!-- The orb's colours (the waveform and the island's glow use them too; see Aurora). -->
+        <LinearGradientBrush x:Key="OrbBrush" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Offset="0" Color="#FF6E7BFF" />
+            <GradientStop Offset="0.45" Color="#FFA66CFF" />
+            <GradientStop Offset="1" Color="#FFF06AB4" />
+        </LinearGradientBrush>
+    </UserControl.Resources>
 
     <!--
         The assistant in the pill: its orb on the left, then one of
-          - a live waveform while it listens,
+          - a live waveform while it listens, and under it what you're saying, as you say it (kept
+            up, the bars resting and the words shimmering, while it works out the answer),
           - a status line ("Thinking…", download progress, "Didn't catch that"),
-          - what it heard and its answer.
-        Tapping stops listening early, or dismisses the answer.
+          - what it heard and its answer,
+          - a box to type a request in (or a change to a draft),
+          - a draft to confirm.
+        Switching between them crossfades. Tapping stops listening early, or dismisses the answer.
     -->
     <Grid Padding="10,0,18,0" ColumnSpacing="11" Background="Transparent" Tapped="OnTapped">
         <Grid.ColumnDefinitions>
@@ -17,31 +30,115 @@
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
-        <Ellipse x:Name="Orb" Width="20" Height="20" VerticalAlignment="Center">
-            <Ellipse.Fill>
-                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                    <GradientStop Offset="0" Color="#FF8A6CFF" />
-                    <GradientStop Offset="0.5" Color="#FFF05AB4" />
-                    <GradientStop Offset="1" Color="#FF3DB8FF" />
-                </LinearGradientBrush>
-            </Ellipse.Fill>
-        </Ellipse>
+        <!--
+            The orb: Glyde's face (its logo, alive: see GlydeFace), breathing gently, its colours turning
+            while it works something out, with a soft glow behind it that swells with whoever's talking, and
+            rings rippling out from it while it thinks. All animated in code; the sizes here are the resting ones.
+        -->
+        <Grid x:Name="OrbHost" Width="20" Height="20" VerticalAlignment="Center">
+            <Grid x:Name="Breath" Width="20" Height="20">
+                <Ellipse x:Name="OrbGlow" Width="20" Height="20">
+                    <Ellipse.Fill>
+                        <RadialGradientBrush>
+                            <GradientStop Offset="0" Color="#B3F05AB4" />
+                            <GradientStop Offset="0.55" Color="#4D8A6CFF" />
+                            <GradientStop Offset="1" Color="#003DB8FF" />
+                        </RadialGradientBrush>
+                    </Ellipse.Fill>
+                </Ellipse>
+                <Ellipse x:Name="RippleA" Width="20" Height="20" Stroke="{StaticResource OrbBrush}" StrokeThickness="1.2" />
+                <Ellipse x:Name="RippleB" Width="20" Height="20" Stroke="{StaticResource OrbBrush}" StrokeThickness="1.2" />
+                <Grid x:Name="Bead" Width="20" Height="20">
+                    <local:GlydeFace x:Name="Face" Width="20" Height="20" />
+                </Grid>
+            </Grid>
+        </Grid>
 
-        <StackPanel x:Name="Wave" Grid.Column="1" Orientation="Horizontal" Spacing="3"
-                    HorizontalAlignment="Center" VerticalAlignment="Center" />
+        <!-- The waveform fills the pill's first 36 DIPs; the pill grows below it for the words (two lines at
+             most: earlier words give way to "…", see ShowLiveText). -->
+        <Grid x:Name="ListenPanel" Grid.Column="1" VerticalAlignment="Top">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="36" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <StackPanel x:Name="Wave" Orientation="Horizontal" Spacing="3"
+                        HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <TextBlock x:Name="LiveText" Grid.Row="1" Margin="0,0,0,10" FontSize="13" FontWeight="SemiBold"
+                       Foreground="White" TextWrapping="Wrap" TextAlignment="Center"
+                       LineHeight="18" LineStackingStrategy="BlockLineHeight" Visibility="Collapsed" />
+        </Grid>
 
         <StackPanel x:Name="StatusPanel" Grid.Column="1" VerticalAlignment="Center" Spacing="5">
             <TextBlock x:Name="StatusText" FontSize="13" FontWeight="SemiBold" Foreground="White"
-                       TextTrimming="CharacterEllipsis" MaxLines="1" />
-            <ProgressBar x:Name="Progress" Height="3" MinHeight="3" Maximum="1" CornerRadius="1.5"
-                         Foreground="{StaticResource IslandAccentBrush}" Background="#33FFFFFF" />
+                       TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxLines="3" />
+            <!-- Progress: the fill glides to each new value (see SetProgress). -->
+            <Grid x:Name="Progress" Height="3" CornerRadius="1.5" Background="#33FFFFFF">
+                <Border x:Name="ProgressFill" CornerRadius="1.5" Background="{StaticResource IslandAccentBrush}" />
+            </Grid>
         </StackPanel>
 
-        <StackPanel x:Name="AnswerPanel" Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+        <!-- The pill grows to fit the answer (see AnswerHeight); one too long even for that scrolls. -->
+        <Grid x:Name="AnswerPanel" Grid.Column="1" VerticalAlignment="Center" RowSpacing="2" Padding="0,10">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
             <TextBlock x:Name="HeardText" FontSize="12" Foreground="#99FFFFFF"
-                       TextTrimming="CharacterEllipsis" MaxLines="1" />
-            <TextBlock x:Name="ReplyText" FontSize="14" FontWeight="SemiBold" Foreground="White"
                        TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxLines="2" />
+            <ScrollViewer x:Name="ReplyScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <TextBlock x:Name="ReplyText" FontSize="14" FontWeight="SemiBold" Foreground="White"
+                           TextWrapping="Wrap" IsTextSelectionEnabled="False" />
+            </ScrollViewer>
+        </Grid>
+
+        <!-- Typing a request: Enter asks, Esc closes. A plain box on the glass (no frame, no focus underline). -->
+        <StackPanel x:Name="TypePanel" Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+            <TextBlock x:Name="TypeHint" FontSize="11" Foreground="#99FFFFFF" Margin="1,0,0,0"
+                       TextTrimming="CharacterEllipsis" MaxLines="1" />
+            <TextBox x:Name="TypeBox" FontSize="14" Padding="1,4,0,4" MinHeight="0" BorderThickness="0"
+                     IsSpellCheckEnabled="False" KeyDown="OnTypeBoxKeyDown">
+                <TextBox.Resources>
+                    <SolidColorBrush x:Key="TextControlBackground" Color="Transparent" />
+                    <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="Transparent" />
+                    <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="Transparent" />
+                    <SolidColorBrush x:Key="TextControlBorderBrush" Color="Transparent" />
+                    <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="Transparent" />
+                    <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="Transparent" />
+                    <SolidColorBrush x:Key="TextControlForeground" Color="White" />
+                    <SolidColorBrush x:Key="TextControlForegroundPointerOver" Color="White" />
+                    <SolidColorBrush x:Key="TextControlForegroundFocused" Color="White" />
+                    <SolidColorBrush x:Key="TextControlPlaceholderForeground" Color="#80FFFFFF" />
+                    <SolidColorBrush x:Key="TextControlPlaceholderForegroundPointerOver" Color="#80FFFFFF" />
+                    <SolidColorBrush x:Key="TextControlPlaceholderForegroundFocused" Color="#80FFFFFF" />
+                    <Thickness x:Key="TextControlBorderThemeThicknessFocused">0</Thickness>
+                </TextBox.Resources>
+            </TextBox>
         </StackPanel>
+
+        <!-- A draft to confirm: "Email to Rahul" / subject / the start of it / [Cancel] [Open in Gmail]. -->
+        <Grid x:Name="DraftPanel" Grid.Column="1" VerticalAlignment="Center" RowSpacing="2" Padding="0,10">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <TextBlock x:Name="DraftTitle" FontSize="13" FontWeight="SemiBold" Foreground="White"
+                       TextTrimming="CharacterEllipsis" MaxLines="1" />
+            <TextBlock x:Name="DraftSubject" Grid.Row="1" FontSize="12" Foreground="#CCFFFFFF"
+                       TextTrimming="CharacterEllipsis" MaxLines="1" />
+            <TextBlock x:Name="DraftBody" Grid.Row="2" FontSize="12" Foreground="#99FFFFFF"
+                       TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxLines="3" />
+            <StackPanel x:Name="DraftButtons" Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="6" Margin="0,6,0,0">
+                <Button Style="{StaticResource IslandButtonStyle}" Width="72" Height="30" CornerRadius="15"
+                        Background="#26FFFFFF" Click="OnDraftCancelClick">
+                    <TextBlock Text="Cancel" FontSize="12" Foreground="White" />
+                </Button>
+                <Button Style="{StaticResource IslandButtonStyle}" Width="Auto" MinWidth="72" Height="30" CornerRadius="15"
+                        Padding="14,0" Background="White" Click="OnDraftOpenClick">
+                    <TextBlock x:Name="DraftOpenText" FontSize="12" FontWeight="SemiBold" Foreground="Black" />
+                </Button>
+            </StackPanel>
+        </Grid>
     </Grid>
 </UserControl>

@@ -3,6 +3,7 @@ using Microsoft.UI.Composition;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Hosting;
 using Microsoft.UI.Xaml.Media;
 using Windows.UI;
@@ -23,27 +24,46 @@ public sealed partial class IslandWindow : Window
 {
     // The window is a fixed-size transparent stage; only the pill inside it is visible and clickable.
     // Resizing the window itself during animations would jitter, so the pill animates inside it instead.
-    private const float StageWidth = 480;
+    // Wide enough for the widest pill (440, an answer or draft) with the mic/camera bubble beside it (up to
+    // 46 wide, 6 away): 2 × (220 + 6 + 46) plus a little room.
+    private const float StageWidth = 560;
     private const float StageHeight = 270; // the tallest pill (clipboard + tabs) plus room for its bounce
     private const float TabBarHeight = 34;
     private const float TopGap = 8;
 
     private const int PointerTickMs = 30;
     private const int SlowTickEvery = 16; // ~0.5 s
-    private const int ExpandDelayMs = 90;
+    private const int ExpandDelayMs = 50;
     private const int CollapseDelayMs = 280;
+
+    // Stepping aside for an app underneath (see Tick): the pointer must rest this long on the island to
+    // open it, moving no more than this (DIPs). A while into resting, the island starts coming back.
+    private const int RestToOpenMs = 400;
+    private const int RestShowsAfterMs = 120;
+    private const float RestSlop = 9; // (a resting hand still wobbles a little)
+    private const float PeekOpacity = 0.15f; // the island while you point past it at what's underneath
 
     private static readonly PillShape IdleShape = new(124, 32, 16);
 
     private const float BubbleGap = 6;     // between the pill and the mic/camera bubble
     private const float BubbleHeight = 32;
 
+    private const float TabWidth = 40;     // the tab row's buttons, and the gap between them
+    private const float TabSpacing = 4;
+    private const float TabSlide = 28;     // switching tabs, the new one slides in from this far to the side
+
     private readonly IslandOptions _options;
     private readonly AppSettings _settings = AppSettings.Current;
     private readonly IntPtr _hwnd;
     private readonly Compositor _compositor;
     private readonly Visual _stageVisual;
+    private readonly Visual _islandVisual; // the pill with its shadow and glow, for fading it all out
     private readonly CompositionRoundedRectangleGeometry _pill;
+    private readonly Aurora _aurora;
+    private readonly GlassLight _light;
+    private readonly GlydeFace _idleFace = new() { Width = 18, Height = 18 }; // in the pill when there's nothing to show
+    private readonly Grid _idleLayer = new();
+    private readonly HashSet<FrameworkElement> _expandedLayers = []; // (they grow from the top; compact ones from the middle)
     private readonly DispatcherQueueTimer _timer;
     private readonly List<IslandActivity> _activities;
     private readonly PrivacyActivity _privacy;
@@ -58,17 +78,27 @@ public sealed partial class IslandWindow : Window
     private PillShape _appliedShape;
     private List<IslandActivity> _tabs = [];
     private int _selectedTab;
+    private int _highlightedTab = -1; // where the tab highlight is (-1: not placed since the row was built)
+    private float _tabSlide;          // switching tabs: which way the new one comes in (see SetLayerVisible)
     private string _tabBarSignature = string.Empty;
     private bool _dragOpensShelf; // files are being dragged over the island
     private bool _wantExpanded;
+    private bool _bounce; // a new notice is arriving: the pill springs out with a little bounce
     private bool _visible;
     private bool _userHidden;
     private bool _idleHidden;
     private bool _bubbleShown;
     private float _bubbleWidth;
     private bool _pointerOnBubble;
+    private bool _pointerInside;
     private long _insideSince;
     private long _outsideSince;
+    private bool _yielding;         // an app's window is under the pointer: clicks go through, resting opens
+    private bool _enteredPressed;   // came in with a button held: a drag (files for the shelf, or a browser tab)
+    private bool _pressedOver;      // clicked what's underneath: don't open until the pointer leaves
+    private Native.POINT _restAt;   // where the pointer is resting, and since when
+    private long _restSince;
+    private float _peek = 1;        // the island's opacity while stepping aside
     private int _tick;
 
     private Color _tint = ColorMath.NeutralTint;
@@ -90,10 +120,11 @@ public sealed partial class IslandWindow : Window
         ConfigureWindow();
 
         _stageVisual = ElementCompositionPreview.GetElementVisual(Stage);
+        _islandVisual = ElementCompositionPreview.GetElementVisual(Island);
         _compositor = _stageVisual.Compositor;
         _pill = CreatePillGeometry();
         _stageVisual.Clip = _compositor.CreateGeometricClip(_pill);
-        CreateSheen();
+        (_aurora, _light) = CreateSheenAndLight();
 
         // The mic/camera bubble slides along with the pill's right edge as the pill changes size.
         ElementCompositionPreview.SetIsTranslationEnabled(PrivacyBubble, true);
@@ -112,6 +143,9 @@ public sealed partial class IslandWindow : Window
         _shelf = new ShelfActivity();
         var notifications = new NotificationActivity(DispatcherQueue);
         _assistant = new AssistantActivity(DispatcherQueue);
+        _assistant.KeyboardWanted += SetTakesKeyboard;
+        _assistant.VoiceLevel += _aurora.SetLevel;
+        Activated += OnActivated;
         _activities =
         [
             new ClockActivity(DispatcherQueue),
@@ -130,13 +164,21 @@ public sealed partial class IslandWindow : Window
         foreach (var activity in _activities)
         {
             AddLayer(activity.CompactView, activity.CompactShape);
-            AddLayer(activity.ExpandedView, activity.ExpandedShape);
+            AddLayer(activity.ExpandedView, activity.ExpandedShape, expanded: true);
             activity.Changed += (_, _) => OnActivityChanged();
         }
 
+        // With nothing to show, Glyde's face sits in the pill, blinking and glancing about now and then.
+        _idleFace.SetWander(true);
+        _idleLayer.Children.Add(_idleFace);
+        AddLayer(_idleLayer, IdleShape);
+
+        ElementCompositionPreview.SetIsTranslationEnabled(TabBar, true);
+        ElementCompositionPreview.SetIsTranslationEnabled(TabHighlight, true);
         ElementCompositionPreview.GetElementVisual(TabBar).Opacity = 0;
         TabBar.IsHitTestVisible = false;
         _layerVisible[TabBar] = false;
+        _expandedLayers.Add(TabBar);
 
         if (options.DemoLevel)
         {
@@ -165,6 +207,10 @@ public sealed partial class IslandWindow : Window
         if (options.DemoNotification)
         {
             notifications.Demo();
+        }
+        if (options.DemoAssistant)
+        {
+            _assistant.Demo();
         }
         _selectedTab = options.Tab; // only sticks with --pin=expanded; hovering starts on the first tab
 
@@ -196,12 +242,32 @@ public sealed partial class IslandWindow : Window
         EnsureTopmost();
         UpdateState();
         ApplyState();
+        Introduce();
         _timer.Start();
 
         foreach (var activity in _activities)
         {
             _ = StartActivityAsync(activity);
         }
+    }
+
+    /// <summary>
+    /// Coming up: the pill starts as a dot (see <see cref="CreatePillGeometry"/>), fades in as it springs
+    /// out to its shape, and a glint crosses the glass. (Unless it's hidden when idle: then it's just there to hover.)
+    /// </summary>
+    private void Introduce()
+    {
+        if (_idleHidden || !Motion.Enabled)
+        {
+            return;
+        }
+
+        var fade = _compositor.CreateScalarKeyFrameAnimation();
+        fade.InsertKeyFrame(0f, 0f);
+        fade.InsertKeyFrame(1f, 1f, Motion.Decelerate(_compositor));
+        fade.Duration = Scaled(450);
+        _islandVisual.StartAnimation(nameof(_islandVisual.Opacity), fade);
+        _light.Glint(delay: 250);
     }
 
     private static async Task StartActivityAsync(IslandActivity activity)
@@ -218,10 +284,12 @@ public sealed partial class IslandWindow : Window
 
     private void OnActivityChanged()
     {
+        UpdateVisibility(); // the assistant shows even over a full-screen app
         UpdateState();
         UpdateBubble();
         ApplyIdleFade();
         ApplyTheme();
+        _aurora.SetMode(_assistant.Glow);
     }
 
     private void OnSettingsChanged(object? sender, EventArgs e)
@@ -233,6 +301,7 @@ public sealed partial class IslandWindow : Window
         UpdateBubble();
         ApplyTheme();
         ApplyIdleFade();
+        _aurora.SetMode(_assistant.Glow);
     }
 
     // ---------------------------------------------------------------- window setup
@@ -254,7 +323,8 @@ public sealed partial class IslandWindow : Window
     }
 
     /// <summary>Raw Win32 tweaks WinUI has no API for. WinUI rewrites styles on activation, so call this after Activate().</summary>
-    private void ApplyWin32Styles()
+    /// <param name="takesKeyboard">While you type to the assistant, the window can be activated (see <see cref="SetTakesKeyboard"/>).</param>
+    private void ApplyWin32Styles(bool takesKeyboard = false)
     {
         // SetBorderAndTitleBar(false, false) still leaves a dialog frame, which draws as a white outline.
         Native.SetStyle(_hwnd, Native.GetStyle(_hwnd) & ~(Native.WS_BORDER | Native.WS_DLGFRAME | Native.WS_THICKFRAME));
@@ -265,6 +335,10 @@ public sealed partial class IslandWindow : Window
         var exStyle = Native.GetExStyle(_hwnd);
         exStyle |= Native.WS_EX_LAYERED | Native.WS_EX_TOOLWINDOW | Native.WS_EX_NOACTIVATE | Native.WS_EX_TRANSPARENT;
         exStyle &= ~Native.WS_EX_APPWINDOW;
+        if (takesKeyboard)
+        {
+            exStyle &= ~Native.WS_EX_NOACTIVATE;
+        }
         Native.SetExStyle(_hwnd, exStyle);
         Native.SetLayeredWindowAttributes(_hwnd, 0, 255, Native.LWA_ALPHA);
 
@@ -276,10 +350,76 @@ public sealed partial class IslandWindow : Window
             Native.SWP_NOMOVE | Native.SWP_NOSIZE | Native.SWP_NOZORDER | Native.SWP_NOACTIVATE | Native.SWP_FRAMECHANGED);
     }
 
+    // ---------------------------------------------------------------- the keyboard, for typing to the assistant
+
+    private bool _hasKeyboard;
+    private IntPtr _keyboardFrom; // the window that had the keyboard before
+
+    /// <summary>
+    /// The island never takes the keyboard (you keep typing where you were), except while you type to
+    /// the assistant: then it does, and afterwards gives it back to the window that had it.
+    /// </summary>
+    private void SetTakesKeyboard(bool take)
+    {
+        if (take == _hasKeyboard)
+        {
+            return;
+        }
+
+        _hasKeyboard = take;
+        if (take)
+        {
+            _keyboardFrom = Native.GetForegroundWindow();
+            ApplyWin32Styles(takesKeyboard: true);
+            BringToFront();
+            Activate();
+            ApplyWin32Styles(takesKeyboard: true);
+        }
+        else
+        {
+            ApplyWin32Styles();
+            if (Native.GetForegroundWindow() == _hwnd && _keyboardFrom != _hwnd && Native.IsWindow(_keyboardFrom))
+            {
+                Native.SetForegroundWindow(_keyboardFrom);
+            }
+            _keyboardFrom = IntPtr.Zero;
+        }
+    }
+
+    /// <summary>
+    /// Windows lets an app come to the front only when you just used it. Pressing its shortcut or clicking
+    /// it counts, but not always; sharing input with the app in front makes sure.
+    /// </summary>
+    private void BringToFront()
+    {
+        if (Native.SetForegroundWindow(_hwnd))
+        {
+            return;
+        }
+
+        uint ours = Native.GetCurrentThreadId();
+        uint theirs = Native.GetWindowThreadProcessId(Native.GetForegroundWindow(), IntPtr.Zero);
+        if (theirs != 0 && theirs != ours && Native.AttachThreadInput(ours, theirs, true))
+        {
+            Native.SetForegroundWindow(_hwnd);
+            Native.AttachThreadInput(ours, theirs, false);
+        }
+    }
+
+    private void OnActivated(object sender, WindowActivatedEventArgs e)
+    {
+        // You clicked into another app while typing: put the box away.
+        if (_hasKeyboard && e.WindowActivationState == WindowActivationState.Deactivated)
+        {
+            _assistant.OnKeyboardLost();
+        }
+    }
+
     private CompositionRoundedRectangleGeometry CreatePillGeometry()
     {
+        // A dot to start with: the first ApplyState springs it out to the idle pill (see Introduce).
         var pill = _compositor.CreateRoundedRectangleGeometry();
-        pill.Size = new Vector2(IdleShape.Width, IdleShape.Height);
+        pill.Size = Motion.Enabled ? new Vector2(IdleShape.Height) : new Vector2(IdleShape.Width, IdleShape.Height);
         pill.CornerRadius = new Vector2(IdleShape.Radius);
 
         // Keep the pill horizontally centred while its size springs around.
@@ -295,8 +435,10 @@ public sealed partial class IslandWindow : Window
     /// <summary>
     /// The "glass" part: a highlight fading down from the top edge and a thin rim that is brighter
     /// at the top, like light catching the lip of a glass. Both follow the animated pill geometry.
+    /// Over them, inside the pill, the assistant's glowing rim; behind the pill, its halo and the
+    /// pill's shadow (see <see cref="Aurora"/>). And the light that plays on the glass (<see cref="GlassLight"/>).
     /// </summary>
-    private void CreateSheen()
+    private (Aurora, GlassLight) CreateSheenAndLight()
     {
         var highlight = _compositor.CreateLinearGradientBrush();
         highlight.StartPoint = new Vector2(0, 0);
@@ -315,14 +457,26 @@ public sealed partial class IslandWindow : Window
         shape.StrokeBrush = rim;
         shape.StrokeThickness = 2f; // half of it falls outside the pill clip, leaving a 1 px rim
 
+        var size = new Vector2(StageWidth, StageHeight);
         var sheen = _compositor.CreateShapeVisual();
-        sheen.Size = new Vector2(StageWidth, StageHeight);
+        sheen.Size = size;
         sheen.Shapes.Add(shape);
-        ElementCompositionPreview.SetElementChildVisual(SheenHost, sheen);
+
+        var inside = _compositor.CreateContainerVisual();
+        inside.Size = size;
+        inside.Children.InsertAtTop(sheen);
+        ElementCompositionPreview.SetElementChildVisual(SheenHost, inside);
+
+        var behind = _compositor.CreateContainerVisual();
+        behind.Size = size;
+        ElementCompositionPreview.SetElementChildVisual(HaloHost, behind);
+
+        var light = new GlassLight(_compositor, size, inside);
+        return (new Aurora(_compositor, _pill, size, behind, inside), light);
     }
 
     /// <summary>Adds an activity's view to the stage, sized to its pill and hidden.</summary>
-    private void AddLayer(FrameworkElement? view, PillShape shape)
+    private void AddLayer(FrameworkElement? view, PillShape shape, bool expanded = false)
     {
         if (view is null)
         {
@@ -335,9 +489,16 @@ public sealed partial class IslandWindow : Window
         view.VerticalAlignment = VerticalAlignment.Top;
         view.Margin = new Thickness(0, TopGap, 0, 0);
         view.IsHitTestVisible = false;
-        ElementCompositionPreview.GetElementVisual(view).Opacity = 0;
+        ElementCompositionPreview.SetIsTranslationEnabled(view, true);
+        var visual = ElementCompositionPreview.GetElementVisual(view);
+        visual.Opacity = 0;
+        visual.Scale = new Vector3(HiddenScale, HiddenScale, 1);
         ContentHost.Children.Add(view);
         _layerVisible[view] = false;
+        if (expanded)
+        {
+            _expandedLayers.Add(view);
+        }
     }
 
     // ---------------------------------------------------------------- placement & visibility
@@ -376,7 +537,9 @@ public sealed partial class IslandWindow : Window
 
     private void UpdateVisibility()
     {
-        bool visible = !_userHidden && !FullscreenDetector.IsFullscreenAppOn(_monitor, _hwnd);
+        // Out of the way of full-screen games, video and presentations (and when hidden from the tray),
+        // except while the assistant is busy with something you asked it for.
+        bool visible = _assistant.HoldsIsland || (!_userHidden && !FullscreenDetector.IsFullscreenAppOn(_monitor, _hwnd));
         if (visible == _visible)
         {
             return;
@@ -458,6 +621,7 @@ public sealed partial class IslandWindow : Window
 
         Native.GetCursorPos(out var cursor);
         bool inside = HitRect(CurrentShape()).Contains(cursor);
+        long now = Environment.TickCount64;
 
         // Pointing at the mic/camera bubble says again who's using them.
         bool onBubble = _bubbleShown && BubbleRect().Contains(cursor);
@@ -467,9 +631,23 @@ public sealed partial class IslandWindow : Window
         }
         _pointerOnBubble = onBubble;
 
-        SetClickThrough(!(inside || onBubble));
+        UpdateYielding(inside, cursor, now);
+        bool stepAside = _yielding && _state != IslandState.Expanded;
+        SetClickThrough(!(inside || onBubble) || stepAside);
+        Peek(inside && stepAside ? (now - _restSince >= RestShowsAfterMs && !_pressedOver ? 1 : PeekOpacity) : 1);
 
-        long now = Environment.TickCount64;
+        // The glass catches the light where you point.
+        _light.Follow(inside && !stepAside ? new Vector2((cursor.X - _origin.X) / (float)_scale, (cursor.Y - _origin.Y) / (float)_scale) : null);
+
+        if (inside != _pointerInside)
+        {
+            _pointerInside = inside;
+            foreach (var activity in _activities)
+            {
+                activity.SetPointerOver(inside);
+            }
+        }
+
         if (inside)
         {
             _outsideSince = 0;
@@ -481,8 +659,9 @@ public sealed partial class IslandWindow : Window
             if (_outsideSince == 0) _outsideSince = now;
         }
 
-        bool wantExpanded = _state == IslandState.Expanded
-            ? inside || now - _outsideSince < CollapseDelayMs
+        bool wantExpanded = _state == IslandState.Expanded ? inside || now - _outsideSince < CollapseDelayMs
+            : _yielding ? inside && !_pressedOver && now - _restSince >= RestToOpenMs
+            : _enteredPressed ? _dragOpensShelf // (a drag: only files for the shelf open it)
             : inside && now - _insideSince >= ExpandDelayMs;
 
         if (wantExpanded != _wantExpanded)
@@ -490,6 +669,70 @@ public sealed partial class IslandWindow : Window
             _wantExpanded = wantExpanded;
             UpdateState();
         }
+    }
+
+    /// <summary>
+    /// Windows wasn't designed round a notch: under the island there's often an app (a maximized
+    /// browser's tabs). Then, when "step aside for apps" is on, the island lets it be: clicks go through
+    /// to the app, the island fades as you point past it, and it opens only when the pointer rests on it
+    /// for a moment (never after a click on what's underneath). Over the desktop it opens on hover as
+    /// usual. Not while it's showing something you're in the middle of (the assistant, an alarm ringing),
+    /// and not for a drag that comes in (files for the shelf still drop on it).
+    /// </summary>
+    private void UpdateYielding(bool inside, Native.POINT cursor, long now)
+    {
+        if (!inside)
+        {
+            _yielding = _enteredPressed = _pressedOver = false;
+            return;
+        }
+
+        bool pressed = Native.IsMouseButtonDown();
+        if (!_pointerInside)
+        {
+            // Coming in: what's under the pointer decides.
+            _enteredPressed = pressed;
+            _yielding = _settings.StepAsideForApps && !pressed && _state != IslandState.Expanded
+                && WindowsBelow.AppAt(_hwnd, cursor);
+            _restAt = cursor;
+            _restSince = now;
+        }
+        if (_shown?.HoldsIsland == true)
+        {
+            _yielding = false; // (the assistant listening or answering, an alarm ringing: it's for you)
+        }
+        if (!_yielding)
+        {
+            return;
+        }
+
+        if (pressed && _state != IslandState.Expanded)
+        {
+            _pressedOver = true; // you clicked the app underneath
+        }
+        float slop = RestSlop * (float)_scale;
+        if (Math.Abs(cursor.X - _restAt.X) > slop || Math.Abs(cursor.Y - _restAt.Y) > slop)
+        {
+            _restAt = cursor; // still moving: start resting again
+            _restSince = now;
+        }
+    }
+
+    /// <summary>Fades the whole island (and its bubble) while you point past it, and back as it's about to open or the pointer leaves.</summary>
+    private void Peek(float opacity)
+    {
+        if (opacity == _peek)
+        {
+            return;
+        }
+
+        bool returning = opacity > _peek;
+        _peek = opacity;
+        var root = ElementCompositionPreview.GetElementVisual((UIElement)Content);
+        var fade = _compositor.CreateScalarKeyFrameAnimation();
+        fade.InsertKeyFrame(1f, opacity, Motion.Decelerate(_compositor));
+        fade.Duration = Scaled(returning ? RestToOpenMs - RestShowsAfterMs : 140);
+        root.StartAnimation(nameof(root.Opacity), fade);
     }
 
     /// <summary>
@@ -533,6 +776,11 @@ public sealed partial class IslandWindow : Window
             _ => null,
         };
 
+        // Switching tabs, the new one slides in from the side it's on.
+        int from = _state == IslandState.Expanded && _shown is not null ? _tabs.IndexOf(_shown) : -1;
+        int to = state == IslandState.Expanded && shown is not null ? tabs.IndexOf(shown) : -1;
+        _tabSlide = from >= 0 && to >= 0 && from != to && Motion.Enabled ? Math.Sign(to - from) * TabSlide : 0;
+
         bool tabsChanged = !tabs.SequenceEqual(_tabs);
         _tabs = tabs;
         if (state == _state && shown == _shown && !tabsChanged)
@@ -543,6 +791,16 @@ public sealed partial class IslandWindow : Window
                 ApplyShape();
             }
             return;
+        }
+
+        // Something new on the island: a glint crosses the glass as it opens, and a notice arriving
+        // springs the pill out with a little bounce.
+        bool opening = state == IslandState.Expanded && _state != IslandState.Expanded;
+        bool arriving = state == IslandState.Compact && shown != _shown && _state != IslandState.Expanded;
+        _bounce = arriving;
+        if (opening || arriving)
+        {
+            _light.Glint(delay: 120);
         }
 
         _state = state;
@@ -678,15 +936,17 @@ public sealed partial class IslandWindow : Window
         }
         UpdateTabBar();
         SetLayerVisible(TabBar, ShowTabs);
+        SetLayerVisible(_idleLayer, _state == IslandState.Idle);
 
         foreach (var activity in _activities)
         {
             bool compact = _state == IslandState.Compact && activity == _shown;
             bool expanded = _state == IslandState.Expanded && activity == _shown;
             SetLayerVisible(activity.CompactView, compact);
-            SetLayerVisible(activity.ExpandedView, expanded);
+            SetLayerVisible(activity.ExpandedView, expanded, _tabSlide);
             activity.OnShown(compact, expanded);
         }
+        _tabSlide = 0;
 
         UpdateBubble();
         ApplyIdleFade();
@@ -698,7 +958,8 @@ public sealed partial class IslandWindow : Window
     {
         var shape = CurrentShape();
         _appliedShape = shape;
-        AnimatePill(shape, expanding: _state == IslandState.Expanded);
+        AnimatePill(shape, expanding: _state == IslandState.Expanded, bounce: _bounce);
+        _bounce = false;
 
         var (view, viewShape) = _state switch
         {
@@ -713,32 +974,38 @@ public sealed partial class IslandWindow : Window
         }
     }
 
-    /// <summary>One small icon button per tab, the selected one highlighted. Rebuilt only when tabs or selection change.</summary>
+    /// <summary>One small icon button per tab, then the assistant's. Rebuilt only when the tabs change; see <see cref="UpdateTabHighlight"/> for the selection.</summary>
     private void UpdateTabBar()
     {
-        string signature = string.Join(",", _tabs.Select(t => t.Name)) + "|" + _selectedTab + "|" + (AssistantActivity.IsEnabled ? AssistantActivity.Shortcut : "");
-        if (signature == _tabBarSignature)
+        string signature = string.Join(",", _tabs.Select(t => t.Name)) + "|"
+            + (AssistantActivity.IsEnabled ? AssistantActivity.Shortcut + AssistantActivity.TypeShortcut : "");
+        if (signature != _tabBarSignature)
         {
-            return;
+            _tabBarSignature = signature;
+            BuildTabBar();
+            _highlightedTab = -1;
         }
+        UpdateTabHighlight();
+    }
 
-        _tabBarSignature = signature;
-        TabBar.Children.Clear();
+    private void BuildTabBar()
+    {
+        TabButtons.Children.Clear();
         for (int i = 0; i < _tabs.Count; i++)
         {
             int index = i;
             var button = new Microsoft.UI.Xaml.Controls.Button
             {
                 Style = (Style)Application.Current.Resources["IslandButtonStyle"],
-                Width = 40,
+                Width = TabWidth,
                 Height = 26,
                 CornerRadius = new CornerRadius(13),
-                Background = new SolidColorBrush(i == _selectedTab ? Color.FromArgb(0x33, 255, 255, 255) : Color.FromArgb(0, 0, 0, 0)),
                 Content = new Microsoft.UI.Xaml.Controls.FontIcon
                 {
                     Glyph = _tabs[i].Glyph,
                     FontSize = 13,
-                    Foreground = new SolidColorBrush(i == _selectedTab ? Color.FromArgb(255, 255, 255, 255) : Color.FromArgb(0x99, 255, 255, 255)),
+                    Foreground = new SolidColorBrush(Color.FromArgb(255, 255, 255, 255)),
+                    OpacityTransition = new ScalarTransition { Duration = TimeSpan.FromMilliseconds(220) },
                 },
             };
             Microsoft.UI.Xaml.Controls.ToolTipService.SetToolTip(button, _tabs[i].Name);
@@ -747,13 +1014,13 @@ public sealed partial class IslandWindow : Window
                 _selectedTab = index;
                 UpdateState();
             };
-            TabBar.Children.Add(button);
+            TabButtons.Children.Add(button);
         }
 
         if (AssistantActivity.IsEnabled)
         {
             // After the tabs, set apart: the assistant's mic.
-            TabBar.Children.Add(new Microsoft.UI.Xaml.Shapes.Rectangle
+            TabButtons.Children.Add(new Microsoft.UI.Xaml.Shapes.Rectangle
             {
                 Width = 1,
                 Height = 14,
@@ -764,7 +1031,7 @@ public sealed partial class IslandWindow : Window
             var mic = new Microsoft.UI.Xaml.Controls.Button
             {
                 Style = (Style)Application.Current.Resources["IslandButtonStyle"],
-                Width = 40,
+                Width = TabWidth,
                 Height = 26,
                 CornerRadius = new CornerRadius(13),
                 Content = new Microsoft.UI.Xaml.Controls.FontIcon
@@ -776,8 +1043,70 @@ public sealed partial class IslandWindow : Window
             };
             Microsoft.UI.Xaml.Controls.ToolTipService.SetToolTip(mic, $"Talk to {Assistant.Name} ({AssistantActivity.Shortcut})");
             mic.Click += (_, _) => _assistant.Toggle();
-            TabBar.Children.Add(mic);
+            TabButtons.Children.Add(mic);
+
+            var keyboard = new Microsoft.UI.Xaml.Controls.Button
+            {
+                Style = (Style)Application.Current.Resources["IslandButtonStyle"],
+                Width = TabWidth,
+                Height = 26,
+                CornerRadius = new CornerRadius(13),
+                Content = new Microsoft.UI.Xaml.Controls.FontIcon
+                {
+                    Glyph = "", // Keyboard
+                    FontSize = 13,
+                    Foreground = new SolidColorBrush(Color.FromArgb(0xCC, 255, 255, 255)),
+                },
+            };
+            Microsoft.UI.Xaml.Controls.ToolTipService.SetToolTip(keyboard, $"Type to {Assistant.Name} ({AssistantActivity.TypeShortcut})");
+            keyboard.Click += (_, _) => _assistant.StartTyping();
+            TabButtons.Children.Add(keyboard);
         }
+    }
+
+    /// <summary>
+    /// The selected tab's icon brightens and the highlight springs over to it. While the tab row is
+    /// hidden (or was just rebuilt) it's simply put there, so it never slides in from a stale place.
+    /// </summary>
+    private void UpdateTabHighlight()
+    {
+        for (int i = 0; i < _tabs.Count && i < TabButtons.Children.Count; i++)
+        {
+            if (TabButtons.Children[i] is Microsoft.UI.Xaml.Controls.Button { Content: UIElement icon })
+            {
+                icon.Opacity = i == _selectedTab ? 1 : 0.6;
+            }
+        }
+
+        if (_selectedTab == _highlightedTab)
+        {
+            return;
+        }
+
+        var visual = ElementCompositionPreview.GetElementVisual(TabHighlight);
+        var target = new Vector3(_selectedTab * (TabWidth + TabSpacing), 0, 0);
+        if (_highlightedTab < 0 || !_layerVisible[TabBar] || !Motion.Enabled)
+        {
+            visual.StopAnimation("Translation");
+            visual.Properties.InsertVector3("Translation", target);
+        }
+        else
+        {
+            var slide = _compositor.CreateSpringVector3Animation();
+            slide.FinalValue = target;
+            slide.DampingRatio = 0.72f;
+            slide.Period = Scaled(45);
+            visual.StartAnimation("Translation", slide);
+
+            // A little squeeze as it moves, like a drop of liquid.
+            var squeeze = _compositor.CreateVector3KeyFrameAnimation();
+            squeeze.InsertKeyFrame(0.35f, new Vector3(1.18f, 0.86f, 1), Motion.Decelerate(_compositor));
+            squeeze.InsertKeyFrame(1f, Vector3.One, Motion.Decelerate(_compositor));
+            squeeze.Duration = Scaled(380);
+            visual.CenterPoint = new Vector3(TabWidth / 2, 13, 0);
+            visual.StartAnimation(nameof(visual.Scale), squeeze);
+        }
+        _highlightedTab = _selectedTab;
     }
 
     /// <summary>
@@ -832,6 +1161,7 @@ public sealed partial class IslandWindow : Window
     private void ApplyIdleFade()
     {
         bool hide = _settings.HideWhenIdle && _state == IslandState.Idle && _options.PinnedState is null && !_bubbleShown;
+        _idleFace.SetAlive(_state == IslandState.Idle && !hide); // (blinking only while it can be seen)
         if (hide == _idleHidden)
         {
             return;
@@ -839,19 +1169,20 @@ public sealed partial class IslandWindow : Window
 
         _idleHidden = hide;
         var fade = _compositor.CreateScalarKeyFrameAnimation();
-        fade.InsertKeyFrame(1f, hide ? 0f : 1f);
-        fade.Duration = Scaled(hide ? 300 : 120);
-        _stageVisual.StartAnimation(nameof(_stageVisual.Opacity), fade);
+        fade.InsertKeyFrame(1f, hide ? 0f : 1f, hide ? Motion.Accelerate(_compositor) : Motion.Decelerate(_compositor));
+        fade.Duration = Scaled(hide ? 300 : 160);
+        _islandVisual.StartAnimation(nameof(_islandVisual.Opacity), fade);
     }
 
     /// <summary>A duration adjusted for the "animation speed" setting.</summary>
     private TimeSpan Scaled(double milliseconds) => TimeSpan.FromMilliseconds(milliseconds * _settings.AnimationScale);
 
-    private void AnimatePill(PillShape shape, bool expanding)
+    /// <param name="bounce">A notice arriving: a livelier spring, so the pill pops out to meet it.</param>
+    private void AnimatePill(PillShape shape, bool expanding, bool bounce = false)
     {
         // Growing is a little bouncy, like the iPhone's island; shrinking settles faster.
-        float damping = expanding ? 0.68f : 0.85f;
-        var period = Scaled(expanding ? 55 : 45);
+        float damping = expanding ? 0.68f : bounce && Motion.Enabled ? 0.6f : 0.85f;
+        var period = Scaled(expanding || bounce ? 52 : 45);
 
         StartSpring(nameof(_pill.Size), new Vector2(shape.Width, shape.Height), damping, period);
         StartSpring(nameof(_pill.CornerRadius), new Vector2(shape.Radius), damping, period);
@@ -866,7 +1197,16 @@ public sealed partial class IslandWindow : Window
         _pill.StartAnimation(property, spring);
     }
 
-    private void SetLayerVisible(FrameworkElement? layer, bool show)
+    private const float HiddenScale = 0.94f; // a hidden view, a little smaller than it shows: it grows into place
+
+    /// <summary>
+    /// Fades a view (or the tab row) in or out. Coming in it grows into place as the pill springs open
+    /// (an expanded view from the top, dropping into place as the pill grows down; a compact one from the
+    /// middle), then plays its own entrance (<see cref="IEntrance"/>). Going out it shrinks back and fades
+    /// quickly, out of the way of what's next.
+    /// </summary>
+    /// <param name="slide">Switching tabs: comes in from this far to the side (negative: from the left) and leaves the other way.</param>
+    private void SetLayerVisible(FrameworkElement? layer, bool show, float slide = 0)
     {
         // Re-running the fade on a layer that's already showing would restart it and flicker.
         if (layer is null || _layerVisible[layer] == show)
@@ -877,27 +1217,55 @@ public sealed partial class IslandWindow : Window
         _layerVisible[layer] = show;
         layer.IsHitTestVisible = show;
         var visual = ElementCompositionPreview.GetElementVisual(layer);
+        bool fromTop = _expandedLayers.Contains(layer);
         double width = double.IsNaN(layer.Width) ? layer.ActualWidth : layer.Width; // the tab row sizes itself
-        visual.CenterPoint = new Vector3((float)width / 2, 0, 0);
+        double height = double.IsNaN(layer.Height) ? layer.ActualHeight : layer.Height;
+        visual.CenterPoint = new Vector3((float)width / 2, fromTop ? 0 : (float)height / 2, 0);
 
         var fade = _compositor.CreateScalarKeyFrameAnimation();
-        fade.InsertKeyFrame(1f, show ? 1f : 0f);
-        fade.Duration = Scaled(show ? 220 : 110);
+        fade.InsertKeyFrame(1f, show ? 1f : 0f, show ? Motion.Decelerate(_compositor) : Motion.Accelerate(_compositor));
+        fade.Duration = Scaled(show ? 200 : 110);
         if (show)
         {
-            fade.DelayTime = Scaled(60); // let the pill start changing shape first
+            fade.DelayTime = Scaled(slide != 0 ? 15 : 25); // let the pill start changing shape first
         }
 
         var scale = _compositor.CreateSpringVector3Animation();
-        scale.FinalValue = show ? Vector3.One : new Vector3(0.92f, 0.92f, 1f);
+        scale.FinalValue = show ? Vector3.One : new Vector3(HiddenScale, HiddenScale, 1f);
         scale.DampingRatio = 0.8f;
         scale.Period = Scaled(50);
 
+        var move = _compositor.CreateVector3KeyFrameAnimation();
+        if (show)
+        {
+            move.InsertKeyFrame(0f, new Vector3(slide, fromTop && slide == 0 && Motion.Enabled ? -8 : 0, 0));
+            move.InsertKeyFrame(1f, Vector3.Zero, Motion.Decelerate(_compositor));
+            move.Duration = Scaled(420);
+        }
+        else
+        {
+            move.InsertKeyFrame(1f, new Vector3(-slide * 0.6f, 0, 0), Motion.Accelerate(_compositor));
+            move.Duration = Scaled(160);
+        }
+
         visual.StartAnimation(nameof(visual.Opacity), fade);
         visual.StartAnimation(nameof(visual.Scale), scale);
+        visual.StartAnimation("Translation", move);
+
+        if (show && layer is IEntrance entrance)
+        {
+            entrance.Enter();
+        }
+        else if (show && layer == TabBar)
+        {
+            Motion.Cascade(TabButtons.Children, new Vector2(0, -6), delay: 50, step: 28);
+            Motion.Enter(TabHighlight, Vector2.Zero, delay: 90, scale: 0.6f);
+        }
     }
 
     // ---------------------------------------------------------------- glass
+
+    private const double WashOpacity = 0.6; // the artwork's colour wash in the glass
 
     /// <summary>
     /// Colours the glass from the activity being shown or, failing that, from whichever live activity
@@ -930,7 +1298,7 @@ public sealed partial class IslandWindow : Window
         {
             if (!_glowFading)
             {
-                GlowLayer.Opacity = glow is null ? 0 : 0.9;
+                GlowLayer.Opacity = glow is null ? 0 : WashOpacity;
             }
             return;
         }
@@ -951,6 +1319,6 @@ public sealed partial class IslandWindow : Window
 
         _glowFading = false;
         GlowBrush.ImageSource = glow;
-        GlowLayer.Opacity = glow is null ? 0 : 0.9;
+        GlowLayer.Opacity = glow is null ? 0 : WashOpacity;
     }
 }

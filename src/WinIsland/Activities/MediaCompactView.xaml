@@ -6,7 +6,7 @@
 
     <!-- Artwork on the left, level bars on the right. -->
     <Grid Padding="6,0,14,0">
-        <Grid Width="24" Height="24" HorizontalAlignment="Left">
+        <Grid x:Name="ArtHost" Width="24" Height="24" HorizontalAlignment="Left">
             <Border CornerRadius="7" Background="#26FFFFFF">
                 <FontIcon Glyph="&#xE8D6;" FontSize="11" Foreground="#99FFFFFF" />
             </Border>

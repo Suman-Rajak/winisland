@@ -26,11 +26,11 @@ internal sealed class TrayIconController : IDisposable
         menu.Items.Add(new MenuFlyoutItem { Text = "Settings", Command = new RelayCommand(openSettings) });
         menu.Items.Add(toggleItem);
         menu.Items.Add(new MenuFlyoutSeparator());
-        menu.Items.Add(new MenuFlyoutItem { Text = "Quit WinIsland", Command = new RelayCommand(quit) });
+        menu.Items.Add(new MenuFlyoutItem { Text = $"Quit {Product.Name}", Command = new RelayCommand(quit) });
 
         _icon = new TaskbarIcon
         {
-            ToolTipText = "WinIsland",
+            ToolTipText = Product.Name,
             Icon = new System.Drawing.Icon(Path.Combine(AppContext.BaseDirectory, "Assets", "island.ico")),
             ContextMenuMode = ContextMenuMode.PopupMenu,
             ContextFlyout = menu,

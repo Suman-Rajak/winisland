@@ -20,8 +20,8 @@ public partial class App : Application
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
         // Launching WinIsland again while it's running opens Settings in the running copy.
-        s_showSettingsSignal = new EventWaitHandle(false, EventResetMode.AutoReset, @"Local\WinIsland.ShowSettings");
-        s_instanceMutex = new Mutex(initiallyOwned: true, @"Local\WinIsland.SingleInstance", out bool isFirstInstance);
+        s_showSettingsSignal = new EventWaitHandle(false, EventResetMode.AutoReset, $@"Local\{Product.Name}.ShowSettings");
+        s_instanceMutex = new Mutex(initiallyOwned: true, $@"Local\{Product.Name}.SingleInstance", out bool isFirstInstance);
         if (!isFirstInstance)
         {
             s_showSettingsSignal.Set();
@@ -29,7 +29,7 @@ public partial class App : Application
             return;
         }
 
-        Log.Info($"WinIsland {typeof(App).Assembly.GetName().Version?.ToString(3)} starting " +
+        Log.Info($"{Product.Name} {typeof(App).Assembly.GetName().Version?.ToString(3)} starting " +
                  $"({(AppPaths.IsPackaged ? "installed package" : "unpackaged")}, data in {AppPaths.DataFolder})");
 
         var dispatcher = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();

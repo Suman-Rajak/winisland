@@ -11,8 +11,8 @@ namespace WinIsland;
 internal static class StartupRegistration
 {
     private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
-    private const string ValueName = "WinIsland";
-    private const string TaskId = "WinIslandStartup"; // Package.appxmanifest
+    private const string ValueName = Product.Name;
+    private const string TaskId = "GlydeStartup"; // Package.appxmanifest
 
     /// <summary>
     /// Left in the installed app's data folder by build-package.ps1 when it removes the plain build's Run
@@ -48,6 +48,7 @@ internal static class StartupRegistration
         }
 
         using var key = Registry.CurrentUser.CreateSubKey(RunKey);
+        key.DeleteValue(Product.FormerName, throwOnMissingValue: false); // the entry under the app's old name
         if (enabled)
         {
             key.SetValue(ValueName, $"\"{Environment.ProcessPath}\"");

@@ -20,7 +20,7 @@ internal sealed class MessageWindow
             cbSize = Marshal.SizeOf<WNDCLASSEX>(),
             lpfnWndProc = Marshal.GetFunctionPointerForDelegate(_wndProc),
             hInstance = GetModuleHandle(null),
-            lpszClassName = $"WinIsland.{name}",
+            lpszClassName = $"{Product.Name}.{name}",
         };
         RegisterClassEx(ref windowClass);
         Handle = CreateWindowEx(0, windowClass.lpszClassName, "", 0, 0, 0, 0, 0, HWND_MESSAGE, IntPtr.Zero, windowClass.hInstance, IntPtr.Zero);

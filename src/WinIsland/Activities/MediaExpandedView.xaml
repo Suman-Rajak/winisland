@@ -19,18 +19,21 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
-            <Grid>
-                <Border CornerRadius="14" Background="#26FFFFFF">
-                    <FontIcon Glyph="&#xE8D6;" FontSize="24" Foreground="#99FFFFFF" />
-                </Border>
-                <Border CornerRadius="14">
-                    <Border.Background>
-                        <ImageBrush x:Name="Art" Stretch="UniformToFill" />
-                    </Border.Background>
-                </Border>
+            <!-- ArtBreath swells very slowly while the music plays. -->
+            <Grid x:Name="ArtHost" Width="64" Height="64">
+                <Grid x:Name="ArtBreath" Width="64" Height="64">
+                    <Border CornerRadius="14" Background="#26FFFFFF">
+                        <FontIcon Glyph="&#xE8D6;" FontSize="24" Foreground="#99FFFFFF" />
+                    </Border>
+                    <Border CornerRadius="14">
+                        <Border.Background>
+                            <ImageBrush x:Name="Art" Stretch="UniformToFill" />
+                        </Border.Background>
+                    </Border>
+                </Grid>
             </Grid>
 
-            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+            <StackPanel x:Name="TextStack" Grid.Column="1" VerticalAlignment="Center" Spacing="1">
                 <TextBlock x:Name="TitleText" FontSize="16" FontWeight="SemiBold" Foreground="White"
                            TextTrimming="CharacterEllipsis" MaxLines="1" />
                 <TextBlock x:Name="ArtistText" FontSize="13" Foreground="#B3FFFFFF"
@@ -60,7 +63,7 @@
                        VerticalAlignment="Center" />
         </Grid>
 
-        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="28"
+        <StackPanel x:Name="Controls" Grid.Row="2" Orientation="Horizontal" Spacing="28"
                     HorizontalAlignment="Center" VerticalAlignment="Center">
             <Button Style="{StaticResource IslandButtonStyle}" Click="OnPreviousClick"
                     ToolTipService.ToolTip="Previous">

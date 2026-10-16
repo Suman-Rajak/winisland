@@ -5,7 +5,8 @@ namespace WinIsland.Services;
 /// <summary>Detects games, fullscreen video and presentations so the island can get out of the way.</summary>
 internal static class FullscreenDetector
 {
-    private static readonly HashSet<string> s_shellClasses = new(StringComparer.Ordinal)
+    /// <summary>The desktop and the taskbar: not apps.</summary>
+    internal static readonly HashSet<string> ShellClasses = new(StringComparer.Ordinal)
     {
         "Progman",        // desktop
         "WorkerW",        // desktop wallpaper host
@@ -27,7 +28,7 @@ internal static class FullscreenDetector
         }
 
         // A maximized window also covers the monitor when the taskbar auto-hides; that is not fullscreen.
-        if (Native.IsZoomed(foreground) || s_shellClasses.Contains(Native.GetClassName(foreground)))
+        if (Native.IsZoomed(foreground) || ShellClasses.Contains(Native.GetClassName(foreground)))
         {
             return false;
         }

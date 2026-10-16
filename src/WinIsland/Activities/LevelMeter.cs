@@ -32,18 +32,20 @@ internal static class LevelMeter
             var animation = visual.Compositor.CreateScalarKeyFrameAnimation();
             if (running)
             {
+                // Eased between heights, so the bars bounce rather than tick.
+                var ease = Motion.Sine(visual.Compositor);
                 var pattern = s_patterns[i % s_patterns.Length];
                 for (int k = 0; k < pattern.Length; k++)
                 {
-                    animation.InsertKeyFrame(k / (float)(pattern.Length - 1), pattern[k]);
+                    animation.InsertKeyFrame(k / (float)(pattern.Length - 1), pattern[k], ease);
                 }
                 animation.Duration = TimeSpan.FromMilliseconds(900 + i * 170);
                 animation.IterationBehavior = AnimationIterationBehavior.Forever;
             }
             else
             {
-                animation.InsertKeyFrame(1f, 0.3f);
-                animation.Duration = TimeSpan.FromMilliseconds(200);
+                animation.InsertKeyFrame(1f, 0.3f, Motion.Decelerate(visual.Compositor));
+                animation.Duration = TimeSpan.FromMilliseconds(320);
             }
 
             visual.StartAnimation("Scale.Y", animation);

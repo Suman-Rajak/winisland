@@ -61,7 +61,7 @@ internal sealed class PrivacyMonitor
     public void Start()
     {
         // Registry change notifications belong to the thread that asked for them, so a dedicated one waits.
-        new Thread(Watch) { IsBackground = true, Name = "WinIsland privacy watcher" }.Start();
+        new Thread(Watch) { IsBackground = true, Name = $"{Product.Name} privacy watcher" }.Start();
     }
 
     private void Watch()

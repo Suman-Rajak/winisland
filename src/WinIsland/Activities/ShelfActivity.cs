@@ -84,7 +84,7 @@ internal sealed class ShelfActivity : IslandActivity
         var items = new List<IStorageItem>
         {
             await StorageFile.GetFileFromPathAsync(Path.Combine(root, "Assets", "island.ico")),
-            await StorageFile.GetFileFromPathAsync(Path.Combine(root, "WinIsland.dll")),
+            await StorageFile.GetFileFromPathAsync(Path.Combine(root, Path.GetFileName(typeof(App).Assembly.Location))),
             await StorageFolder.GetFolderFromPathAsync(Path.Combine(root, "Assets")),
         };
         await AddAsync(items, save: false);

@@ -3,9 +3,9 @@ using System.Runtime.InteropServices;
 namespace WinIsland.Interop;
 
 /// <summary>
-/// The slice of the Windows Core Audio API the island needs: the default speakers' volume and mute,
-/// change notifications for them, notice when the default output device changes, and listing
-/// microphones with their names and driver family.
+/// The slice of the Windows Core Audio API the island needs: the default speakers' volume, mute and
+/// loudness, change notifications for them, notice when the default output device changes, and
+/// listing microphones with their names and driver family.
 /// Only the methods up to the last one used are declared; COM only cares about vtable order.
 /// </summary>
 internal static class CoreAudio
@@ -68,15 +68,51 @@ internal static class CoreAudio
         [PreserveSig] int GetValue(ref PropertyKey key, out PropVariant value);
     }
 
-    /// <summary>PROPVARIANT, enough to read a string (VT_LPWSTR). 24 bytes on 64-bit, as in Windows.</summary>
+    /// <summary>PROPVARIANT, enough to read a string (VT_LPWSTR) or a number (VT_UI4). 24 bytes on 64-bit, as in Windows.</summary>
     [StructLayout(LayoutKind.Explicit, Size = 24)]
     public struct PropVariant
     {
         [FieldOffset(0)] public ushort Type;
         [FieldOffset(8)] public IntPtr Pointer;
+        [FieldOffset(8)] public uint UInt;
     }
 
     private const ushort VT_LPWSTR = 31;
+    private const ushort VT_UI4 = 19;
+
+    /// <summary>What an output is: speakers (1), headphones (3), a headset (5)… (EndpointFormFactor).</summary>
+    public static readonly PropertyKey PKEY_AudioEndpoint_FormFactor = new() { FormatId = new("1DA5D803-D492-4EDD-8C23-E0C0FFEE7F0E"), PropertyId = 0 };
+
+    public const uint FormFactorHeadphones = 3, FormFactorHeadset = 5, FormFactorHandset = 6;
+
+    /// <summary>A number property of a device, or null.</summary>
+    public static uint? GetUInt(IMMDevice device, PropertyKey key)
+    {
+        if (device.OpenPropertyStore(STGM_READ, out var store) != 0)
+        {
+            return null;
+        }
+
+        try
+        {
+            if (store.GetValue(ref key, out var value) != 0)
+            {
+                return null;
+            }
+            try
+            {
+                return value.Type == VT_UI4 ? value.UInt : null;
+            }
+            finally
+            {
+                PropVariantClear(ref value);
+            }
+        }
+        finally
+        {
+            Marshal.ReleaseComObject(store);
+        }
+    }
 
     /// <summary>The device's driver family: "BTHHFENUM" for a Bluetooth headset's microphone, "HDAUDIO" for a built-in one, "USB"…</summary>
     public static readonly PropertyKey PKEY_Device_EnumeratorName = new() { FormatId = new("A45C254E-DF1C-4EFD-8020-67D146A850E0"), PropertyId = 24 };
@@ -131,6 +167,12 @@ internal static class CoreAudio
         [PreserveSig] int GetChannelVolumeLevelScalar(uint channel, out float level);
         [PreserveSig] int SetMute([MarshalAs(UnmanagedType.Bool)] bool mute, ref Guid context);
         [PreserveSig] int GetMute([MarshalAs(UnmanagedType.Bool)] out bool mute);
+    }
+
+    [ComImport, Guid("C02216F6-8C67-4B5B-9D00-D008E73E0064"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    public interface IAudioMeterInformation
+    {
+        [PreserveSig] int GetPeakValue(out float peak);
     }
 
     [ComImport, Guid("657804FA-D6AD-4496-8A60-352752AF4F89"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
