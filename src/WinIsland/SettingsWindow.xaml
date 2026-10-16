@@ -122,6 +122,20 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Mac-style notch" Style="{StaticResource CardTitleStyle}" />
+                            <TextBlock Text="The island becomes a black notch hanging from the top edge, always there, in a frosted bar as tall as it is. Maximized and snapped windows start below the bar, like on a Mac."
+                                       Style="{StaticResource CardDescriptionStyle}" />
+                        </StackPanel>
+                        <ToggleSwitch x:Name="NotchToggle" Grid.Column="1" OnContent="" OffContent="" MinWidth="0" Toggled="OnNotchToggled" />
+                    </Grid>
+                </Border>
+                <Border Style="{StaticResource CardStyle}">
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
                             <TextBlock Text="Hide when idle" Style="{StaticResource CardTitleStyle}" />
                             <TextBlock Text="Fade the island out when nothing is playing. Point at the top of the screen to bring it back."
                                        Style="{StaticResource CardDescriptionStyle}" />

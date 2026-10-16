@@ -141,6 +141,8 @@ public sealed partial class SettingsWindow : Window
 
             DistanceSlider.Value = _settings.DistanceFromTop;
             DistanceLabel.Text = $"{_settings.DistanceFromTop:0} px";
+            NotchToggle.IsOn = _settings.Notch;
+            ShowNotch();
             HideIdleToggle.IsOn = _settings.HideWhenIdle;
             StepAsideToggle.IsOn = _settings.StepAsideForApps;
 
@@ -270,6 +272,19 @@ public sealed partial class SettingsWindow : Window
     }
 
     private void OnStepAsideToggled(object sender, RoutedEventArgs e) => Update(s => s.StepAsideForApps = StepAsideToggle.IsOn);
+
+    private void OnNotchToggled(object sender, RoutedEventArgs e)
+    {
+        Update(s => s.Notch = NotchToggle.IsOn);
+        ShowNotch();
+    }
+
+    /// <summary>A notch hangs from the top edge and is always there, so distance and hiding don't apply.</summary>
+    private void ShowNotch()
+    {
+        DistanceSlider.IsEnabled = !NotchToggle.IsOn;
+        HideIdleToggle.IsEnabled = !NotchToggle.IsOn;
+    }
 
     private void OnHideIdleToggled(object sender, RoutedEventArgs e) =>
         Update(s => s.HideWhenIdle = HideIdleToggle.IsOn);

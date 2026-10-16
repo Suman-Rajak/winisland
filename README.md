@@ -8,9 +8,11 @@ A voice island for Windows: a pill at the top of the screen that expands on hove
 
 ## What works
 
-- Transparent, always-on-top pill at the top centre of the primary monitor (sits below the taskbar if it's docked at the top).
+- Always on top, at the top centre of the primary monitor (below the taskbar if it's docked at the top).
 - Glyde has a face: its logo, a glossy violet-to-pink orb with two eyes and a smile, like an emoji. It sits in the empty island, blinking and glancing about now and then; it's the assistant's orb (wide-eyed as it listens, eyes up while it thinks, its mouth moving as it talks, smiling after an answer, a little puzzled when it didn't catch you); and it's at the top of Settings, its eyes following your pointer. The app, tray and Start menu icons are the same face.
-- Windows wasn't designed round a notch, so there's often an app under the island (a maximized browser's tabs). Then it steps aside: clicks go through to the app (you can pick or close the tab under it), the island fades as you point past it, and it opens only when the pointer rests on it for a moment, never after a click on what's underneath. Over the desktop it opens on hover straight away. Files dragged onto it still land on the shelf. (Settings → Step aside for apps.)
+- By default the island is a Mac-style notch: pure black, hanging from the top edge with square top corners, rounded bottom ones and little shoulders curving out into the edge, always there. When it opens it drops down as a black panel, like NotchNook. Around it, a frosted bar across the top of the screen (Windows' acrylic, tinted for the light or dark theme), exactly as tall as the notch at rest: the Mac's menu bar. Windows keeps the bar as it keeps the bottom for the taskbar (it's an app bar), so maximized and snapped windows start below it. Full-screen video and games still get the whole screen; hiding the island from the tray or quitting gives the top back, and Windows takes it back by itself if Glyde is ended. Turned off, the island is the floating glass pill. (Settings → Mac-style notch.)
+- At rest, Glyde's face sits at the island's left end and the time at its right (12 or 24 hours, as Windows shows it).
+- Windows wasn't designed round a notch, so with the top given back (or a window dragged up there) there's often an app under the island, a browser's tabs say. Then it steps aside: clicks go through to the app (you can pick or close the tab under it), the island fades as you point past it, and it opens only when the pointer rests on it for a moment, never after a click on what's underneath. Over the desktop it opens on hover straight away. Files dragged onto it still land on the shelf. (Settings → Step aside for apps.)
 - Spring animations between **idle**, **compact** and **expanded**; hover to expand. It comes up as a dot that springs out to the pill. What it shows glides in as the pill opens, each view with a small entrance of its own (artwork popping in, rows cascading, a battery filling up, a ringing bell swinging); switching tabs slides the content over and the tab highlight springs across. A glint crosses the glass as the island opens or a notice arrives (which springs the pill out with a little bounce), the glass catches the light where you point, buttons grow a touch under the pointer and sink when pressed, and the artwork slowly swells while music plays. A faint shadow keeps the pill clear of light wallpapers. With Windows' "Animation effects" off (Accessibility → Visual effects), things just appear and nothing loops.
 - Clicks pass straight through everywhere except the pill, and clicking it never steals focus.
 - Now playing for any app that publishes media info (Spotify, Amazon Music, YouTube in Chrome/Edge, Media Player…): artwork, title, progress, play/pause/next/previous.
@@ -60,6 +62,7 @@ Changes apply immediately and are saved to `settings.json` in the data folder:
 | Start with Windows | Adds Glyde to your sign-in apps (per-user Run key) |
 | Display | Which screen the island sits on |
 | Distance from top | Gap above the island; 0 hugs the top edge |
+| Mac-style notch | The island as a black notch hanging from the top edge, always there, in a frosted bar as tall as it; windows start below the bar (on by default; distance and "hide when idle" then don't apply) |
 | Hide when idle | Fades the island out when nothing is playing; point at the top of the screen to bring it back |
 | Step aside for apps | With an app under the island, clicks go through to it and resting the pointer opens the island |
 | Animation speed | Relaxed, Normal or Snappy |
@@ -181,10 +184,11 @@ src/WinIsland/
 build-package.ps1             builds and installs the packaged version (Developer Mode)
 tools/make-logo.py            draws the logo (Assets/Glyde.svg, the app icon and the tiles); run it after changing the face
   Services/WindowsBelow.cs    what's under the island: an app's window, or the desktop
+  Services/TopStrip.cs        the frosted bar the notch hangs in (an app bar), so windows start below it
   Services/FullscreenDetector.cs
   Interop/Native.cs           Win32 / DWM calls
   Interop/CoreAudio.cs        Core Audio COM interfaces
   Interop/Displays.cs         monitor enumeration
-  Interop/MessageWindow.cs    hidden message-only window (clipboard and hotkey messages)
+  Interop/MessageWindow.cs    hidden window for Win32 messages (clipboard, hotkeys, the app bar)
   TrayIconController.cs       notification-area icon
 ```

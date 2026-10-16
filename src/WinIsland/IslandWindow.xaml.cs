@@ -43,7 +43,12 @@ public sealed partial class IslandWindow : Window
     private const float RestSlop = 9; // (a resting hand still wobbles a little)
     private const float PeekOpacity = 0.15f; // the island while you point past it at what's underneath
 
-    private static readonly PillShape IdleShape = new(124, 32, 16);
+    // The island at rest is this tall, idle or compact; as a notch, so is the frosted bar it hangs in
+    // across the top of the screen (see TopStrip).
+    private const float RestingHeight = 34;
+
+    // With nothing to show: Glyde's face at the left end, the time at the right.
+    private static readonly PillShape IdleShape = new(176, RestingHeight, RestingHeight / 2);
 
     private const float BubbleGap = 6;     // between the pill and the mic/camera bubble
     private const float BubbleHeight = 32;
@@ -61,7 +66,8 @@ public sealed partial class IslandWindow : Window
     private readonly CompositionRoundedRectangleGeometry _pill;
     private readonly Aurora _aurora;
     private readonly GlassLight _light;
-    private readonly GlydeFace _idleFace = new() { Width = 18, Height = 18 }; // in the pill when there's nothing to show
+    private readonly GlydeFace _idleFace = new() { Width = 20, Height = 20 }; // in the pill when there's nothing to show
+    private readonly TextBlock _idleTime = new();
     private readonly Grid _idleLayer = new();
     private readonly HashSet<FrameworkElement> _expandedLayers = []; // (they grow from the top; compact ones from the middle)
     private readonly DispatcherQueueTimer _timer;
@@ -72,6 +78,10 @@ public sealed partial class IslandWindow : Window
     private readonly Visual _bubbleVisual;
     private readonly ExpressionAnimation _bubbleFollow;
     private readonly Dictionary<FrameworkElement, bool> _layerVisible = [];
+    private readonly TopStrip _strip = new(); // (before the activities: they can change while being set up)
+    private ExpressionAnimation _pillPlace = null!; // (set up with the pill)
+    private ShapeVisual _sheen = null!;
+    private bool? _notch; // shown as a notch, as last applied (see ApplyNotch)
 
     private IslandState _state = IslandState.Idle;
     private IslandActivity? _shown;
@@ -125,6 +135,8 @@ public sealed partial class IslandWindow : Window
         _pill = CreatePillGeometry();
         _stageVisual.Clip = _compositor.CreateGeometricClip(_pill);
         (_aurora, _light) = CreateSheenAndLight();
+        FollowNotchSide(LeftShoulder, -1);
+        FollowNotchSide(RightShoulder, 1);
 
         // The mic/camera bubble slides along with the pill's right edge as the pill changes size.
         ElementCompositionPreview.SetIsTranslationEnabled(PrivacyBubble, true);
@@ -168,9 +180,21 @@ public sealed partial class IslandWindow : Window
             activity.Changed += (_, _) => OnActivityChanged();
         }
 
-        // With nothing to show, Glyde's face sits in the pill, blinking and glancing about now and then.
+        // With nothing to show, Glyde's face sits at the pill's left end, blinking and glancing about now
+        // and then, centred in the rounded end; the time is at the right.
         _idleFace.SetWander(true);
+        _idleFace.HorizontalAlignment = HorizontalAlignment.Left;
+        _idleFace.VerticalAlignment = VerticalAlignment.Center;
+        _idleFace.Margin = new Thickness(RestingHeight / 2 - 10, 0, 0, 0);
+        _idleTime.HorizontalAlignment = HorizontalAlignment.Right;
+        _idleTime.VerticalAlignment = VerticalAlignment.Center;
+        _idleTime.Margin = new Thickness(0, 0, 15, 0);
+        _idleTime.FontSize = 13;
+        _idleTime.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold;
+        _idleTime.Foreground = new SolidColorBrush(Color.FromArgb(0xEE, 255, 255, 255));
+        ShowIdleTime();
         _idleLayer.Children.Add(_idleFace);
+        _idleLayer.Children.Add(_idleTime);
         AddLayer(_idleLayer, IdleShape);
 
         ElementCompositionPreview.SetIsTranslationEnabled(TabBar, true);
@@ -218,6 +242,8 @@ public sealed partial class IslandWindow : Window
         _timer.Interval = TimeSpan.FromMilliseconds(PointerTickMs);
         _timer.Tick += OnTick;
 
+        Closed += (_, _) => _strip.Release(); // the windows get the top of the screen back
+
         _settings.Changed += OnSettingsChanged;
     }
 
@@ -228,7 +254,9 @@ public sealed partial class IslandWindow : Window
         set
         {
             _userHidden = value;
+            UpdatePlacement(); // hidden, it gives the top of the screen back
             UpdateVisibility();
+            ApplyNotch();
         }
     }
 
@@ -241,6 +269,7 @@ public sealed partial class IslandWindow : Window
         UpdateVisibility();
         EnsureTopmost();
         UpdateState();
+        ApplyNotch();
         ApplyState();
         Introduce();
         _timer.Start();
@@ -298,6 +327,7 @@ public sealed partial class IslandWindow : Window
         UpdatePlacement();
         UpdateVisibility();
         UpdateState();
+        ApplyNotch();
         UpdateBubble();
         ApplyTheme();
         ApplyIdleFade();
@@ -422,14 +452,61 @@ public sealed partial class IslandWindow : Window
         pill.Size = Motion.Enabled ? new Vector2(IdleShape.Height) : new Vector2(IdleShape.Width, IdleShape.Height);
         pill.CornerRadius = new Vector2(IdleShape.Radius);
 
-        // Keep the pill horizontally centred while its size springs around.
-        var centre = _compositor.CreateExpressionAnimation("Vector2((stageWidth - pill.Size.X) / 2, topGap)");
-        centre.SetScalarParameter("stageWidth", StageWidth);
-        centre.SetScalarParameter("topGap", TopGap);
-        centre.SetReferenceParameter("pill", pill);
-        pill.StartAnimation(nameof(pill.Offset), centre);
+        // Keep the pill horizontally centred while its size springs around. As a notch, its rounded top
+        // is lifted out of sight (see ApplyNotch).
+        _pillPlace = _compositor.CreateExpressionAnimation("Vector2((stageWidth - pill.Size.X) / 2, topGap - notch * pill.CornerRadius.Y)");
+        _pillPlace.SetScalarParameter("stageWidth", StageWidth);
+        _pillPlace.SetScalarParameter("topGap", TopGap);
+        _pillPlace.SetScalarParameter("notch", 0);
+        _pillPlace.SetReferenceParameter("pill", pill);
+        pill.StartAnimation(nameof(pill.Offset), _pillPlace);
 
         return pill;
+    }
+
+    /// <summary>
+    /// As a notch (see TopStrip), the island is pure black and hangs from the top edge: square at the top
+    /// (the pill is made taller by its corner radius and lifted by as much, above a clip at the edge, so
+    /// only its rounded bottom shows) with shoulders curving out into the edge. Otherwise it's the glass
+    /// pill floating below the top.
+    /// </summary>
+    private void ApplyNotch()
+    {
+        bool notch = IsNotch;
+        if (notch == _notch)
+        {
+            return;
+        }
+
+        _notch = notch;
+        _pillPlace.SetScalarParameter("notch", notch ? 1 : 0);
+        _pill.StartAnimation(nameof(_pill.Offset), _pillPlace);
+        _islandVisual.Clip = notch ? _compositor.CreateInsetClip(0, TopGap, 0, 0) : null;
+        _sheen.IsVisible = !notch; // (black, not glass: no highlight or rim)
+        LeftShoulder.Visibility = RightShoulder.Visibility = notch ? Visibility.Visible : Visibility.Collapsed;
+
+        // The mic/camera bubble hangs from the edge beside it, the same.
+        float radius = notch ? NotchRadius(IdleShape) : BubbleHeight / 2;
+        PrivacyBubble.Height = notch ? RestingHeight : BubbleHeight;
+        PrivacyBubble.CornerRadius = notch ? new CornerRadius(0, 0, radius, radius) : new CornerRadius(radius);
+        PrivacyBubble.BorderThickness = new Thickness(notch ? 0 : 1);
+
+        ApplyShape();
+        ApplyTheme();
+    }
+
+    /// <summary>A notch's bottom corners are tighter than the pill's ends, as a Mac's are.</summary>
+    private static float NotchRadius(PillShape shape) => Math.Clamp(shape.Radius * 0.65f, 10, 22);
+
+    /// <summary>Keeps a shoulder against the notch's side as it springs wider and narrower.</summary>
+    private void FollowNotchSide(FrameworkElement shoulder, float side)
+    {
+        ElementCompositionPreview.SetIsTranslationEnabled(shoulder, true);
+        var follow = _compositor.CreateExpressionAnimation("Vector3(side * (pill.Size.X / 2 + half), 0, 0)");
+        follow.SetReferenceParameter("pill", _pill);
+        follow.SetScalarParameter("side", side);
+        follow.SetScalarParameter("half", (float)(shoulder.Width / 2 - 1)); // (tucked a pixel under the notch)
+        ElementCompositionPreview.GetElementVisual(shoulder).StartAnimation("Translation", follow);
     }
 
     /// <summary>
@@ -458,13 +535,13 @@ public sealed partial class IslandWindow : Window
         shape.StrokeThickness = 2f; // half of it falls outside the pill clip, leaving a 1 px rim
 
         var size = new Vector2(StageWidth, StageHeight);
-        var sheen = _compositor.CreateShapeVisual();
-        sheen.Size = size;
-        sheen.Shapes.Add(shape);
+        _sheen = _compositor.CreateShapeVisual();
+        _sheen.Size = size;
+        _sheen.Shapes.Add(shape);
 
         var inside = _compositor.CreateContainerVisual();
         inside.Size = size;
-        inside.Children.InsertAtTop(sheen);
+        inside.Children.InsertAtTop(_sheen);
         ElementCompositionPreview.SetElementChildVisual(SheenHost, inside);
 
         var behind = _compositor.CreateContainerVisual();
@@ -515,12 +592,31 @@ public sealed partial class IslandWindow : Window
         int width = (int)Math.Ceiling(StageWidth * scale);
         int height = (int)Math.Ceiling(StageHeight * scale);
 
+        // As a notch, the island hangs from the top edge in its bar (see TopStrip), as tall as the bar. So it
+        // goes from the bar's top, not the work area's, which now starts below the bar.
+        int top = display.WorkArea.Top;
+        double distance = _settings.DistanceFromTop;
+        if (IsNotch)
+        {
+            _strip.Keep(display.Bounds, (int)Math.Ceiling(RestingHeight * scale));
+            if (_strip.Top is { } barTop)
+            {
+                top = barTop;
+                distance = 0;
+            }
+        }
+        else if (_strip.Release())
+        {
+            display = Displays.FindOrPrimary(_settings.Display) ?? display; // the work area grew back
+            top = display.WorkArea.Top;
+        }
+
         // Centre on the screen, below the taskbar if it's docked at the top. The pill sits TopGap
         // inside the window, so a smaller distance pushes the (invisible) top of the window off-screen.
         var origin = new Native.POINT
         {
             X = display.Bounds.Left + (display.Bounds.Width - width) / 2,
-            Y = display.WorkArea.Top + (int)Math.Round((_settings.DistanceFromTop - TopGap) * scale),
+            Y = top + (int)Math.Round((distance - TopGap) * scale),
         };
 
         if (display.Handle == _monitor && origin.X == _origin.X && origin.Y == _origin.Y && scale == _scale)
@@ -530,31 +626,35 @@ public sealed partial class IslandWindow : Window
 
         _monitor = display.Handle;
         _origin = origin;
-        _hitTop = display.WorkArea.Top;
+        _hitTop = top;
         _scale = scale;
         Native.SetWindowPos(_hwnd, IntPtr.Zero, origin.X, origin.Y, width, height, Native.SWP_NOZORDER | Native.SWP_NOACTIVATE);
     }
 
+    /// <summary>The island is a notch in its bar at the top of the screen (see TopStrip), unless it's hidden from the tray.</summary>
+    private bool IsNotch => _settings.Notch && !_userHidden;
+
     private void UpdateVisibility()
     {
         // Out of the way of full-screen games, video and presentations (and when hidden from the tray),
-        // except while the assistant is busy with something you asked it for.
-        bool visible = _assistant.HoldsIsland || (!_userHidden && !FullscreenDetector.IsFullscreenAppOn(_monitor, _hwnd));
-        if (visible == _visible)
+        // except while the assistant is busy with something you asked it for. The bar at the top always goes.
+        bool fullscreen = FullscreenDetector.IsFullscreenAppOn(_monitor, _hwnd);
+        bool visible = _assistant.HoldsIsland || (!_userHidden && !fullscreen);
+        if (visible != _visible)
         {
-            return;
+            _visible = visible;
+            if (visible)
+            {
+                AppWindow.Show(activateWindow: false);
+                EnsureTopmost();
+            }
+            else
+            {
+                AppWindow.Hide();
+            }
         }
 
-        _visible = visible;
-        if (visible)
-        {
-            AppWindow.Show(activateWindow: false);
-            EnsureTopmost();
-        }
-        else
-        {
-            AppWindow.Hide();
-        }
+        _strip.Show(visible && !fullscreen, below: _hwnd);
     }
 
     /// <summary>
@@ -612,6 +712,7 @@ public sealed partial class IslandWindow : Window
             UpdatePlacement();
             UpdateVisibility();
             EnsureTopmost();
+            ShowIdleTime();
         }
 
         if (!_visible)
@@ -693,7 +794,7 @@ public sealed partial class IslandWindow : Window
             // Coming in: what's under the pointer decides.
             _enteredPressed = pressed;
             _yielding = _settings.StepAsideForApps && !pressed && _state != IslandState.Expanded
-                && WindowsBelow.AppAt(_hwnd, cursor);
+                && WindowsBelow.AppAt(_hwnd, cursor, _strip.Handle);
             _restAt = cursor;
             _restSince = now;
         }
@@ -908,7 +1009,7 @@ public sealed partial class IslandWindow : Window
             Left = _origin.X + (int)(left * _scale),
             Top = _hitTop,
             Right = _origin.X + (int)((left + _bubbleWidth + pad * 2) * _scale),
-            Bottom = _origin.Y + (int)((TopGap + BubbleHeight + pad) * _scale),
+            Bottom = _origin.Y + (int)((TopGap + (float)PrivacyBubble.Height + pad) * _scale),
         };
     }
 
@@ -1156,11 +1257,12 @@ public sealed partial class IslandWindow : Window
 
     /// <summary>
     /// "Hide when idle": fade the whole island out, but keep hover working so it can come back.
-    /// Not while the mic or camera is in use: then the island stays, with its dot beside it.
+    /// Not while the mic or camera is in use: then the island stays, with its dot beside it. And never
+    /// as a notch (see TopStrip): a notch is always there.
     /// </summary>
     private void ApplyIdleFade()
     {
-        bool hide = _settings.HideWhenIdle && _state == IslandState.Idle && _options.PinnedState is null && !_bubbleShown;
+        bool hide = _settings.HideWhenIdle && !IsNotch && _state == IslandState.Idle && _options.PinnedState is null && !_bubbleShown;
         _idleFace.SetAlive(_state == IslandState.Idle && !hide); // (blinking only while it can be seen)
         if (hide == _idleHidden)
         {
@@ -1174,6 +1276,16 @@ public sealed partial class IslandWindow : Window
         _islandVisual.StartAnimation(nameof(_islandVisual.Opacity), fade);
     }
 
+    /// <summary>The time at the idle island's right end, as Windows writes it (12 or 24 hours).</summary>
+    private void ShowIdleTime()
+    {
+        string time = DateTime.Now.ToString("t", System.Globalization.CultureInfo.CurrentCulture);
+        if (_idleTime.Text != time)
+        {
+            _idleTime.Text = time;
+        }
+    }
+
     /// <summary>A duration adjusted for the "animation speed" setting.</summary>
     private TimeSpan Scaled(double milliseconds) => TimeSpan.FromMilliseconds(milliseconds * _settings.AnimationScale);
 
@@ -1184,8 +1296,12 @@ public sealed partial class IslandWindow : Window
         float damping = expanding ? 0.68f : bounce && Motion.Enabled ? 0.6f : 0.85f;
         var period = Scaled(expanding || bounce ? 52 : 45);
 
-        StartSpring(nameof(_pill.Size), new Vector2(shape.Width, shape.Height), damping, period);
-        StartSpring(nameof(_pill.CornerRadius), new Vector2(shape.Radius), damping, period);
+        // As a notch, taller by its (tighter) corner radius, lifted by as much (see ApplyNotch): the same
+        // height shows, with only the bottom corners rounded.
+        float radius = _notch == true ? NotchRadius(shape) : shape.Radius;
+        float lift = _notch == true ? radius : 0;
+        StartSpring(nameof(_pill.Size), new Vector2(shape.Width, shape.Height + lift), damping, period);
+        StartSpring(nameof(_pill.CornerRadius), new Vector2(radius), damping, period);
     }
 
     private void StartSpring(string property, Vector2 target, float damping, TimeSpan period)
@@ -1270,19 +1386,22 @@ public sealed partial class IslandWindow : Window
     /// <summary>
     /// Colours the glass from the activity being shown or, failing that, from whichever live activity
     /// has colours (so music keeps its colours while the volume indicator is up). Neutral otherwise,
-    /// or when "match the music's colours" is off.
+    /// or when "match the music's colours" is off. A notch is always pure black (the music keeps its
+    /// accent colour for the controls).
     /// </summary>
     private async void ApplyTheme()
     {
         var theme = !_settings.MatchMusicColors ? null
             : _shown?.Theme
               ?? _activities.Where(a => a.WantsCompact && a.Theme is not null).MaxBy(a => a.Priority)?.Theme;
+        bool notch = _notch == true;
 
-        Backdrop.Opacity = _settings.GlassOpacity;
+        double opacity = notch ? 1 : _settings.GlassOpacity;
+        Backdrop.Opacity = opacity;
         ((SolidColorBrush)Application.Current.Resources["IslandAccentBrush"]).Color =
             theme?.Accent ?? Color.FromArgb(255, 255, 255, 255);
 
-        var tint = theme?.Tint ?? ColorMath.NeutralTint;
+        var tint = notch ? Color.FromArgb(255, 0, 0, 0) : theme?.Tint ?? ColorMath.NeutralTint;
         if (tint != _tint)
         {
             _tint = tint;
@@ -1291,9 +1410,9 @@ public sealed partial class IslandWindow : Window
 
         // The bubble is the same glass as the pill.
         PrivacyBubble.Background = new SolidColorBrush(
-            Color.FromArgb((byte)Math.Round(255 * _settings.GlassOpacity), tint.R, tint.G, tint.B));
+            Color.FromArgb((byte)Math.Round(255 * opacity), tint.R, tint.G, tint.B));
 
-        var glow = theme?.Glow;
+        var glow = notch ? null : theme?.Glow;
         if (ReferenceEquals(glow, _glow))
         {
             if (!_glowFading)

@@ -63,6 +63,13 @@ internal sealed class AppSettings
     /// <summary>Gap between the top of the screen (or a top-docked taskbar) and the island, in pixels at 100% scale.</summary>
     public double DistanceFromTop { get; set; } = 8;
 
+    /// <summary>
+    /// The island as a Mac's notch: black, hanging from the top edge, always there, in a frosted bar as tall
+    /// as it is at rest (distance and "hide when idle" don't apply). Windows keeps the bar as it keeps the
+    /// bottom for the taskbar, so maximized and snapped windows start below it.
+    /// </summary>
+    public bool Notch { get; set; } = true;
+
     /// <summary>Fade the island out when there's nothing to show; hovering the top of the screen brings it back.</summary>
     public bool HideWhenIdle { get; set; }
 
@@ -184,6 +191,7 @@ internal sealed class AppSettings
         var defaults = new AppSettings();
         Display = defaults.Display;
         DistanceFromTop = defaults.DistanceFromTop;
+        Notch = defaults.Notch;
         HideWhenIdle = defaults.HideWhenIdle;
         StepAsideForApps = defaults.StepAsideForApps;
         AnimationSpeed = defaults.AnimationSpeed;

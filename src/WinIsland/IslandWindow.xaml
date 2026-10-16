@@ -13,6 +13,15 @@
         <Grid x:Name="Island">
             <Canvas x:Name="HaloHost" IsHitTestVisible="False" />
 
+            <!-- As a notch: its shoulders, curving out into the top edge either side, like a Mac's. Each
+                 tucks a pixel under the notch, so no seam shows; code keeps them at the notch's sides. -->
+            <Path x:Name="LeftShoulder" Data="M0,0 L7,0 L7,6 L6,6 A6,6 0 0 0 0,0 Z" Fill="Black"
+                  Width="7" Height="6" Margin="0,8,0,0" HorizontalAlignment="Center" VerticalAlignment="Top"
+                  IsHitTestVisible="False" Visibility="Collapsed" />
+            <Path x:Name="RightShoulder" Data="M7,0 L0,0 L0,6 L1,6 A6,6 0 0 1 7,0 Z" Fill="Black"
+                  Width="7" Height="6" Margin="0,8,0,0" HorizontalAlignment="Center" VerticalAlignment="Top"
+                  IsHitTestVisible="False" Visibility="Collapsed" />
+
             <!--
                 Stage fills the (transparent) window. Its composition visual is clipped to an animated
                 rounded rectangle in code, so the background *is* the pill, and every layer below is

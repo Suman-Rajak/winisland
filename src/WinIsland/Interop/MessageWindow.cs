@@ -6,13 +6,19 @@ namespace WinIsland.Interop;
 /// A hidden message-only window, for Win32 APIs that report through window messages (clipboard
 /// changes, global hotkeys). Create it on the UI thread; messages arrive there.
 /// </summary>
+/// <remarks>
+/// Some need a real window instead, <c>topLevel</c> (hidden until shown, filled with <c>background</c>):
+/// app bars, and hearing what Windows tells every window, such as Explorer restarting (see
+/// <see cref="Services.TopStrip"/>).
+/// </remarks>
 internal sealed class MessageWindow
 {
     private static readonly IntPtr HWND_MESSAGE = new(-3);
+    private const int WS_POPUP = unchecked((int)0x80000000);
 
     private readonly WndProc _wndProc; // kept alive: Windows holds a pointer to it
 
-    public MessageWindow(string name)
+    public MessageWindow(string name, bool topLevel = false, IntPtr background = default)
     {
         _wndProc = OnMessage;
         var windowClass = new WNDCLASSEX
@@ -20,10 +26,14 @@ internal sealed class MessageWindow
             cbSize = Marshal.SizeOf<WNDCLASSEX>(),
             lpfnWndProc = Marshal.GetFunctionPointerForDelegate(_wndProc),
             hInstance = GetModuleHandle(null),
+            hbrBackground = background,
             lpszClassName = $"{Product.Name}.{name}",
         };
         RegisterClassEx(ref windowClass);
-        Handle = CreateWindowEx(0, windowClass.lpszClassName, "", 0, 0, 0, 0, 0, HWND_MESSAGE, IntPtr.Zero, windowClass.hInstance, IntPtr.Zero);
+        Handle = topLevel
+            ? CreateWindowEx((int)(Native.WS_EX_TOOLWINDOW | Native.WS_EX_NOACTIVATE), windowClass.lpszClassName, Product.Name, WS_POPUP,
+                0, 0, 0, 0, IntPtr.Zero, IntPtr.Zero, windowClass.hInstance, IntPtr.Zero)
+            : CreateWindowEx(0, windowClass.lpszClassName, "", 0, 0, 0, 0, 0, HWND_MESSAGE, IntPtr.Zero, windowClass.hInstance, IntPtr.Zero);
         if (Handle == IntPtr.Zero)
         {
             throw new InvalidOperationException($"Couldn't create the {name} window (error {Marshal.GetLastWin32Error()})");
