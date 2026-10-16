@@ -394,6 +394,32 @@
                             </StackPanel>
                             <ToggleSwitch x:Name="BrainToggle" Grid.Column="1" OnContent="" OffContent="" MinWidth="0" Toggled="OnBrainToggled" />
                         </Grid>
+                        <!-- Which model: Claude Haiku (fastest, paid) or Gemini (free), each with its own key. -->
+                        <Grid x:Name="BrainChoiceRow" ColumnSpacing="16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="Model" Style="{StaticResource CardTitleStyle}" />
+                                <TextBlock x:Name="BrainChoiceDescription" Style="{StaticResource CardDescriptionStyle}" />
+                            </StackPanel>
+                            <ComboBox x:Name="BrainCombo" Grid.Column="1" MinWidth="210" VerticalAlignment="Center" SelectionChanged="OnBrainChanged">
+                                <ComboBoxItem Content="Claude Haiku (fastest)" Tag="Claude" />
+                                <ComboBoxItem Content="Gemini Flash (free)" Tag="Gemini" />
+                            </ComboBox>
+                        </Grid>
+                        <Grid x:Name="ClaudeKeyRow" ColumnSpacing="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <PasswordBox x:Name="ClaudeKeyBox" PlaceholderText="Anthropic API key" />
+                            <Button Grid.Column="1" Content="Save" Click="OnSaveClaudeKeyClick" />
+                            <Button Grid.Column="2" x:Name="TestClaudeButton" Content="Test" Click="OnTestBrainClick" />
+                        </Grid>
+                        <HyperlinkButton x:Name="ClaudeLink" Content="Get a key at console.anthropic.com" NavigateUri="https://console.anthropic.com/settings/keys" Padding="0" />
                         <Grid x:Name="BrainKeyRow" ColumnSpacing="8">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -404,9 +430,7 @@
                             <Button Grid.Column="1" Content="Save" Click="OnSaveKeyClick" />
                             <Button Grid.Column="2" x:Name="TestBrainButton" Content="Test" Click="OnTestBrainClick" />
                         </Grid>
-                        <StackPanel Orientation="Horizontal" Spacing="12">
-                            <HyperlinkButton Content="Get a free key from Google AI Studio" NavigateUri="https://aistudio.google.com/apikey" Padding="0" />
-                        </StackPanel>
+                        <HyperlinkButton x:Name="GeminiLink" Content="Get a free key from Google AI Studio" NavigateUri="https://aistudio.google.com/apikey" Padding="0" />
                         <!-- A spinner beside it while Test is asking. -->
                         <Grid>
                             <Grid.ColumnDefinitions>

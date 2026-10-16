@@ -106,6 +106,8 @@ internal sealed class GeminiBrain(string apiKey) : IBrain
 
     public string Name => "Gemini";
 
+    public bool CanHear => true;
+
     public async Task<BrainResult> AskAsync(string request, string? copiedText, IReadOnlyList<ConversationTurn> conversation, CancellationToken cancellation)
     {
         string prompt = copiedText is null

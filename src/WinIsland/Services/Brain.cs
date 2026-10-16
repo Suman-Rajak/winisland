@@ -30,6 +30,9 @@ internal interface IBrain
     /// <summary>"Gemini", for messages.</summary>
     string Name { get; }
 
+    /// <summary>Can turn spoken requests into text itself (and tell their accent): see <see cref="TranscribeAsync"/>.</summary>
+    bool CanHear { get; }
+
     /// <param name="request">What you said, without the wake phrase.</param>
     /// <param name="copiedText">The clipboard's text, when the request is about it ("translate this"); else null.</param>
     /// <param name="conversation">The exchanges just before, oldest first, so a follow-up ("and tomorrow?") makes sense.</param>
@@ -51,9 +54,12 @@ internal interface IBrain
 internal static class Brains
 {
     /// <summary>The brain chosen in Settings, or null if there's none (no key yet, or turned off).</summary>
-    public static IBrain? Current => AppSettings.Current.AiProvider == AiProvider.Gemini && SecretStore.Get(GeminiBrain.KeyName) is { Length: > 0 } key
-        ? new GeminiBrain(key)
-        : null;
+    public static IBrain? Current => AppSettings.Current.AiProvider switch
+    {
+        AiProvider.Gemini when SecretStore.Get(GeminiBrain.KeyName) is { Length: > 0 } key => new GeminiBrain(key),
+        AiProvider.Claude when SecretStore.Get(ClaudeBrain.KeyName) is { Length: > 0 } key => new ClaudeBrain(key),
+        _ => null,
+    };
 
     /// <summary>Asks for a changed version of a draft: "make it shorter", "add that I'll bring snacks".</summary>
     public static Task<BrainResult> ReviseAsync(IBrain brain, BrainResult draft, string change, CancellationToken cancellation)

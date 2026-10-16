@@ -89,7 +89,7 @@ public sealed partial class SettingsWindow : Window
             }
         }
 
-        foreach (var row in new UIElement[] { BrainKeyRow, CloudSpeechRow, DeepgramKeyRow, DeepgramLink, DeepgramStatusRow, WakeWordStatus,
+        foreach (var row in new UIElement[] { BrainChoiceRow, ClaudeKeyRow, ClaudeLink, GeminiLink, BrainKeyRow, CloudSpeechRow, DeepgramKeyRow, DeepgramLink, DeepgramStatusRow, WakeWordStatus,
                      VoiceKeyRow, AzureLink, VoiceStatusRow, AccentRow })
         {
             Motion.CrossfadeVisibility(row, rise: 4);
@@ -334,16 +334,27 @@ public sealed partial class SettingsWindow : Window
 
     private void LoadBrain()
     {
-        BrainTitle.Text = $"{Assistant.Name}'s brain (Google Gemini)";
+        BrainTitle.Text = $"{Assistant.Name}'s brain";
         BrainDescription.Text =
             $"For what {Assistant.Name} can't do on the PC: questions, Hindi, writing emails and WhatsApp messages (you review and send them), " +
-            "and “translate / summarise this” on copied text. Only those requests (and the copied text, when you say “this”) go to Google. " +
-            "On Gemini's free tier, Google may use them to improve its products.";
-        BrainToggle.IsOn = _settings.AiProvider == AiProvider.Gemini;
+            "and “translate / summarise this” on copied text. Only those requests (and the copied text, when you say “this”) go to the " +
+            "model's maker: Anthropic for Claude, Google for Gemini. On Gemini's free tier, Google may use them to improve its products.";
+        BrainChoiceDescription.Text =
+            "Claude Haiku answers fastest, every time, for a fraction of a cent a question with your own Anthropic key. " +
+            "Gemini is free, but its free tier is often busy. Claude can't hear audio: with a Gemini key saved too, Gemini still hears " +
+            "your words (when Deepgram doesn't) and your accent.";
+        BrainToggle.IsOn = _settings.AiProvider != AiProvider.Off;
+        bool hasClaudeKey = SecretStore.Get(ClaudeBrain.KeyName) is { Length: > 0 };
+        var choice = _settings.AiProvider != AiProvider.Off ? _settings.AiProvider : hasClaudeKey ? AiProvider.Claude : AiProvider.Gemini;
+        BrainCombo.SelectedItem = BrainCombo.Items.Cast<ComboBoxItem>().First(i => (string)i.Tag == choice.ToString());
+        ClaudeKeyBox.Password = "";
+        ClaudeKeyBox.PlaceholderText = hasClaudeKey ? "Saved (type a new key to replace it)" : "Anthropic API key";
         bool hasKey = SecretStore.Get(GeminiBrain.KeyName) is { Length: > 0 };
         GeminiKeyBox.Password = "";
-        GeminiKeyBox.PlaceholderText = hasKey ? "Saved (type a new key to replace it)" : "Gemini API key";
-        BrainStatus.Text = hasKey ? "" : "No key yet: paste one from Google AI Studio (free, no card needed), then Save.";
+        GeminiKeyBox.PlaceholderText = hasKey ? "Gemini key saved (type a new key to replace it)" : "Gemini API key";
+        BrainStatus.Text = choice == AiProvider.Claude
+            ? hasClaudeKey ? "" : "No Anthropic key yet: create one at console.anthropic.com (API keys), paste it here, then Save."
+            : hasKey ? "" : "No key yet: paste one from Google AI Studio (free, no card needed), then Save.";
         CloudSpeechToggle.IsOn = _settings.CloudSpeech;
         CloudSpeechDescription.Text =
             "Much more accurate with Indian accents, names and Hinglish than the PC's own speech recognition. What you say after the " +
@@ -352,19 +363,59 @@ public sealed partial class SettingsWindow : Window
         UpdateBrainEnabled();
     }
 
+    /// <summary>The model chosen in the list (whether or not the brain is on).</summary>
+    private AiProvider ChosenBrain => BrainCombo.SelectedItem is ComboBoxItem { Tag: string tag } && Enum.TryParse<AiProvider>(tag, out var provider)
+        ? provider
+        : AiProvider.Gemini;
+
     private void UpdateBrainEnabled()
     {
-        bool on = _settings.VoiceAssistant && _settings.AiProvider == AiProvider.Gemini;
+        bool on = _settings.VoiceAssistant && _settings.AiProvider != AiProvider.Off;
+        bool claude = on && ChosenBrain == AiProvider.Claude;
         BrainToggle.IsEnabled = _settings.VoiceAssistant;
-        BrainKeyRow.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
-        CloudSpeechRow.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
+        BrainChoiceRow.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
+        foreach (var part in new FrameworkElement[] { ClaudeKeyRow, ClaudeLink })
+        {
+            part.Visibility = claude ? Visibility.Visible : Visibility.Collapsed;
+        }
+        // Gemini's key: needed for Gemini; with Claude, optional (it hears speech and accents for it).
+        foreach (var part in new FrameworkElement[] { BrainKeyRow, GeminiLink, CloudSpeechRow })
+        {
+            part.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
+        }
+        TestBrainButton.Visibility = claude ? Visibility.Collapsed : Visibility.Visible; // (Claude's row has its own)
+    }
+
+    private void OnBrainChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_settings.AiProvider != AiProvider.Off)
+        {
+            Update(s => s.AiProvider = ChosenBrain);
+        }
+        if (!_loading)
+        {
+            BrainStatus.Text = "";
+        }
+        UpdateBrainEnabled();
+    }
+
+    private void OnSaveClaudeKeyClick(object sender, RoutedEventArgs e)
+    {
+        if (ClaudeKeyBox.Password.Trim() is not { Length: > 0 } key)
+        {
+            return;
+        }
+        SecretStore.Set(ClaudeBrain.KeyName, key);
+        ClaudeKeyBox.Password = "";
+        ClaudeKeyBox.PlaceholderText = "Saved (type a new key to replace it)";
+        BrainStatus.Text = "Saved. Press Test to check it works.";
     }
 
     private void OnCloudSpeechToggled(object sender, RoutedEventArgs e) => Update(s => s.CloudSpeech = CloudSpeechToggle.IsOn);
 
     private void OnBrainToggled(object sender, RoutedEventArgs e)
     {
-        Update(s => s.AiProvider = BrainToggle.IsOn ? AiProvider.Gemini : AiProvider.Off);
+        Update(s => s.AiProvider = BrainToggle.IsOn ? ChosenBrain : AiProvider.Off);
         UpdateBrainEnabled();
     }
 
@@ -386,19 +437,26 @@ public sealed partial class SettingsWindow : Window
         {
             OnSaveKeyClick(sender, e); // test what's typed
         }
+        if (ClaudeKeyBox.Password.Trim() is { Length: > 0 })
+        {
+            OnSaveClaudeKeyClick(sender, e);
+        }
         if (Brains.Current is not { } brain)
         {
             BrainStatus.Text = "Paste a key and press Save first.";
             return;
         }
 
-        TestBrainButton.IsEnabled = false;
-        BrainStatus.Text = "Asking Gemini…";
+        TestBrainButton.IsEnabled = TestClaudeButton.IsEnabled = false;
+        BrainStatus.Text = $"Asking {brain.Name}…";
         SetTesting(BrainTesting, BrainStatus, true);
         try
         {
+            var watch = System.Diagnostics.Stopwatch.StartNew();
             var reply = await brain.AskAsync("Say hello in five words or fewer.", null, [], CancellationToken.None);
-            BrainStatus.Text = reply is BrainAnswer answer ? $"Works! Gemini says: “{answer.Text}”" : "Works!";
+            BrainStatus.Text = reply is BrainAnswer answer
+                ? $"Works! {brain.Name} says: “{answer.Text}” ({watch.Elapsed.TotalSeconds:0.0} s)"
+                : "Works!";
         }
         catch (BrainException ex)
         {
@@ -406,7 +464,7 @@ public sealed partial class SettingsWindow : Window
         }
         finally
         {
-            TestBrainButton.IsEnabled = true;
+            TestBrainButton.IsEnabled = TestClaudeButton.IsEnabled = true;
             SetTesting(BrainTesting, BrainStatus, false);
         }
     }

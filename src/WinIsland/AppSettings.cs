@@ -6,7 +6,8 @@ namespace WinIsland;
 internal enum AiProvider
 {
     Off,
-    Gemini,
+    Gemini, // free, with your own key; often busy on the free tier
+    Claude, // Claude Haiku: fastest, paid with your own key
 }
 
 internal enum SpeechLanguages

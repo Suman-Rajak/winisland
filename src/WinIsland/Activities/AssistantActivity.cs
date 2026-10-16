@@ -827,9 +827,17 @@ internal sealed class AssistantActivity : IslandActivity
         }
         else if (_loudestOverAnswer > float.NegativeInfinity)
         {
-            // How loud its own voice came back while answering (to tune the interrupting by).
+            // The answer's been said (you didn't talk over it: that's Interrupt): the follow-up's time
+            // starts now. All the microphone heard meanwhile was its own voice coming back, so start
+            // afresh; otherwise that echo counts as you having spoken and stopped, and it gives up at once.
             Log.Info($"While answering: its own voice up to {_echoDb:0} dB at first, loudest {_loudestOverAnswer:0} dB");
             _loudestOverAnswer = float.NegativeInfinity;
+            _speech.Reset();
+            _heardSpeech = false;
+            _lastSpeechAt = 0;
+            _listeningSince = now;
+            _requestFrom = position;
+            return;
         }
 
         if (_speech.IsSpeech)
@@ -1174,7 +1182,7 @@ internal sealed class AssistantActivity : IslandActivity
     }
 
     /// <summary>Gemini turns the requests into text, when that's on and it can (more accurate); else the PC.</summary>
-    private static bool UsesCloudSpeech => AppSettings.Current.CloudSpeech && Brains.Current is not null;
+    private static bool UsesCloudSpeech => AppSettings.Current.CloudSpeech && Brains.Current is { CanHear: true };
 
     private static readonly TimeSpan CloudSpeechWaits = TimeSpan.FromSeconds(8);
 
@@ -1200,7 +1208,7 @@ internal sealed class AssistantActivity : IslandActivity
             }
         }
 
-        if (AppSettings.Current.CloudSpeech && Brains.Current is { } brain)
+        if (AppSettings.Current.CloudSpeech && Brains.Current is { CanHear: true } brain)
         {
             var watch = System.Diagnostics.Stopwatch.StartNew();
             try
@@ -1251,7 +1259,7 @@ internal sealed class AssistantActivity : IslandActivity
             // Nothing local: the AI brain's turn, if there is one.
             if (Brains.Current is not { } brain)
             {
-                ShowAnswer(heard, new CommandResult("I can't do that yet. Add a free Gemini key in Settings and I can do more."));
+                ShowAnswer(heard, new CommandResult("I can't do that yet. Add a Claude or a free Gemini key in Settings and I can do more."));
                 return;
             }
             string request = Assistant.WithoutWakePhrase(heard);
@@ -1655,13 +1663,14 @@ internal sealed class AssistantActivity : IslandActivity
 
     /// <summary>
     /// Says something; meanwhile the orb and the island's glow move with the voice (see <see cref="OnVoiceTick"/>).
-    /// Matching your accent, it first gives the brain a moment to say which it heard (it's usually done by now).
+    /// Matching your accent, the first time it gives the brain a moment to say which it heard; after that it
+    /// answers straight away in the accent heard last (the check, still going, is for next time).
     /// </summary>
     private async Task SayAsync(string text)
     {
-        if (_accentLook is { IsCompleted: false } look)
+        if (_accentLook is { IsCompleted: false } look && Speaker.HeardAccent is null)
         {
-            await Task.WhenAny(look, Task.Delay(Speaker.HeardAccent is null ? 2000 : 700));
+            await Task.WhenAny(look, Task.Delay(1500));
         }
         var saying = _speaker.SpeakAsync(text);
         _voiceTimer.Start();
@@ -1671,6 +1680,8 @@ internal sealed class AssistantActivity : IslandActivity
     }
 
     private Task? _accentLook; // the brain listening to the last request for your accent
+    private long _accentRestsUntil; // after the brain couldn't tell (busy): no more asking for a while
+    private static readonly TimeSpan AccentRestsFor = TimeSpan.FromMinutes(10);
 
     /// <summary>
     /// When replies match your accent (and there are voices with more than one), the brain listens to the
@@ -1678,8 +1689,9 @@ internal sealed class AssistantActivity : IslandActivity
     /// </summary>
     private void LookForAccent(float[] samples)
     {
-        if (AppSettings.Current.ReplyAccent != AccentChoice.MatchMine || !Speaker.CanMatchAccent || Brains.Current is not { } brain
-            || samples.Length < MicrophoneRecorder.SampleRate) // (under a second: too little to tell)
+        if (AppSettings.Current.ReplyAccent != AccentChoice.MatchMine || !Speaker.CanMatchAccent || Brains.Current is not { CanHear: true } brain
+            || samples.Length < MicrophoneRecorder.SampleRate // (under a second: too little to tell)
+            || Environment.TickCount64 < _accentRestsUntil)
         {
             return;
         }
@@ -1702,7 +1714,9 @@ internal sealed class AssistantActivity : IslandActivity
             }
             catch (Exception ex)
             {
-                Log.Info($"Couldn't tell the accent ({ex.Message})");
+                // Usually Gemini's free tier being busy: let it be for a while (replies keep the last accent).
+                Log.Info($"Couldn't tell the accent ({ex.Message}); not asking again for {AccentRestsFor.TotalMinutes:0} minutes");
+                _accentRestsUntil = Environment.TickCount64 + (long)AccentRestsFor.TotalMilliseconds;
             }
         }
     }
