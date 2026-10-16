@@ -53,7 +53,8 @@ internal static class ColorMath
         }
     }
 
-    private static (double H, double S, double L) ToHsl(double r, double g, double b)
+    /// <summary>Hue (0 to 1), saturation and lightness of a colour given as 0-to-1 channels.</summary>
+    public static (double H, double S, double L) ToHsl(double r, double g, double b)
     {
         double max = Math.Max(r, Math.Max(g, b)), min = Math.Min(r, Math.Min(g, b));
         double l = (max + min) / 2, d = max - min;

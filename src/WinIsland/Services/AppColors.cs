@@ -5,13 +5,95 @@ using WinIsland.Interop;
 namespace WinIsland.Services;
 
 /// <summary>
-/// The colour an app wears at its top (its title bar, or tabs), read off the screen, so the bar above
-/// it can wear it too, as a phone's status bar takes on the app below it.
+/// The colours of the app you're in, for the bar above it to wear, as a phone's status bar takes on the
+/// app below it: the app's own accent, from its icon (Chrome's, VS Code's blue, Claude's orange), or
+/// failing that the colour along its top (its title bar or tabs), read off the screen.
 /// </summary>
 internal static class AppColors
 {
     private const int Inset = 6;  // down from the window's top edge, into its title bar
     private const int Step = 2;   // every other pixel along the line is plenty
+
+    private const int IconPixels = 48;
+    private const int Hues = 24;  // the colour wheel in slices, to find the icon's main colour
+
+    private static readonly Dictionary<string, Color?> s_accents = [];
+
+    /// <summary>
+    /// An app's accent: its icon's main colour (of its colourful parts, the hue covering most of it),
+    /// made rich enough for a bar (neither neon nor murky). Null for an icon that's grey, black or white.
+    /// Call on the UI thread; remembered per app.
+    /// </summary>
+    /// <param name="icon">Where the icon comes from (see <see cref="ForegroundApp.Icon"/>).</param>
+    public static Color? AccentOf(string? icon)
+    {
+        if (icon is null)
+        {
+            return null;
+        }
+        if (s_accents.TryGetValue(icon, out var known))
+        {
+            return known;
+        }
+
+        Color? accent = ShellIcons.Pixels(icon, IconPixels) is { } pixels ? MainColour(pixels.Bgra) : null;
+        if (s_accents.Count > 100)
+        {
+            s_accents.Clear();
+        }
+        return s_accents[icon] = accent;
+    }
+
+    private static Color? MainColour(byte[] bgra)
+    {
+        var weight = new double[Hues];
+        var r = new double[Hues];
+        var g = new double[Hues];
+        var b = new double[Hues];
+        int solid = 0, colourful = 0;
+        for (int i = 0; i < bgra.Length; i += 4)
+        {
+            int alpha = bgra[i + 3];
+            if (alpha < 160)
+            {
+                continue; // the icon's see-through edges and background
+            }
+            solid++;
+
+            // (the shell's pixels have their alpha multiplied in)
+            double pr = Math.Min(1, bgra[i + 2] / (double)alpha), pg = Math.Min(1, bgra[i + 1] / (double)alpha), pb = Math.Min(1, bgra[i] / (double)alpha);
+            var (h, s, l) = ColorMath.ToHsl(pr, pg, pb);
+            if (s < 0.35 || l < 0.15 || l > 0.85)
+            {
+                continue; // grey, black or white: outlines, shading, highlights
+            }
+
+            colourful++;
+            int slice = (int)(h * Hues) % Hues;
+            weight[slice] += s;
+            r[slice] += pr * s;
+            g[slice] += pg * s;
+            b[slice] += pb * s;
+        }
+        if (colourful == 0 || colourful < solid * 0.08)
+        {
+            return null;
+        }
+
+        // Neighbouring slices count together: a gradient of one colour is still one colour.
+        int best = Enumerable.Range(0, Hues).MaxBy(i => weight[(i + Hues - 1) % Hues] + weight[i] + weight[(i + 1) % Hues]);
+        double total = 0, sr = 0, sg = 0, sb = 0;
+        foreach (int i in new[] { (best + Hues - 1) % Hues, best, (best + 1) % Hues })
+        {
+            total += weight[i];
+            sr += r[i];
+            sg += g[i];
+            sb += b[i];
+        }
+
+        var (hue, saturation, lightness) = ColorMath.ToHsl(sr / total, sg / total, sb / total);
+        return ColorMath.FromHsl(hue, Math.Clamp(saturation, 0.4, 0.75), Math.Clamp(lightness, 0.36, 0.52));
+    }
 
     /// <summary>
     /// The commonest colour along a line just inside the top of <paramref name="window"/> as it shows on

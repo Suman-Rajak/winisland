@@ -699,8 +699,9 @@ public sealed partial class IslandWindow : Window
     }
 
     /// <summary>
-    /// The bar at the top wears the colour of the app you're in: its title bar's, read off the screen just
-    /// below the bar (see AppColors). Not while one of the menu bar's menus is open over it.
+    /// The bar at the top wears the colour of the app you're in (see AppColors): its accent, from its icon,
+    /// or else its title bar's, read off the screen just below the bar. Not while one of the menu bar's
+    /// menus is open over it.
     /// </summary>
     private void TintBar()
     {
@@ -716,7 +717,7 @@ public sealed partial class IslandWindow : Window
             Right = _origin.X + (int)Math.Ceiling(StageWidth * _scale),
             Bottom = _origin.Y + (int)Math.Ceiling(StageHeight * _scale),
         };
-        var colour = AppColors.TopOf(_foreground.Window, bar.Bottom, island);
+        var colour = AppColors.AccentOf(_foreground.Icon) ?? AppColors.TopOf(_foreground.Window, bar.Bottom, island);
         _strip.Tint(colour);
         _menuBar?.ShowBarColour(colour);
     }

@@ -31,7 +31,7 @@ internal sealed class ForegroundApp
     private static readonly uint s_ownProcess = (uint)Environment.ProcessId;
 
     private readonly WinEventProc _onForeground; // kept alive: Windows holds a pointer to it
-    private readonly Dictionary<uint, (string Exe, string Name)> _processes = [];
+    private readonly Dictionary<uint, (string Exe, string Name, string? Icon)> _processes = [];
 
     public ForegroundApp()
     {
@@ -71,6 +71,12 @@ internal sealed class ForegroundApp
 
     public bool IsDesktop { get; private set; } = true;
 
+    /// <summary>
+    /// Where the app's icon comes from (for <see cref="ShellIcons"/>): its program, or a Store app's
+    /// entry in the Applications folder. Null on the desktop.
+    /// </summary>
+    public string? Icon { get; private set; }
+
     public event Action? Changed;
 
     /// <summary>Looks again (a Store app's title, which is its name, comes a moment after its window).</summary>
@@ -78,35 +84,39 @@ internal sealed class ForegroundApp
 
     private void Follow(IntPtr window)
     {
-        if (window == IntPtr.Zero || NameOf(window) is not { } name)
+        if (window == IntPtr.Zero || Identify(window) is not { } app)
         {
             return; // not an app: keep the last one
         }
 
         bool desktop = Native.GetClassName(window) is "Progman" or "WorkerW";
-        if (window == Window && name == Name)
+        if (window == Window && app.Name == Name)
         {
             return;
         }
 
         Window = window;
-        Name = name;
+        Name = app.Name;
+        Icon = app.Icon;
         IsDesktop = desktop;
         Changed?.Invoke();
     }
 
-    private string? NameOf(IntPtr window)
+    private string? NameOf(IntPtr window) => Identify(window)?.Name;
+
+    /// <summary>The app a window belongs to, by name, and where its icon comes from; null if it isn't an app's.</summary>
+    private (string Name, string? Icon)? Identify(IntPtr window)
     {
         string type = Native.GetClassName(window);
         GetWindowThreadProcessId(window, out uint process);
         if (process == s_ownProcess)
         {
             // Settings has a title bar; the island, the bar and their menus don't.
-            return (Native.GetStyle(window) & WS_CAPTION) == WS_CAPTION ? Product.Name : null;
+            return (Native.GetStyle(window) & WS_CAPTION) == WS_CAPTION ? (Product.Name, Describe(process).Icon) : null;
         }
         if (type is "Progman" or "WorkerW")
         {
-            return "Desktop";
+            return ("Desktop", null);
         }
         if (FullscreenDetector.ShellClasses.Contains(type))
         {
@@ -114,24 +124,35 @@ internal sealed class ForegroundApp
         }
         if (type == "CabinetWClass")
         {
-            return "File Explorer";
+            return ("File Explorer", Describe(process).Icon);
         }
 
-        var (exe, name) = Describe(process);
+        var (exe, name, icon) = Describe(process);
         if (s_shellHosts.Contains(exe))
         {
             return null;
         }
         if (exe.Equals("ApplicationFrameHost", StringComparison.OrdinalIgnoreCase))
         {
-            string title = TitleOf(window); // a Store app's frame: its title is the app's name
-            return title.Length > 0 ? title : null;
+            // A Store app's frame: its title is the app's name, and the app itself runs in the window inside.
+            string title = TitleOf(window);
+            var inside = FindWindowEx(window, IntPtr.Zero, "Windows.UI.Core.CoreWindow", null);
+            string? appIcon = null;
+            if (inside != IntPtr.Zero)
+            {
+                GetWindowThreadProcessId(inside, out uint app);
+                appIcon = Describe(app).Icon;
+            }
+            return title.Length > 0 ? (title, appIcon) : null;
         }
-        return name;
+        return (name, icon);
     }
 
-    /// <summary>The process's program name and the name it gives itself ("chrome", "Google Chrome").</summary>
-    private (string Exe, string Name) Describe(uint process)
+    /// <summary>
+    /// The process's program name, the name it gives itself ("chrome", "Google Chrome"), and where its
+    /// icon comes from: a Store (or other packaged) app's entry in the Applications folder, else its program.
+    /// </summary>
+    private (string Exe, string Name, string? Icon) Describe(uint process)
     {
         if (_processes.TryGetValue(process, out var known))
         {
@@ -139,15 +160,24 @@ internal sealed class ForegroundApp
         }
 
         string exe = string.Empty, name = string.Empty;
+        string? icon = null;
         var handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, process);
         if (handle != IntPtr.Zero)
         {
             try
             {
+                var appId = new StringBuilder(256);
+                int appIdLength = appId.Capacity;
+                if (GetApplicationUserModelId(handle, ref appIdLength, appId) == 0)
+                {
+                    icon = $@"shell:AppsFolder\{appId}";
+                }
+
                 var path = new StringBuilder(1024);
                 int length = path.Capacity;
                 if (QueryFullProcessImageName(handle, 0, path, ref length))
                 {
+                    icon ??= path.ToString();
                     exe = Path.GetFileNameWithoutExtension(path.ToString());
                     try
                     {
@@ -174,7 +204,7 @@ internal sealed class ForegroundApp
         {
             _processes.Clear(); // (process ids get reused)
         }
-        return _processes[process] = (exe, name);
+        return _processes[process] = (exe, name, icon);
     }
 
     // ---------------------------------------------------------------- what the app menu does
@@ -252,4 +282,11 @@ internal sealed class ForegroundApp
 
     [DllImport("kernel32.dll")]
     private static extern bool CloseHandle(IntPtr handle);
+
+    /// <summary>0 for a packaged app (its app ID filled in); an error for an ordinary program.</summary>
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+    private static extern int GetApplicationUserModelId(IntPtr process, ref int length, StringBuilder appId);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern IntPtr FindWindowEx(IntPtr parent, IntPtr after, string? className, string? title);
 }
