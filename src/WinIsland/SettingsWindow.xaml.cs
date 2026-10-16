@@ -142,6 +142,7 @@ public sealed partial class SettingsWindow : Window
             DistanceSlider.Value = _settings.DistanceFromTop;
             DistanceLabel.Text = $"{_settings.DistanceFromTop:0} px";
             NotchToggle.IsOn = _settings.Notch;
+            MenuBarToggle.IsOn = _settings.MenuBar;
             ShowNotch();
             HideIdleToggle.IsOn = _settings.HideWhenIdle;
             StepAsideToggle.IsOn = _settings.StepAsideForApps;
@@ -279,11 +280,14 @@ public sealed partial class SettingsWindow : Window
         ShowNotch();
     }
 
-    /// <summary>A notch hangs from the top edge and is always there, so distance and hiding don't apply.</summary>
+    private void OnMenuBarToggled(object sender, RoutedEventArgs e) => Update(s => s.MenuBar = MenuBarToggle.IsOn);
+
+    /// <summary>A notch hangs from the top edge and is always there, so distance and hiding don't apply; the menu bar is in its bar.</summary>
     private void ShowNotch()
     {
         DistanceSlider.IsEnabled = !NotchToggle.IsOn;
         HideIdleToggle.IsEnabled = !NotchToggle.IsOn;
+        MenuBarToggle.IsEnabled = NotchToggle.IsOn;
     }
 
     private void OnHideIdleToggled(object sender, RoutedEventArgs e) =>

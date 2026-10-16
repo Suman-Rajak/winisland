@@ -38,6 +38,7 @@ public partial class App : Application
 
         _island = new IslandWindow(IslandOptions.FromCommandLine(Environment.GetCommandLineArgs()));
         _tray = new TrayIconController(_island, OpenSettings, Quit);
+        _island.SettingsRequested += OpenSettings;
         _island.Start();
         _ = StartupRegistration.MigrateToPackageAsync();
     }

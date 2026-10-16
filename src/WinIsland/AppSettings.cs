@@ -70,6 +70,12 @@ internal sealed class AppSettings
     /// </summary>
     public bool Notch { get; set; } = true;
 
+    /// <summary>
+    /// With the notch, a Mac's menu bar either side of it: Glyde's menu, the app you're in and Go on the
+    /// left; pinned apps, Glyde, Wi-Fi, sound, battery and the time on the right.
+    /// </summary>
+    public bool MenuBar { get; set; } = true;
+
     /// <summary>Fade the island out when there's nothing to show; hovering the top of the screen brings it back.</summary>
     public bool HideWhenIdle { get; set; }
 
@@ -192,6 +198,7 @@ internal sealed class AppSettings
         Display = defaults.Display;
         DistanceFromTop = defaults.DistanceFromTop;
         Notch = defaults.Notch;
+        MenuBar = defaults.MenuBar;
         HideWhenIdle = defaults.HideWhenIdle;
         StepAsideForApps = defaults.StepAsideForApps;
         AnimationSpeed = defaults.AnimationSpeed;

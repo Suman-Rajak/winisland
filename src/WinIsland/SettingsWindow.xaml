@@ -136,6 +136,20 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Menu bar" Style="{StaticResource CardTitleStyle}" />
+                            <TextBlock Text="In the bar beside the notch, like a Mac's: Glyde's menu, the app you're in and Go on the left; your pinned apps, Glyde, Wi-Fi, sound, battery and the time on the right."
+                                       Style="{StaticResource CardDescriptionStyle}" />
+                        </StackPanel>
+                        <ToggleSwitch x:Name="MenuBarToggle" Grid.Column="1" OnContent="" OffContent="" MinWidth="0" Toggled="OnMenuBarToggled" />
+                    </Grid>
+                </Border>
+                <Border Style="{StaticResource CardStyle}">
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
                             <TextBlock Text="Hide when idle" Style="{StaticResource CardTitleStyle}" />
                             <TextBlock Text="Fade the island out when nothing is playing. Point at the top of the screen to bring it back."
                                        Style="{StaticResource CardDescriptionStyle}" />

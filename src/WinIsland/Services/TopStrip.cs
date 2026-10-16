@@ -61,6 +61,9 @@ internal sealed class TopStrip
     /// </summary>
     public int? Top { get; private set; }
 
+    /// <summary>Where the bar is (physical pixels) while it's kept: for the menu bar over it.</summary>
+    public Native.RECT? Bounds => _registered ? _bar : null;
+
     /// <summary>Keeps the top <paramref name="height"/> pixels of this display (its bounds) for the island.</summary>
     public void Keep(Native.RECT monitor, int height)
     {
@@ -109,7 +112,7 @@ internal sealed class TopStrip
     /// Shows the bar while it's kept, always just under the island (both stay above other windows, as the
     /// taskbar does), or hides it: out of the way of a full-screen app, say.
     /// </summary>
-    /// <param name="below">The island's window.</param>
+    /// <param name="below">The window just above it: the island's, or the menu bar's over it.</param>
     public void Show(bool show, IntPtr below)
     {
         if (!show || !_registered)

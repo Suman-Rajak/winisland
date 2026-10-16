@@ -79,6 +79,8 @@ public sealed partial class IslandWindow : Window
     private readonly ExpressionAnimation _bubbleFollow;
     private readonly Dictionary<FrameworkElement, bool> _layerVisible = [];
     private readonly TopStrip _strip = new(); // (before the activities: they can change while being set up)
+    private MenuBarWindow? _menuBar;
+    private bool _started;
     private ExpressionAnimation _pillPlace = null!; // (set up with the pill)
     private ShapeVisual _sheen = null!;
     private bool? _notch; // shown as a notch, as last applied (see ApplyNotch)
@@ -242,10 +244,17 @@ public sealed partial class IslandWindow : Window
         _timer.Interval = TimeSpan.FromMilliseconds(PointerTickMs);
         _timer.Tick += OnTick;
 
-        Closed += (_, _) => _strip.Release(); // the windows get the top of the screen back
+        Closed += (_, _) =>
+        {
+            _menuBar?.Close();
+            _strip.Release(); // the windows get the top of the screen back
+        };
 
         _settings.Changed += OnSettingsChanged;
     }
+
+    /// <summary>"Glyde Settings…" in the menu bar.</summary>
+    public event Action? SettingsRequested;
 
     /// <summary>Set from the tray menu.</summary>
     public bool UserHidden
@@ -273,6 +282,8 @@ public sealed partial class IslandWindow : Window
         ApplyState();
         Introduce();
         _timer.Start();
+        _started = true;
+        UpdateVisibility(); // (the menu bar, now the island's up)
 
         foreach (var activity in _activities)
         {
@@ -654,7 +665,24 @@ public sealed partial class IslandWindow : Window
             }
         }
 
-        _strip.Show(visible && !fullscreen, below: _hwnd);
+        // The frosted bar under the notch and, over it and under the island, the menu bar.
+        bool bar = visible && !fullscreen;
+        bool menu = bar && _started && _settings.MenuBar && _strip.Bounds is not null;
+        var menuBar = menu ? MenuBar() : _menuBar;
+        menuBar?.Place(menu ? _strip.Bounds : null, below: _hwnd);
+        _strip.Show(bar, below: menuBar is { IsShown: true } ? menuBar.Handle : _hwnd);
+    }
+
+    /// <summary>The menu bar beside the notch, made the first time it's wanted.</summary>
+    private MenuBarWindow MenuBar()
+    {
+        if (_menuBar is null)
+        {
+            _menuBar = new MenuBarWindow();
+            _menuBar.SettingsRequested += () => SettingsRequested?.Invoke();
+            _menuBar.TalkRequested += _assistant.Toggle;
+        }
+        return _menuBar;
     }
 
     /// <summary>
@@ -713,6 +741,10 @@ public sealed partial class IslandWindow : Window
             UpdateVisibility();
             EnsureTopmost();
             ShowIdleTime();
+            if (_menuBar is { IsShown: true })
+            {
+                _menuBar.Refresh();
+            }
         }
 
         if (!_visible)

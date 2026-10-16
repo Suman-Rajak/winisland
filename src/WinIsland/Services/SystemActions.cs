@@ -13,7 +13,7 @@ internal enum MediaCommand
     Previous,
 }
 
-/// <summary>Things the assistant can do to the PC directly: music, volume, brightness, locking.</summary>
+/// <summary>Things the assistant and the menu bar can do to the PC directly: music, volume, brightness, locking, sleep.</summary>
 internal static class SystemActions
 {
     // ---------------------------------------------------------------- volume
@@ -41,6 +41,10 @@ internal static class SystemActions
         var context = QuietChange;
         return volume.SetMasterVolumeLevelScalar(Math.Clamp(level, 0, 1), ref context) == 0;
     });
+
+    /// <summary>Whether the default speakers are muted; null if there are none.</summary>
+    public static bool? IsMuted() => WithSpeakers(volume =>
+        volume.GetMute(out bool muted) == 0 ? muted : (bool?)null);
 
     public static bool SetMute(bool mute) => WithSpeakers(volume =>
     {
@@ -191,6 +195,49 @@ internal static class SystemActions
 
     public static bool Lock() => LockWorkStation();
 
+    public static void Sleep() => SetSuspendState(hibernate: false, force: false, wakeupEventsDisabled: false);
+
+    /// <summary>
+    /// Windows' own "Shut Down Windows" box (shut down, restart, sleep, sign out), so nothing happens
+    /// until you choose. Call on the UI thread.
+    /// </summary>
+    public static void AskToShutDown()
+    {
+        try
+        {
+            var shellType = Type.GetTypeFromProgID("Shell.Application");
+            if (shellType is not null && Activator.CreateInstance(shellType) is { } shell)
+            {
+                shellType.InvokeMember("ShutdownWindows", System.Reflection.BindingFlags.InvokeMethod, null, shell, null);
+                Marshal.ReleaseComObject(shell);
+            }
+        }
+        catch (Exception ex) when (ex is COMException or System.Reflection.TargetInvocationException or MissingMethodException)
+        {
+            Log.Error("Opening the shut down box failed", ex);
+        }
+    }
+
+    /// <summary>Opens a folder, a Settings page (ms-settings:…) or a program by name, as Run would.</summary>
+    public static void Open(string target, string? arguments = null)
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(target)
+            {
+                Arguments = arguments ?? string.Empty,
+                UseShellExecute = true,
+            });
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
+        {
+            Log.Error($"Opening {target} failed", ex);
+        }
+    }
+
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool LockWorkStation();
+
+    [DllImport("powrprof.dll")]
+    private static extern bool SetSuspendState(bool hibernate, bool force, bool wakeupEventsDisabled);
 }

@@ -12,6 +12,7 @@ A voice island for Windows: a pill at the top of the screen that expands on hove
 - Glyde has a face: its logo, a glossy violet-to-pink orb with two eyes and a smile, like an emoji. It sits in the empty island, blinking and glancing about now and then; it's the assistant's orb (wide-eyed as it listens, eyes up while it thinks, its mouth moving as it talks, smiling after an answer, a little puzzled when it didn't catch you); and it's at the top of Settings, its eyes following your pointer. The app, tray and Start menu icons are the same face.
 - By default the island is a Mac-style notch: pure black, hanging from the top edge with square top corners, rounded bottom ones and little shoulders curving out into the edge, always there. When it opens it drops down as a black panel, like NotchNook. Around it, a frosted bar across the top of the screen (Windows' acrylic, tinted for the light or dark theme), exactly as tall as the notch at rest: the Mac's menu bar. Windows keeps the bar as it keeps the bottom for the taskbar (it's an app bar), so maximized and snapped windows start below it. Full-screen video and games still get the whole screen; hiding the island from the tray or quitting gives the top back, and Windows takes it back by itself if Glyde is ended. Turned off, the island is the floating glass pill. (Settings → Mac-style notch.)
 - At rest, Glyde's face sits at the island's left end and the time at its right (12 or 24 hours, as Windows shows it).
+- The bar beside the notch is a Mac's menu bar. On the left: Glyde's menu (About this PC, Windows and Glyde settings, Task Manager, Sleep, Shut down or restart… in Windows' own box, Lock screen); the app you're in, by name, with its menu (hide it, maximize or restore it, hide others, close it); and Go (Home, Desktop, Documents, Downloads, Pictures, Music, Videos, This PC, Recycle Bin). On the right: the apps pinned to your taskbar, a microphone to talk to Glyde, Wi-Fi (its signal; click for Windows' network list), sound (scroll over it to turn it up or down; click for a volume slider and mute), battery (charge, green while charging; click for what it's doing and time left) and the date and time (click for notifications and the calendar). Items get a soft highlight under the pointer, the colours follow the Windows theme, menus take the keyboard only while they're open, and pinned apps make room when space beside the notch runs out. (Settings → Menu bar.)
 - Windows wasn't designed round a notch, so with the top given back (or a window dragged up there) there's often an app under the island, a browser's tabs say. Then it steps aside: clicks go through to the app (you can pick or close the tab under it), the island fades as you point past it, and it opens only when the pointer rests on it for a moment, never after a click on what's underneath. Over the desktop it opens on hover straight away. Files dragged onto it still land on the shelf. (Settings → Step aside for apps.)
 - Spring animations between **idle**, **compact** and **expanded**; hover to expand. It comes up as a dot that springs out to the pill. What it shows glides in as the pill opens, each view with a small entrance of its own (artwork popping in, rows cascading, a battery filling up, a ringing bell swinging); switching tabs slides the content over and the tab highlight springs across. A glint crosses the glass as the island opens or a notice arrives (which springs the pill out with a little bounce), the glass catches the light where you point, buttons grow a touch under the pointer and sink when pressed, and the artwork slowly swells while music plays. A faint shadow keeps the pill clear of light wallpapers. With Windows' "Animation effects" off (Accessibility → Visual effects), things just appear and nothing loops.
 - Clicks pass straight through everywhere except the pill, and clicking it never steals focus.
@@ -63,6 +64,7 @@ Changes apply immediately and are saved to `settings.json` in the data folder:
 | Display | Which screen the island sits on |
 | Distance from top | Gap above the island; 0 hugs the top edge |
 | Mac-style notch | The island as a black notch hanging from the top edge, always there, in a frosted bar as tall as it; windows start below the bar (on by default; distance and "hide when idle" then don't apply) |
+| Menu bar | With the notch, a Mac's menu bar beside it: Glyde's menu, the app you're in and Go; pinned apps, Glyde, Wi-Fi, sound, battery and the time (on by default) |
 | Hide when idle | Fades the island out when nothing is playing; point at the top of the screen to bring it back |
 | Step aside for apps | With an app under the island, clicks go through to it and resting the pointer opens the island |
 | Animation speed | Relaxed, Normal or Snappy |
@@ -146,6 +148,7 @@ src/WinIsland/
   GlassLight.cs               light on the glass: the spot that follows the pointer, the glint as it opens
   Press.cs                    island buttons that grow under the pointer and sink when pressed
   GlydeFace.xaml(.cs)         Glyde's face, alive: blinking, glancing, its looks (listening, thinking…), talking
+  MenuBarWindow.xaml(.cs)     the Mac-style menu bar beside the notch: menus, pinned apps, Wi-Fi, sound, battery, time
   SettingsWindow.xaml(.cs)    settings UI
   AppSettings.cs              settings model + JSON persistence
   StartupRegistration.cs      "Start with Windows"
@@ -185,6 +188,8 @@ build-package.ps1             builds and installs the packaged version (Develope
 tools/make-logo.py            draws the logo (Assets/Glyde.svg, the app icon and the tiles); run it after changing the face
   Services/WindowsBelow.cs    what's under the island: an app's window, or the desktop
   Services/TopStrip.cs        the frosted bar the notch hangs in (an app bar), so windows start below it
+  Services/ForegroundApp.cs   the app you're in (for the menu bar), and hiding, maximizing or closing its window
+  Services/PinnedApps.cs      the taskbar's pinned apps and their icons
   Services/FullscreenDetector.cs
   Interop/Native.cs           Win32 / DWM calls
   Interop/CoreAudio.cs        Core Audio COM interfaces

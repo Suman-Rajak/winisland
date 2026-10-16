@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="WinIsland.MenuBarWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:WinIsland"
+    Title="Glyde menu bar">
+
+    <!--
+        The Mac's menu bar, either side of the notch, over the frosted bar (see TopStrip). On the left:
+        Glyde's menu (the PC: settings, sleep, shut down…), the app you're in with its menu, and Go (your
+        folders). On the right: the taskbar's pinned apps, Glyde to talk to, Wi-Fi, sound, battery and the
+        date and time. The middle is the notch's. Its colours follow the Windows theme, as the frost does.
+    -->
+    <Grid x:Name="Root" Background="Transparent" Padding="8,0">
+        <Grid.Resources>
+            <ResourceDictionary>
+                <ResourceDictionary.ThemeDictionaries>
+                    <ResourceDictionary x:Key="Default">
+                        <SolidColorBrush x:Key="BarForeground" Color="#F2FFFFFF" />
+                        <SolidColorBrush x:Key="ButtonForeground" Color="#F2FFFFFF" />
+                        <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="#FFFFFFFF" />
+                        <SolidColorBrush x:Key="ButtonForegroundPressed" Color="#D9FFFFFF" />
+                        <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#26FFFFFF" />
+                        <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#1AFFFFFF" />
+                    </ResourceDictionary>
+                    <ResourceDictionary x:Key="Light">
+                        <SolidColorBrush x:Key="BarForeground" Color="#E6000000" />
+                        <SolidColorBrush x:Key="ButtonForeground" Color="#E6000000" />
+                        <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="#FF000000" />
+                        <SolidColorBrush x:Key="ButtonForegroundPressed" Color="#B3000000" />
+                        <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#1A000000" />
+                        <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#12000000" />
+                    </ResourceDictionary>
+                </ResourceDictionary.ThemeDictionaries>
+
+                <!-- Flat, with a soft rounded highlight under the pointer, as a Mac's menu bar items have. -->
+                <Style x:Key="BarButtonStyle" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
+                    <Setter Property="Background" Value="Transparent" />
+                    <Setter Property="BorderThickness" Value="0" />
+                    <Setter Property="Padding" Value="8,0" />
+                    <Setter Property="Height" Value="26" />
+                    <Setter Property="MinWidth" Value="0" />
+                    <Setter Property="CornerRadius" Value="6" />
+                    <Setter Property="FontSize" Value="13" />
+                    <Setter Property="VerticalAlignment" Value="Center" />
+                    <Setter Property="IsTabStop" Value="False" />
+                    <Setter Property="UseSystemFocusVisuals" Value="False" />
+                </Style>
+                <Style TargetType="Button" BasedOn="{StaticResource BarButtonStyle}" />
+                <Style TargetType="FontIcon">
+                    <Setter Property="FontSize" Value="15" />
+                </Style>
+            </ResourceDictionary>
+        </Grid.Resources>
+
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition x:Name="NotchColumn" Width="480" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Left: Glyde's menu, the app you're in, Go. -->
+        <StackPanel x:Name="Left" Orientation="Horizontal" Spacing="1" VerticalAlignment="Center">
+            <Button x:Name="GlydeButton" Padding="7,0" ToolTipService.ToolTip="Glyde">
+                <local:GlydeFace Width="17" Height="17" />
+                <Button.Flyout>
+                    <MenuFlyout Placement="BottomEdgeAlignedLeft" ShouldConstrainToRootBounds="False">
+                        <MenuFlyoutItem Text="About this PC" Click="OnAboutClick">
+                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE7F4;" /></MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutItem Text="Windows Settings…" Click="OnWindowsSettingsClick">
+                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE713;" /></MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutItem Text="Glyde Settings…" Click="OnGlydeSettingsClick">
+                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE771;" /></MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutSeparator />
+                        <MenuFlyoutItem Text="Task Manager" Click="OnTaskManagerClick">
+                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE9D9;" /></MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutSeparator />
+                        <MenuFlyoutItem Text="Sleep" Click="OnSleepClick">
+                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE708;" /></MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutItem Text="Shut down or restart…" Click="OnShutDownClick">
+                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE7E8;" /></MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutSeparator />
+                        <MenuFlyoutItem Text="Lock screen" Click="OnLockClick">
+                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE72E;" /></MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                    </MenuFlyout>
+                </Button.Flyout>
+            </Button>
+
+            <Button x:Name="AppButton">
+                <TextBlock x:Name="AppName" FontWeight="SemiBold" MaxWidth="240" TextTrimming="CharacterEllipsis" />
+                <Button.Flyout>
+                    <MenuFlyout x:Name="AppMenu" Placement="BottomEdgeAlignedLeft" ShouldConstrainToRootBounds="False"
+                                Opening="OnAppMenuOpening">
+                        <MenuFlyoutItem x:Name="MinimizeItem" Click="OnMinimizeClick">
+                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE921;" /></MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutItem x:Name="MaximizeItem" Click="OnMaximizeClick">
+                            <MenuFlyoutItem.Icon><FontIcon x:Name="MaximizeIcon" Glyph="&#xE922;" /></MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutItem Text="Hide others" Click="OnHideOthersClick">
+                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8A7;" /></MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutSeparator x:Name="CloseSeparator" />
+                        <MenuFlyoutItem x:Name="CloseItem" Click="OnCloseClick">
+                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE711;" /></MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                    </MenuFlyout>
+                </Button.Flyout>
+            </Button>
+
+            <Button x:Name="GoButton" Content="Go">
+                <Button.Flyout>
+                    <MenuFlyout Placement="BottomEdgeAlignedLeft" ShouldConstrainToRootBounds="False">
+                        <MenuFlyoutItem Text="Home" Tag="home" Click="OnGoClick">
+                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE80F;" /></MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutItem Text="Desktop" Tag="desktop" Click="OnGoClick">
+                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8FC;" /></MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutItem Text="Documents" Tag="documents" Click="OnGoClick">
+                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8A5;" /></MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutItem Text="Downloads" Tag="downloads" Click="OnGoClick">
+                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE896;" /></MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutItem Text="Pictures" Tag="pictures" Click="OnGoClick">
+                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE91B;" /></MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutItem Text="Music" Tag="music" Click="OnGoClick">
+                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8D6;" /></MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutItem Text="Videos" Tag="videos" Click="OnGoClick">
+                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8B2;" /></MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutSeparator />
+                        <MenuFlyoutItem Text="This PC" Tag="pc" Click="OnGoClick">
+                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE7F8;" /></MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutItem Text="Recycle Bin" Tag="bin" Click="OnGoClick">
+                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE74D;" /></MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                    </MenuFlyout>
+                </Button.Flyout>
+            </Button>
+        </StackPanel>
+
+        <!-- Right: pinned apps, then Glyde, Wi-Fi, sound, battery, the date and time. -->
+        <StackPanel x:Name="Right" Grid.Column="2" Orientation="Horizontal" Spacing="1"
+                    HorizontalAlignment="Right" VerticalAlignment="Center">
+            <StackPanel x:Name="Apps" Orientation="Horizontal" Spacing="1" Margin="0,0,6,0" />
+
+            <Button x:Name="TalkButton" Padding="7,0" Click="OnTalkClick" ToolTipService.ToolTip="Talk to Glyde">
+                <FontIcon Glyph="&#xE720;" FontSize="14" />
+            </Button>
+
+            <Button x:Name="WifiButton" Padding="7,0" Click="OnWifiClick">
+                <FontIcon x:Name="WifiIcon" Glyph="&#xE701;" />
+            </Button>
+
+            <Button x:Name="SoundButton" Padding="7,0" PointerWheelChanged="OnSoundWheel">
+                <FontIcon x:Name="SoundIcon" Glyph="&#xE995;" />
+                <Button.Flyout>
+                    <Flyout x:Name="SoundFlyout" Placement="BottomEdgeAlignedRight" ShouldConstrainToRootBounds="False"
+                            Opening="OnSoundOpening">
+                        <StackPanel Width="260" Spacing="8">
+                            <Grid>
+                                <TextBlock Text="Sound" FontWeight="SemiBold" />
+                                <TextBlock x:Name="SoundPercent" HorizontalAlignment="Right" Opacity="0.7" />
+                            </Grid>
+                            <Grid ColumnSpacing="6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Button x:Name="MuteButton" Style="{StaticResource DefaultButtonStyle}" Width="36" Height="32"
+                                        Padding="0" Click="OnMuteClick" ToolTipService.ToolTip="Mute">
+                                    <FontIcon x:Name="MuteIcon" Glyph="&#xE995;" FontSize="14" />
+                                </Button>
+                                <Slider x:Name="VolumeSlider" Grid.Column="1" Minimum="0" Maximum="100" StepFrequency="1"
+                                        VerticalAlignment="Center" ValueChanged="OnVolumeSliderChanged" />
+                            </Grid>
+                            <HyperlinkButton Content="Sound settings…" Padding="0" Click="OnSoundSettingsClick" />
+                        </StackPanel>
+                    </Flyout>
+                </Button.Flyout>
+            </Button>
+
+            <Button x:Name="BatteryButton" Padding="7,0">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock x:Name="BatteryPercent" VerticalAlignment="Center" />
+                    <!-- A small battery, filled to the charge: green while charging, red when low. -->
+                    <Grid Width="25" Height="12" VerticalAlignment="Center">
+                        <Border Width="22" HorizontalAlignment="Left" CornerRadius="3.5" BorderThickness="1"
+                                BorderBrush="{ThemeResource BarForeground}" Opacity="0.55" />
+                        <Border Width="2" Height="4" HorizontalAlignment="Right" CornerRadius="0,1,1,0"
+                                Background="{ThemeResource BarForeground}" Opacity="0.55" />
+                        <Border x:Name="BatteryFill" Margin="2" Width="18" HorizontalAlignment="Left" CornerRadius="1.5"
+                                Background="{ThemeResource BarForeground}" />
+                    </Grid>
+                    <FontIcon x:Name="ChargingBolt" Glyph="&#xE945;" FontSize="11" Margin="-3,0,0,0" Visibility="Collapsed" />
+                </StackPanel>
+                <Button.Flyout>
+                    <Flyout Placement="BottomEdgeAlignedRight" ShouldConstrainToRootBounds="False">
+                        <StackPanel Width="240" Spacing="4">
+                            <TextBlock x:Name="BatteryTitle" FontWeight="SemiBold" />
+                            <TextBlock x:Name="BatteryState" Opacity="0.7" TextWrapping="Wrap" />
+                            <HyperlinkButton Content="Battery settings…" Padding="0" Margin="0,6,0,0" Click="OnBatterySettingsClick" />
+                        </StackPanel>
+                    </Flyout>
+                </Button.Flyout>
+            </Button>
+
+            <Button x:Name="ClockButton" Click="OnClockClick" ToolTipService.ToolTip="Notifications and calendar">
+                <TextBlock x:Name="ClockText" />
+            </Button>
+        </StackPanel>
+    </Grid>
+</Window>
