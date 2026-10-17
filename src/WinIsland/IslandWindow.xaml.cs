@@ -1481,8 +1481,8 @@ public sealed partial class IslandWindow : Window
     /// <summary>
     /// Colours the glass from the activity being shown or, failing that, from whichever live activity
     /// has colours (so music keeps its colours while the volume indicator is up). Neutral otherwise,
-    /// or when "match the music's colours" is off. A notch is always pure black (the music keeps its
-    /// accent colour for the controls).
+    /// or when "match the music's colours" is off. A notch is pure black, but takes on the music's
+    /// colours too while it plays, as the glass does.
     /// </summary>
     private async void ApplyTheme()
     {
@@ -1496,7 +1496,7 @@ public sealed partial class IslandWindow : Window
         ((SolidColorBrush)Application.Current.Resources["IslandAccentBrush"]).Color =
             theme?.Accent ?? Color.FromArgb(255, 255, 255, 255);
 
-        var tint = notch ? Color.FromArgb(255, 0, 0, 0) : theme?.Tint ?? ColorMath.NeutralTint;
+        var tint = theme?.Tint ?? (notch ? Color.FromArgb(255, 0, 0, 0) : ColorMath.NeutralTint);
         if (tint != _tint)
         {
             _tint = tint;
@@ -1507,7 +1507,7 @@ public sealed partial class IslandWindow : Window
         PrivacyBubble.Background = new SolidColorBrush(
             Color.FromArgb((byte)Math.Round(255 * opacity), tint.R, tint.G, tint.B));
 
-        var glow = notch ? null : theme?.Glow;
+        var glow = theme?.Glow;
         if (ReferenceEquals(glow, _glow))
         {
             if (!_glowFading)

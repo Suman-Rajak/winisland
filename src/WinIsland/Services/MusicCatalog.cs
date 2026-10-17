@@ -6,7 +6,7 @@ namespace WinIsland.Services;
 /// <summary>
 /// Online music catalogues, for apps that publish poor metadata (Amazon Music shares no artwork,
 /// and sometimes repeats one value as both title and artist). Uses the iTunes catalogue (your
-/// country's store, then the US store) and MusicBrainz + the Cover Art Archive, which have many
+/// country's store and the US store) and MusicBrainz + the Cover Art Archive, which have many
 /// independent releases iTunes lacks. Sends artist and title to Apple and MusicBrainz, so only
 /// call this when <see cref="AppSettings.FindArtworkOnline"/> is on.
 /// </summary>
@@ -37,37 +37,52 @@ internal static class MusicCatalog
             return cached;
         }
 
-        var sources = new List<(string Name, Func<Task<byte[]?>> Lookup)>
-        {
-            ("iTunes " + Country, () => ArtworkFromITunesAsync(track, Country)),
-        };
-        if (Country != "US")
-        {
-            sources.Add(("iTunes US", () => ArtworkFromITunesAsync(track, "US")));
-        }
-        sources.Add(("MusicBrainz", () => ArtworkFromMusicBrainzAsync(track)));
-
-        byte[]? result = null;
+        // The quick catalogues are all asked at once, and the first to find the track wins (each only
+        // accepts the right track, so it doesn't matter which). MusicBrainz is slow and allows one
+        // request a second, so it's only asked when none of them has the track.
+        var watch = System.Diagnostics.Stopwatch.StartNew();
         bool anyFailed = false;
-        string from = "nowhere";
-        foreach (var (name, lookup) in sources)
+        async Task<(string Name, byte[]? Art)> Ask(string name, Func<Task<byte[]?>> lookup)
         {
             try
             {
-                if ((result = await lookup()) is not null)
-                {
-                    from = name;
-                    break;
-                }
+                return (name, await lookup());
             }
             catch (Exception ex)
             {
                 anyFailed = true;
                 Log.Error($"Artwork lookup via {name} failed", ex);
+                return (name, null);
             }
         }
 
-        Log.Info($"Artwork for '{track.PrimaryArtist} - {track.Title}': {from}");
+        var asking = new List<Task<(string Name, byte[]? Art)>>
+        {
+            Ask("iTunes " + Country, () => ArtworkFromITunesAsync(track, Country)),
+        };
+        if (Country != "US")
+        {
+            asking.Add(Ask("iTunes US", () => ArtworkFromITunesAsync(track, "US")));
+        }
+
+        byte[]? result = null;
+        string from = "nowhere";
+        while (asking.Count > 0 && result is null)
+        {
+            var answered = await Task.WhenAny(asking);
+            asking.Remove(answered);
+            (from, result) = await answered;
+        }
+        if (result is null)
+        {
+            (from, result) = await Ask("MusicBrainz", () => ArtworkFromMusicBrainzAsync(track));
+        }
+        if (result is null)
+        {
+            from = "nowhere";
+        }
+
+        Log.Info($"Artwork for '{track.PrimaryArtist} - {track.Title}': {from} ({watch.ElapsedMilliseconds} ms)");
 
         // Remember "not found", but not network errors: those get another try next time the song plays.
         if (result is not null || !anyFailed)

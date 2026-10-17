@@ -17,8 +17,8 @@ A voice island for Windows: a pill at the top of the screen that expands on hove
 - Spring animations between **idle**, **compact** and **expanded**; hover to expand. It comes up as a dot that springs out to the pill. What it shows glides in as the pill opens, each view with a small entrance of its own (artwork popping in, rows cascading, a battery filling up, a ringing bell swinging); switching tabs slides the content over and the tab highlight springs across. A glint crosses the glass as the island opens or a notice arrives (which springs the pill out with a little bounce), the glass catches the light where you point, buttons grow a touch under the pointer and sink when pressed, and the artwork slowly swells while music plays. A faint shadow keeps the pill clear of light wallpapers. With Windows' "Animation effects" off (Accessibility → Visual effects), things just appear and nothing loops.
 - Clicks pass straight through everywhere except the pill, and clicking it never steals focus.
 - Now playing for any app that publishes media info (Spotify, Amazon Music, YouTube in Chrome/Edge, Media Player…): artwork, title, progress, play/pause/next/previous.
-- Glass look: a solid tint (a hint of see-through is available in Settings) with a top highlight and bright rim. While music plays, the glass, level bars and progress bar take their colours from the artwork.
-- Artwork comes from the playing app; when the app doesn't provide any (Amazon Music doesn't), it's looked up by artist + title in the iTunes catalogue (your country's store, then the US store) and then MusicBrainz / Cover Art Archive. Only results whose artist *and* title match are used; if nothing matches, the island gets a colour generated from the song instead. The lookup sends the artist and title to Apple and MusicBrainz, and can be switched off in Settings.
+- Glass look: a solid tint (a hint of see-through is available in Settings) with a top highlight and bright rim. While music plays, the glass (or the black notch), level bars and progress bar take their colours from the artwork.
+- Artwork comes from the playing app. When the app doesn't provide any: a video playing in a browser (which shares only its title and channel) gets its own thumbnail from YouTube, found on YouTube's search page by its exact title (and channel); a song (Amazon Music shares no artwork) is looked up by artist + title in the iTunes catalogue, your country's store and the US store at once, the first to find it winning, and only if neither has it in MusicBrainz / Cover Art Archive, which is slow. Only results whose artist *and* exact title match are used (not "Shoorveer" for "Shoorveer III"); if nothing matches, the island gets a colour generated from the song instead. A new song's cover replaces the last one's straight away (with the music note until it's found), never showing the old song's. The lookups send the title and artist (or channel) to YouTube, Apple and MusicBrainz, and can be switched off in Settings.
 - Some apps publish odd metadata. Amazon Music never shares artwork or track length, and sometimes reports one value as both title and artist for a whole song — sometimes it's the artist ("Sayfalse"), sometimes the song ("Pooja & Patola"). The island asks the catalogue which it is (when online lookups are allowed); if it's an artist, or it can't tell, it shows "Now playing" rather than passing the artist off as the song.
 - Volume and brightness changes show briefly as a level bar, keeping the music's colours if something's playing. Switching speakers (headphones connecting) doesn't pop up the volume; the Bluetooth notice covers that. Brightness works on laptop screens; desktop monitors don't report it. Windows' own volume pop-up still appears too.
 - Battery: "Charging" when you plug in, "Fully charged" when it gets to 100%, and warnings at 20% and 10% (once each per discharge). Unplugging is silent; PCs without a battery never show it.
@@ -85,7 +85,7 @@ Changes apply immediately and are saved to `settings.json` in the data folder:
 | Natural voice (Microsoft Azure) | On/off, your Azure Speech key and region (Save, Test plays a sample), link to create a Speech resource |
 | Accent and voice | Match mine (the accent you speak with), Indian, American or British English; female or male |
 | Listen for "Hey Glyde" | Wake phrase instead of (or as well as) the shortcut; keeps the microphone open |
-| Find missing album art online | iTunes / MusicBrainz lookup for apps that don't share artwork (sends artist + title to them) |
+| Find missing album art online | YouTube thumbnails for browser videos, iTunes / MusicBrainz covers for apps that don't share artwork (sends title + artist or channel to them) |
 
 ## Run it
 
@@ -156,6 +156,7 @@ src/WinIsland/
   Services/MediaService.cs    Windows media sessions (now playing + controls)
   Services/ArtworkService.cs  artwork decoding, colour palette, generated fallback colours
   Services/MusicCatalog.cs    online lookups: artwork, and which of title/artist a value is (iTunes, MusicBrainz)
+  Services/YouTubeThumbnails.cs  a browser video's own thumbnail, found on YouTube by its title
   Services/TrackQuery.cs      title/artist clean-up and matching
   Services/ColorMath.cs
   Services/VolumeMonitor.cs   default speakers' volume/mute (Core Audio)

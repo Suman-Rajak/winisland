@@ -19,8 +19,9 @@ internal static class ArtworkService
     private const int GlowSize = 6;
 
     /// <summary>
-    /// The track's artwork from the app, or from an online catalogue (if allowed). When there is
-    /// none anywhere, colours generated from the title, so the glass still gets a colour per song.
+    /// The track's artwork from the app, or else (if allowed) a browser video's thumbnail from YouTube or
+    /// a song's cover from online catalogues. When there is none anywhere, colours generated from the
+    /// title, so the glass still gets a colour per song.
     /// </summary>
     public static async Task<Artwork> LoadAsync(MediaSnapshot media)
     {
@@ -42,6 +43,15 @@ internal static class ArtworkService
 
     private static async Task<IRandomAccessStream?> OpenAsync(MediaSnapshot media)
     {
+        // What a browser plays is mostly YouTube, and a browser's own picture for it is often just its
+        // logo (Brave's lion), so look for the video's thumbnail first. Only a video with exactly this
+        // title is taken, so a song on a music site still gets that site's picture.
+        bool online = AppSettings.Current.FindArtworkOnline && media.Title.Length > 0;
+        if (online && s_browsers.Contains(media.AppName) && await YouTubeThumbnails.FindAsync(media.Title, media.Artist) is { } video)
+        {
+            return new MemoryStream(video).AsRandomAccessStream();
+        }
+
         if (media.Thumbnail is not null)
         {
             try
@@ -54,7 +64,7 @@ internal static class ArtworkService
             }
         }
 
-        if (!AppSettings.Current.FindArtworkOnline || media.Title.Length == 0)
+        if (!online)
         {
             return null;
         }
@@ -62,6 +72,12 @@ internal static class ArtworkService
         var bytes = await MusicCatalog.FindArtworkAsync(media.Artist, media.Title);
         return bytes is null ? null : new MemoryStream(bytes).AsRandomAccessStream();
     }
+
+    // As MediaService names them.
+    private static readonly HashSet<string> s_browsers = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Chrome", "Microsoft Edge", "Brave", "Firefox", "Opera",
+    };
 
     private static async Task<Artwork> DecodeArtworkAsync(IRandomAccessStream stream)
     {

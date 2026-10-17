@@ -606,7 +606,7 @@
                         </Grid.ColumnDefinitions>
                         <StackPanel VerticalAlignment="Center">
                             <TextBlock Text="Find missing album art online" Style="{StaticResource CardTitleStyle}" />
-                            <TextBlock Text="Some apps, like Amazon Music, don't share their artwork. Glyde can look it up in Apple's iTunes catalogue and MusicBrainz, which sends the song title and artist to them."
+                            <TextBlock Text="Some apps, like Amazon Music and browsers, don't share their artwork. Glyde can look songs up in the iTunes and MusicBrainz catalogues, and a video playing in a browser on YouTube, which sends the title and artist (or channel) to them."
                                        Style="{StaticResource CardDescriptionStyle}" />
                         </StackPanel>
                         <ToggleSwitch x:Name="ArtworkToggle" Grid.Column="1" OnContent="" OffContent="" MinWidth="0" Toggled="OnArtworkToggled" />

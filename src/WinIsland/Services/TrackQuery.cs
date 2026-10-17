@@ -17,22 +17,29 @@ internal sealed partial record TrackQuery(string Title, IReadOnlyList<string> Ar
         new(CleanTitle(title), [.. ArtistSeparators().Split(artist).Select(a => a.Trim()).Where(a => a.Length > 0)]);
 
     /// <summary>
-    /// True when a catalogue result is really this track: same title (ignoring decorations) and
+    /// True when a catalogue result is really this track: the same title (ignoring decorations) and
     /// at least one artist in common. Title-only matches find other artists' songs with the same
-    /// name, which is worse than showing no artwork.
+    /// name, and titles that only begin alike find other songs ("Shoorveer" for "Shoorveer III"):
+    /// both are worse than showing no artwork.
     /// </summary>
     public bool Matches(string candidateArtist, string candidateTitle)
     {
-        string wanted = Normalize(Title), found = Normalize(CleanTitle(candidateTitle));
-        if (wanted.Length == 0 || found.Length == 0 ||
-            !(wanted == found || found.StartsWith(wanted + " ") || wanted.StartsWith(found + " ")))
+        string wanted = Normalize(Title);
+        if (wanted.Length == 0 || wanted != Normalize(CleanTitle(candidateTitle)))
         {
             return false;
         }
 
-        string foundArtist = Normalize(candidateArtist);
-        return Artists.Select(Normalize).Any(a => a.Length > 0 && (foundArtist.Contains(a) || a.Contains(foundArtist)));
+        var found = From(candidateArtist, string.Empty).Artists.Select(Normalize).Where(a => a.Length > 0).ToList();
+        return Artists.Select(Normalize).Any(a => a.Length > 0 && found.Any(f => SameArtist(a, f)));
     }
+
+    /// <summary>
+    /// The same artist, or one name within the other as whole words ("Karan Aujla" in "Karan Aujla &amp;
+    /// Ikky" when a catalogue didn't split them). Not just any part of a name: "Ap" isn't "Ap Dhillon".
+    /// </summary>
+    private static bool SameArtist(string a, string b) =>
+        a == b || (b.Length >= 4 && $" {a} ".Contains($" {b} ")) || (a.Length >= 4 && $" {b} ".Contains($" {a} "));
 
     /// <summary>Drops bracketed decorations and "feat."/"- Remastered" style suffixes.</summary>
     public static string CleanTitle(string title)
@@ -43,11 +50,14 @@ internal sealed partial record TrackQuery(string Title, IReadOnlyList<string> Ar
         return Whitespace().Replace(cleaned, " ").Trim();
     }
 
-    /// <summary>Lowercase letters and digits only, accents removed, single spaces.</summary>
+    /// <summary>
+    /// Lowercase letters and digits only, accents removed, single spaces. Styled letters count as the
+    /// plain ones ("𝙈𝙊𝙉𝙏𝘼𝙂𝙀𝙈", "Ｆａｍａ"), as video titles often use them.
+    /// </summary>
     public static string Normalize(string text)
     {
         var builder = new StringBuilder(text.Length);
-        foreach (char c in text.Normalize(NormalizationForm.FormD))
+        foreach (char c in text.Normalize(NormalizationForm.FormKD))
         {
             if (CharUnicodeInfo.GetUnicodeCategory(c) == UnicodeCategory.NonSpacingMark)
             {

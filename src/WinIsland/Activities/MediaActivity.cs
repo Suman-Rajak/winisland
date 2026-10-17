@@ -101,6 +101,13 @@ internal sealed class MediaActivity : IslandActivity
             return;
         }
 
+        if (track != _artworkTrack)
+        {
+            // A new song: the last one's cover goes straight away (it would be the wrong one while the
+            // new one's looked up); its colours stay until the new ones come.
+            _compactView.Artwork = null;
+            _expandedView.Artwork = null;
+        }
         _artworkTrack = track;
         _artworkFromThumbnail = hasThumbnail;
         var artwork = media is null ? null : await ArtworkService.LoadAsync(media);
