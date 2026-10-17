@@ -26,9 +26,27 @@ if ($unlock.AllowDevelopmentWithoutDevLicense -ne 1) {
     exit 1
 }
 
-# A running copy (packaged or not, either name) would hold its files open.
-Get-Process $name, $formerName -ErrorAction SilentlyContinue | Stop-Process
-Start-Sleep -Milliseconds 500
+# A running copy (packaged or not, either name) would hold its files open. Ask it to quit first, so it
+# closes the microphone properly: killing it while it recorded has twice left Windows' audio unable to
+# open any microphone until the Windows Audio service was restarted. Kill it only if it doesn't go.
+$running = Get-Process $name, $formerName -ErrorAction SilentlyContinue
+if ($running) {
+    $quit = $null
+    if ([System.Threading.EventWaitHandle]::TryOpenExisting("Local\$name.Quit", [ref]$quit)) {
+        $quit.Set() | Out-Null
+        $quit.Dispose()
+        $running | Wait-Process -Timeout 5 -ErrorAction SilentlyContinue
+    }
+    $stuck = Get-Process $name, $formerName -ErrorAction SilentlyContinue
+    if ($stuck) {
+        Write-Host "$name didn't quit by itself; stopping it."
+        # (A copy that's already on its way out, or crashed and being reported to Windows, refuses to be
+        # stopped: just wait for it to go.)
+        $stuck | Stop-Process -Force -ErrorAction SilentlyContinue
+        $stuck | Wait-Process -Timeout 30 -ErrorAction SilentlyContinue
+    }
+    Start-Sleep -Milliseconds 500
+}
 
 dotnet build $project -c Packaged -p:Platform=x64 -nologo -v:minimal
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

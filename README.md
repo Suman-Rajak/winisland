@@ -104,7 +104,7 @@ Windows only shares notifications with apps installed as a package (MSIX). With 
 ./build-package.ps1
 ```
 
-Then start Glyde from the Start menu; the first time, Windows asks whether it may read your notifications. Run the script again after changes to update it (if the manifest changed, it reinstalls, keeping the app's data). The installed version keeps its own settings, shelf and log; the first install copies the plain build's across and moves "Start with Windows" to the package's startup task (shown in Task Manager → Startup apps). To uninstall: `Get-AppxPackage Glyde | Remove-AppxPackage`.
+Then start Glyde from the Start menu; the first time, Windows asks whether it may read your notifications. Run the script again after changes to update it (if the manifest changed, it reinstalls, keeping the app's data). It asks the running Glyde to quit first, so the microphone is closed properly (killing it mid-recording has left Windows' audio unable to open a microphone until the Windows Audio service was restarted), and only stops it by force if it hasn't gone after 5 seconds. The installed version keeps its own settings, shelf and log; the first install copies the plain build's across and moves "Start with Windows" to the package's startup task (shown in Task Manager → Startup apps). To uninstall: `Get-AppxPackage Glyde | Remove-AppxPackage`.
 
 ### Developer switches
 

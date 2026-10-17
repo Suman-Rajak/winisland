@@ -83,6 +83,7 @@ public sealed partial class IslandWindow : Window
     private readonly DispatcherQueueTimer _tintSoon;    // a moment after you switch apps, once the new one's drawn
     private MenuBarWindow? _menuBar;
     private bool _started;
+    private bool _closed; // quitting: the windows are going
     private ExpressionAnimation _pillPlace = null!; // (set up with the pill)
     private ShapeVisual _sheen = null!;
     private bool? _notch; // shown as a notch, as last applied (see ApplyNotch)
@@ -258,6 +259,13 @@ public sealed partial class IslandWindow : Window
 
         Closed += (_, _) =>
         {
+            // Quitting: nothing may touch the windows from here on. Closing the microphone, say, tells the
+            // mic/camera watcher it's free, and the foreground moves as the windows go.
+            _closed = true;
+            _timer.Stop();
+            _tintSoon.Stop();
+            _settings.Changed -= OnSettingsChanged;
+            _assistant.Shutdown(); // lets go of the microphone
             _menuBar?.Close();
             _strip.Release(); // the windows get the top of the screen back
         };
@@ -336,6 +344,11 @@ public sealed partial class IslandWindow : Window
 
     private void OnActivityChanged()
     {
+        if (_closed)
+        {
+            return;
+        }
+
         UpdateVisibility(); // the assistant shows even over a full-screen app
         UpdateState();
         UpdateBubble();

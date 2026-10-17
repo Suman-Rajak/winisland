@@ -88,6 +88,7 @@ internal sealed class AssistantActivity : IslandActivity
     private bool _micIsBluetooth;
     private Task<string?>? _micOpening;
     private WakeWordDetector? _wake;
+    private bool _shutDown; // Glyde is quitting: the microphone stays closed
 
     // The request being listened to: where it starts in the microphone's audio, and whether you've finished.
     private volatile bool _inRequest;
@@ -454,6 +455,11 @@ internal sealed class AssistantActivity : IslandActivity
     /// </summary>
     private void UpdateWakeWord()
     {
+        if (_shutDown)
+        {
+            return;
+        }
+
         bool wanted = WakeWordEnabled;
         if (wanted && !SpeechToText.WakeModel.IsDownloaded)
         {
@@ -570,6 +576,11 @@ internal sealed class AssistantActivity : IslandActivity
                 mic.Dispose();
                 return problem;
             }
+            if (_shutDown)
+            {
+                mic.Dispose(); // Glyde quit while it opened
+                return "Glyde is quitting.";
+            }
 
             _mic = mic;
             _micIsBluetooth = choice.IsBluetooth;
@@ -586,6 +597,21 @@ internal sealed class AssistantActivity : IslandActivity
         _mic = null;
         _wake = null;
         Log.Info("Microphone closed");
+    }
+
+    /// <summary>
+    /// Glyde is quitting: stop talking and close the microphone properly, rather than leave it to the
+    /// process ending (a capture stream cut off that way has left Windows' audio stuck), and keep it closed.
+    /// </summary>
+    public void Shutdown()
+    {
+        _shutDown = true;
+        _micRetry.Stop();
+        _speaker.Stop();
+        if (_mic is not null)
+        {
+            CloseMicrophone();
+        }
     }
 
     /// <summary>The microphone's loudness, on the audio thread: to the waveform during a request, else to the wake-phrase detector.</summary>
