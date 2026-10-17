@@ -150,6 +150,24 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Bar colour" Style="{StaticResource CardTitleStyle}" />
+                            <TextBlock Text="The bar beside the notch takes the colour of the page you're on, or matches the taskbar."
+                                       Style="{StaticResource CardDescriptionStyle}" />
+                        </StackPanel>
+                        <ComboBox x:Name="BarColourCombo" Grid.Column="1" MinWidth="200" VerticalAlignment="Center"
+                                  SelectionChanged="OnBarColourChanged">
+                            <ComboBoxItem Content="The page you're on" Tag="Page" />
+                            <ComboBoxItem Content="Same as the taskbar" Tag="Taskbar" />
+                        </ComboBox>
+                    </Grid>
+                </Border>
+                <Border Style="{StaticResource CardStyle}">
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
                             <TextBlock Text="Hide when idle" Style="{StaticResource CardTitleStyle}" />
                             <TextBlock Text="Fade the island out when nothing is playing. Point at the top of the screen to bring it back."
                                        Style="{StaticResource CardDescriptionStyle}" />

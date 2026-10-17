@@ -143,6 +143,8 @@ public sealed partial class SettingsWindow : Window
             DistanceLabel.Text = $"{_settings.DistanceFromTop:0} px";
             NotchToggle.IsOn = _settings.Notch;
             MenuBarToggle.IsOn = _settings.MenuBar;
+            BarColourCombo.SelectedItem = BarColourCombo.Items.Cast<ComboBoxItem>()
+                .First(item => (string)item.Tag == _settings.BarColour.ToString());
             ShowNotch();
             HideIdleToggle.IsOn = _settings.HideWhenIdle;
             StepAsideToggle.IsOn = _settings.StepAsideForApps;
@@ -282,12 +284,21 @@ public sealed partial class SettingsWindow : Window
 
     private void OnMenuBarToggled(object sender, RoutedEventArgs e) => Update(s => s.MenuBar = MenuBarToggle.IsOn);
 
-    /// <summary>A notch hangs from the top edge and is always there, so distance and hiding don't apply; the menu bar is in its bar.</summary>
+    private void OnBarColourChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (BarColourCombo.SelectedItem is ComboBoxItem { Tag: string tag } && Enum.TryParse<BarColour>(tag, out var colour))
+        {
+            Update(s => s.BarColour = colour);
+        }
+    }
+
+    /// <summary>A notch hangs from the top edge and is always there, so distance and hiding don't apply; the menu bar and its colour are in its bar.</summary>
     private void ShowNotch()
     {
         DistanceSlider.IsEnabled = !NotchToggle.IsOn;
         HideIdleToggle.IsEnabled = !NotchToggle.IsOn;
         MenuBarToggle.IsEnabled = NotchToggle.IsOn;
+        BarColourCombo.IsEnabled = NotchToggle.IsOn;
     }
 
     private void OnHideIdleToggled(object sender, RoutedEventArgs e) =>

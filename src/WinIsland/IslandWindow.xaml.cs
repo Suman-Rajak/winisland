@@ -265,6 +265,7 @@ public sealed partial class IslandWindow : Window
             _timer.Stop();
             _tintSoon.Stop();
             _settings.Changed -= OnSettingsChanged;
+            _foreground.Dispose();
             _assistant.Shutdown(); // lets go of the microphone
             _menuBar?.Close();
             _strip.Release(); // the windows get the top of the screen back
@@ -368,6 +369,7 @@ public sealed partial class IslandWindow : Window
         ApplyTheme();
         ApplyIdleFade();
         _aurora.SetMode(_assistant.Glow);
+        TintBar(); // (the bar's colour may have been changed)
     }
 
     // ---------------------------------------------------------------- window setup
@@ -712,9 +714,8 @@ public sealed partial class IslandWindow : Window
     }
 
     /// <summary>
-    /// The bar at the top wears the colour of the app you're in (see AppColors): its accent, from its icon,
-    /// or else its title bar's, read off the screen just below the bar. Not while one of the menu bar's
-    /// menus is open over it.
+    /// The bar at the top takes its colour from the page you're on, read off the screen (see AppColors),
+    /// or the taskbar's, as Settings says. Not while one of the menu bar's menus is open over the page.
     /// </summary>
     private void TintBar()
     {
@@ -723,14 +724,22 @@ public sealed partial class IslandWindow : Window
             return;
         }
 
-        var island = new Native.RECT
+        Windows.UI.Color? colour;
+        if (_settings.BarColour == BarColour.Taskbar)
         {
-            Left = _origin.X,
-            Top = _origin.Y,
-            Right = _origin.X + (int)Math.Ceiling(StageWidth * _scale),
-            Bottom = _origin.Y + (int)Math.Ceiling(StageHeight * _scale),
-        };
-        var colour = AppColors.AccentOf(_foreground.Icon) ?? AppColors.TopOf(_foreground.Window, bar.Bottom, island);
+            colour = AppColors.Taskbar();
+        }
+        else
+        {
+            var island = new Native.RECT
+            {
+                Left = _origin.X,
+                Top = _origin.Y,
+                Right = _origin.X + (int)Math.Ceiling(StageWidth * _scale),
+                Bottom = _origin.Y + (int)Math.Ceiling(StageHeight * _scale),
+            };
+            colour = AppColors.PageOf(_foreground.Window, bar.Bottom, island);
+        }
         _strip.Tint(colour);
         _menuBar?.ShowBarColour(colour);
     }
@@ -880,7 +889,7 @@ public sealed partial class IslandWindow : Window
             // Coming in: what's under the pointer decides.
             _enteredPressed = pressed;
             _yielding = _settings.StepAsideForApps && !pressed && _state != IslandState.Expanded
-                && WindowsBelow.AppAt(_hwnd, cursor, _strip.Handle);
+                && WindowsBelow.AppAt(_hwnd, cursor);
             _restAt = cursor;
             _restSince = now;
         }

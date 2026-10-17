@@ -32,6 +32,13 @@ internal enum AnimationSpeed
     Snappy,
 }
 
+/// <summary>What colour the bar beside the notch takes.</summary>
+internal enum BarColour
+{
+    Page,    // the page you're on: the app's own background
+    Taskbar, // the same as the taskbar
+}
+
 /// <summary>
 /// User settings, stored as JSON in settings.json in <see cref="AppPaths.DataFolder"/>.
 /// Change properties on the UI thread, then call <see cref="Save"/>: it raises <see cref="Changed"/>
@@ -75,6 +82,9 @@ internal sealed class AppSettings
     /// left; pinned apps, Glyde, Wi-Fi, sound, battery and the time on the right.
     /// </summary>
     public bool MenuBar { get; set; } = true;
+
+    /// <summary>The bar beside the notch takes the colour of the page you're on, or the taskbar's.</summary>
+    public BarColour BarColour { get; set; } = BarColour.Page;
 
     /// <summary>Fade the island out when there's nothing to show; hovering the top of the screen brings it back.</summary>
     public bool HideWhenIdle { get; set; }
@@ -199,6 +209,7 @@ internal sealed class AppSettings
         DistanceFromTop = defaults.DistanceFromTop;
         Notch = defaults.Notch;
         MenuBar = defaults.MenuBar;
+        BarColour = defaults.BarColour;
         HideWhenIdle = defaults.HideWhenIdle;
         StepAsideForApps = defaults.StepAsideForApps;
         AnimationSpeed = defaults.AnimationSpeed;
