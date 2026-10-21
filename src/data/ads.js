@@ -7,8 +7,8 @@
 export const ADSENSE_CLIENT = 'ca-pub-8042927022471258';
 
 export const AD_SLOTS = {
-  home: '', // home page, below the islands
-  belowTool: '', // every tool page, under the tool
-  inGuide: '', // inside the guide text
-  sidebar: '', // sticky tall ad beside the guide (desktop only)
+  home: '5121673503', // home page, below the islands
+  belowTool: '6111321542', // every tool page, under the tool
+  inGuide: '5149593661', // inside the guide text
+  sidebar: '5995771478', // sticky tall ad beside the guide (desktop only)
 };

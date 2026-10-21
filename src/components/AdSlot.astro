@@ -59,6 +59,11 @@ const placeholder = !live && import.meta.env.DEV;
     min-height: 280px;
   }
 
+  /* Hide the slot when AdSense has no ad for it (for example while the site is in review). */
+  .ad:has(ins[data-ad-status='unfilled']) {
+    display: none;
+  }
+
   .ad-sidebar {
     position: sticky;
     top: 20px;
