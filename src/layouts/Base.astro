@@ -19,6 +19,8 @@ const ogImage = new URL('/og-image.png', Astro.site);
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
     {noindex && <meta name="robots" content="noindex" />}
+    <!-- Google Search Console ownership check. Keep it, or Search Console loses access. -->
+    <meta name="google-site-verification" content="ELta_Z-UV7j0vJ639rgoh0Pewm5uDoiXYKLfEtm5jR0" />
 
     <Font cssVariable="--font-display" preload />
     <Font cssVariable="--font-body" preload />
