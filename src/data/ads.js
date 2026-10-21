@@ -4,7 +4,7 @@
 // 1. Paste your publisher ID, e.g. 'ca-pub-1234567890123456'. This also creates /ads.txt
 //    and loads Auto ads if you turn them on in AdSense.
 // 2. Optional: create display ad units in AdSense and paste their slot IDs below.
-export const ADSENSE_CLIENT = '';
+export const ADSENSE_CLIENT = 'ca-pub-8042927022471258';
 
 export const AD_SLOTS = {
   home: '', // home page, below the islands
