@@ -4,12 +4,14 @@ import AdSlot from '../components/AdSlot.astro';
 import Island from '../components/Island.astro';
 import ToolIcon from '../components/ToolIcon.astro';
 import { tools } from '../data/tools.js';
+import { guides, guideHref, toolTopics } from '../data/guides.js';
 
 const { title, description, island, heading, intro, kicker, noindex = false } = Astro.props;
 const index = tools.findIndex((t) => t.id === island);
 const tool = tools[index];
 // The next four islands in the list, so every page links to a different set.
 const others = [...tools.slice(index + 1), ...tools.slice(0, index)].slice(0, 4);
+const related = guides.filter((g) => g.topic === toolTopics[island]);
 ---
 
 <Base title={title} description={description} noindex={noindex}>
@@ -30,6 +32,20 @@ const others = [...tools.slice(index + 1), ...tools.slice(0, index)].slice(0, 4)
       </article>
 
       <aside class="side" aria-label="More games">
+        {
+          related.length > 0 && (
+            <section class="panel more">
+              <h2 class="panel-title">Guides</h2>
+              <ul class="guide-links">
+                {related.map((g) => (
+                  <li>
+                    <a href={guideHref(g.slug)}>{g.title}</a>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )
+        }
         <section class="panel more">
           <h2 class="panel-title">Hop to another island</h2>
           <ul>
@@ -105,6 +121,11 @@ const others = [...tools.slice(index + 1), ...tools.slice(0, index)].slice(0, 4)
     font-weight: 400;
     font-size: 1.1rem;
     line-height: 1.2;
+  }
+
+  .guide-links {
+    gap: 8px;
+    font-weight: 800;
   }
 
   .more-blurb {

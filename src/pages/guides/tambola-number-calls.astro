@@ -1,0 +1,229 @@
+---
+import GuidePage from '../../layouts/GuidePage.astro';
+import AdSlot from '../../components/AdSlot.astro';
+import { NICKNAMES, plainCall } from '../../scripts/tambola-calls.js';
+
+// Where each call comes from. Keys match NICKNAMES; the caller uses the same list.
+const WHY = {
+  1: 'Old caller slang. A popular story links it to the single eye slit in outlaw Ned Kelly’s iron helmet.',
+  2: 'The digit 2 looks like a duck swimming.',
+  3: 'Rhymes with three.',
+  4: 'Rhymes with four.',
+  5: 'Rhymes with five.',
+  6: 'Six is half of twelve.',
+  7: 'Seven is a lucky number in many cultures.',
+  8: 'Rhymes with eight.',
+  9: 'From an old army story about a pill doctors handed out, known as “Number 9”.',
+  10: 'From the counting rhyme that ends “nine, ten, a big fat hen”.',
+  11: 'The two 1s look like a pair of legs.',
+  12: 'Twelve is a dozen.',
+  13: 'Thirteen is thought of as unlucky.',
+  14: 'Valentine’s Day falls on 14 February.',
+  15: 'Rhymes with fifteen.',
+  16: 'The birthday that is famously “sweet sixteen”.',
+  17: 'After a famous 1970s pop song about a seventeen-year-old on the dance floor.',
+  18: 'Eighteen is when you legally become an adult in many countries.',
+  19: 'The last year of your teens.',
+  20: 'A score is an old word for twenty.',
+  21: 'Turning 21 traditionally meant getting your own key to the house.',
+  22: 'Two 2s look like two ducks side by side. Players often answer “quack quack”.',
+  23: 'Rhymes with twenty-three.',
+  24: 'Twenty-four is two dozen.',
+  25: 'Rhymes with twenty-five.',
+  26: 'Rhymes with twenty-six.',
+  27: 'Rhymes with twenty-seven.',
+  28: 'A loose rhyme with twenty-eight.',
+  29: 'Rhymes with twenty-nine.',
+  31: 'Rhymes with thirty-one.',
+  32: 'Rhymes with thirty-two, borrowed from the counting rhyme.',
+  33: 'Both digits are 3.',
+  34: 'Rhymes with thirty-four.',
+  35: 'Rhymes with thirty-five.',
+  36: 'Thirty-six is three dozen.',
+  38: 'A loose rhyme with thirty-eight.',
+  39: 'After the classic spy novel and film The 39 Steps.',
+  44: 'Both digits are 4.',
+  45: 'Forty-five is halfway to 90.',
+  46: 'Rhymes with forty-six.',
+  48: 'Forty-eight is four dozen.',
+  50: 'Fifty years make half a century, and fifty runs is a half-century in cricket.',
+  52: 'A pack of playing cards has 52 cards.',
+  53: 'Rhymes with fifty-three.',
+  55: 'Both digits are 5.',
+  60: 'Sixty is five dozen.',
+  62: 'Rhymes with sixty-two. “Tickety-boo” is old slang for “all is well”.',
+  66: 'Rhymes with sixty-six and sounds like the click of the two digits.',
+  67: 'Rhymes with sixty-seven.',
+  71: 'A loose rhyme with seventy-one.',
+  72: 'Seventy-two is six dozen.',
+  73: 'Rhymes with seventy-three.',
+  76: 'After the marching song “Seventy-Six Trombones” from the musical The Music Man.',
+  77: 'Both digits are 7.',
+  81: 'Rhymes with eighty-one.',
+  83: 'Rhymes with eighty-three.',
+  84: 'Eighty-four is seven dozen.',
+  85: 'Rhymes with eighty-five.',
+  86: 'Rhymes with eighty-six. A goalkeeper stands between the sticks.',
+  88: 'Both digits are 8.',
+  89: 'One short of 90, the last number.',
+  90: '90 is the highest number in the game.',
+};
+
+const bands = Array.from({ length: 9 }, (_, i) => {
+  const from = i === 0 ? 1 : i * 10;
+  const to = i === 8 ? 90 : i * 10 + 9;
+  const rows = [];
+  for (let n = from; n <= to; n++) rows.push({ n, call: NICKNAMES[n], plain: plainCall(n), why: WHY[n] });
+  return { from, to, rows };
+});
+const plainOnly = Array.from({ length: 90 }, (_, i) => i + 1).filter((n) => !NICKNAMES[n]);
+---
+
+<GuidePage
+  slug="tambola-number-calls"
+  description="The complete list of tambola (housie) number calls from 1 to 90, from Kelly's eye to Top of the house, with where each nickname comes from and tips for calling."
+  intro="“Two little ducks, twenty-two!” Half the fun of tambola is the calling. Here is every number from 1 to 90 with its traditional family-friendly nickname and the story behind it."
+>
+  <section class="panel">
+    <h2>Why tambola numbers have nicknames</h2>
+    <p>
+      Calls started as a practical trick. In a noisy hall, “fifteen” and “fifty” sound alike, and so do “thirteen” and
+      “thirty”. Adding a rhyme or a picture, such as “young and keen, fifteen”, means players hear the number twice in
+      two different ways, so fewer people mark the wrong box.
+    </p>
+    <p>
+      Over time the calls became part of the entertainment. Most come from British bingo halls and army barracks, and
+      they travelled to India with housie. They fall into a few families:
+    </p>
+    <ul>
+      <li><strong>Rhymes:</strong> “cup of tea, three”, “jump and jive, thirty-five”.</li>
+      <li><strong>Shapes:</strong> “legs eleven”, where the digits look like something.</li>
+      <li><strong>Dozens and doubles:</strong> “three dozen, thirty-six” or “all the fives, fifty-five”.</li>
+      <li><strong>Facts and culture:</strong> “deck of cards, fifty-two”, “Valentine’s Day, fourteen”.</li>
+    </ul>
+  </section>
+
+  <section class="panel">
+    <h2>Tambola calls 1 to 90: the full list</h2>
+    <p>
+      The list is split into the nine columns of a tambola ticket, so 1 to 9 is the first column, 10 to 19 the second and
+      so on. Where a number has no well-known family-friendly nickname, callers read it plainly, digit by digit. Our{' '}
+      <a href="/tambola-number-caller/">tambola number caller</a> uses exactly these calls when “Traditional calls” is
+      switched on.
+    </p>
+    {
+      bands.map((band) => (
+        <>
+          <h3>
+            {band.from} to {band.to}
+          </h3>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">No.</th>
+                  <th scope="col">Call</th>
+                  <th scope="col">Why</th>
+                </tr>
+              </thead>
+              <tbody>
+                {band.rows.map((r) => (
+                  <tr>
+                    <td>{r.n}</td>
+                    <td>{r.call ?? <span class="plain">{r.plain}</span>}</td>
+                    <td>{r.why ?? 'Called plainly.'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      ))
+    }
+  </section>
+
+  <AdSlot name="inGuide" />
+
+  <section class="panel">
+    <h2>How to call numbers like a pro</h2>
+    <ol>
+      <li>
+        <strong>Say it three ways.</strong> Nickname, then digits, then the number: “Legs eleven, one and one, eleven.”
+        It feels slow at first, but it saves endless repeats.
+      </li>
+      <li>
+        <strong>Keep a steady rhythm.</strong> Leave about 8 to 12 seconds between calls. Watch the slowest player at
+        the table, not the fastest.
+      </li>
+      <li>
+        <strong>Show the number too.</strong> Hold up the token or put a board on a screen so players who missed the call
+        can catch up without interrupting.
+      </li>
+      <li>
+        <strong>Pause for claims.</strong> When someone shouts, stop at once and don’t draw the next number until the
+        claim is checked.
+      </li>
+      <li>
+        <strong>Let the crowd join in.</strong> Many groups have a reply for certain calls, like “quack quack” for 22.
+        Encourage it. It keeps everyone listening.
+      </li>
+    </ol>
+    <p>
+      If you would rather play than call, a phone can do the calling for you. The winisland caller reads each number
+      aloud in a clear voice, at the speed you choose, and shows every called number on a board.
+    </p>
+  </section>
+
+  <section class="panel">
+    <h2>Make up your own calls</h2>
+    <p>
+      {plainOnly.length} numbers, such as {plainOnly.slice(0, 4).join(', ')} and {plainOnly.slice(-3).join(', ')}, have
+      no widely known family-friendly nickname. That is your chance to get creative. Personal calls make a game feel
+      special, especially at a birthday, anniversary or office party. A few ways to invent them:
+    </p>
+    <ul>
+      <li><strong>Birthdays and ages:</strong> “Nani’s birthday, seventy-five!” for the guest of honour’s age.</li>
+      <li><strong>House numbers and years:</strong> the flat number of the host, or the year a couple got married.</li>
+      <li><strong>Cricket scores:</strong> a famous innings, or the score your team chased last weekend.</li>
+      <li><strong>Simple rhymes:</strong> “Sixty-four, shut the door” or “Forty-two, all brand new”.</li>
+      <li><strong>Inside jokes:</strong> anything your group will laugh at, as long as everyone is in on it.</li>
+    </ul>
+    <p class="tip">
+      <strong>Tip:</strong> keep calls kind and suitable for every age at the table. A good call makes people smile, and
+      nobody should be the butt of the joke.
+    </p>
+  </section>
+
+  <section class="panel faq">
+    <h2>Frequently asked questions</h2>
+    <details>
+      <summary>Do I have to use nicknames when calling tambola?</summary>
+      <p>
+        No. Plain calls are perfectly fine and are easier for young children and new players. Many hosts use nicknames
+        only for the well-known ones like 11, 22 and 90.
+      </p>
+    </details>
+    <details>
+      <summary>Why are some numbers called “all the …”?</summary>
+      <p>Numbers with two identical digits, like 33, 44 and 77, are called “all the threes”, “all the fours” and so on.</p>
+    </details>
+    <details>
+      <summary>Are the calls different in India and the UK?</summary>
+      <p>
+        Most are shared, but each region and family has favourites. In India you will also hear calls in Hindi and
+        local languages, and many groups make up their own. There is no single official list.
+      </p>
+    </details>
+    <details>
+      <summary>How do I learn the rules before calling?</summary>
+      <p>Read our <a href="/guides/how-to-play-tambola/">complete guide to playing tambola</a>, which covers tickets, prizes and claims.</p>
+    </details>
+  </section>
+</GuidePage>
+
+<style>
+  .plain {
+    color: var(--muted);
+    font-style: italic;
+  }
+</style>

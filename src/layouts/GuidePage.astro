@@ -1,0 +1,284 @@
+---
+// Layout for a guide article. Each page passes its slug; title, dates and the related tool
+// come from src/data/guides.js so the index, footer and "More guides" box stay in sync.
+import Base from './Base.astro';
+import AdSlot from '../components/AdSlot.astro';
+import Island from '../components/Island.astro';
+import Logo from '../components/Logo.astro';
+import { guides, guideHref } from '../data/guides.js';
+import { tools } from '../data/tools.js';
+
+const { slug, description, heading, intro } = Astro.props;
+const guide = guides.find((g) => g.slug === slug);
+if (!guide) throw new Error(`No guide with slug "${slug}" in src/data/guides.js`);
+
+const tool = tools.find((t) => t.id === guide.tool);
+const more = guides.filter((g) => g.slug !== slug).slice(0, 5);
+const date = (iso) =>
+  new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+const updated = guide.updated ?? guide.published;
+
+const pageUrl = new URL(guideHref(slug), Astro.site).href;
+const schema = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: guide.title,
+    description: description ?? guide.blurb,
+    datePublished: guide.published,
+    dateModified: updated,
+    mainEntityOfPage: pageUrl,
+    image: new URL('/og-image.png', Astro.site).href,
+    author: { '@type': 'Organization', name: 'winisland', url: Astro.site.href },
+    publisher: { '@type': 'Organization', name: 'winisland', url: Astro.site.href },
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: Astro.site.href },
+      { '@type': 'ListItem', position: 2, name: 'Guides', item: new URL('/guides/', Astro.site).href },
+      { '@type': 'ListItem', position: 3, name: guide.short, item: pageUrl },
+    ],
+  },
+];
+---
+
+<Base title={`${guide.title} | winisland`} description={description ?? guide.blurb}>
+  <script slot="head" type="application/ld+json" set:html={JSON.stringify(schema)} />
+
+  <div class="container">
+    <nav class="crumbs" aria-label="Breadcrumb">
+      <ol>
+        <li><a href="/">Home</a></li>
+        <li><a href="/guides/">Guides</a></li>
+        <li aria-current="page">{guide.short}</li>
+      </ol>
+    </nav>
+
+    <header class="level-head">
+      <p class="kicker"><Logo size={26} /> {guide.topic} guide</p>
+      <h1>{heading ?? guide.title}</h1>
+      {intro && <p class="intro">{intro}</p>}
+      <p class="meta">
+        By the winisland team · {guide.minutes} min read ·{' '}
+        {
+          updated === guide.published ? (
+            <time datetime={guide.published}>{date(guide.published)}</time>
+          ) : (
+            <>
+              Updated <time datetime={updated}>{date(updated)}</time>
+            </>
+          )
+        }
+      </p>
+    </header>
+
+    <div class="content-grid">
+      <article class="guide article">
+        <slot />
+
+        {
+          tool && (
+            <section class="panel try">
+              <Island kind={tool.id} uid={`try-${tool.id}`} class="try-art" />
+              <div>
+                <h2>Try the free {tool.name}</h2>
+                <p>{tool.blurb} No sign-up, and it works offline.</p>
+                <a class="btn btn-play" href={tool.href}>
+                  Open {tool.short} ▶
+                </a>
+              </div>
+            </section>
+          )
+        }
+      </article>
+
+      <aside class="side" aria-label="More guides">
+        <section class="panel more">
+          <h2 class="panel-title">More guides</h2>
+          <ul>
+            {
+              more.map((g) => (
+                <li>
+                  <a href={guideHref(g.slug)}>
+                    <strong>{g.short}</strong>
+                    <span>{g.blurb}</span>
+                  </a>
+                </li>
+              ))
+            }
+          </ul>
+          <p class="all"><a href="/guides/">All guides →</a></p>
+        </section>
+        <AdSlot name="sidebar" desktopOnly />
+      </aside>
+    </div>
+  </div>
+</Base>
+
+<style>
+  .crumbs {
+    padding-top: 18px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--muted);
+  }
+
+  .crumbs ol {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .crumbs li + li::before {
+    content: '›';
+    margin-inline: 8px;
+    color: var(--muted);
+  }
+
+  .crumbs a {
+    color: var(--muted);
+  }
+
+  .crumbs a:hover {
+    color: var(--text);
+  }
+
+  .level-head {
+    padding-top: 12px;
+  }
+
+  .meta {
+    margin: 12px 0 0;
+    color: var(--muted);
+    font-size: 0.9rem;
+    font-weight: 700;
+  }
+
+  .content-grid {
+    padding-top: 12px;
+  }
+
+  .article :global(h3) {
+    margin-top: 1.3em;
+    font-size: 1.2rem;
+  }
+
+  .article :global(section > h3:first-child),
+  .article :global(h2 + h3) {
+    margin-top: 0.6em;
+  }
+
+  .article :global(.table-wrap) {
+    overflow-x: auto;
+    margin: 0 0 1em;
+  }
+
+  .article :global(table) {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.97rem;
+  }
+
+  .article :global(th),
+  .article :global(td) {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .article :global(th) {
+    color: var(--gold);
+    font-weight: 900;
+  }
+
+  .article :global(td:first-child) {
+    font-weight: 900;
+    white-space: nowrap;
+  }
+
+  .article :global(.tip) {
+    padding: 14px 16px;
+    border-left: 4px solid var(--cyan);
+    border-radius: 0 12px 12px 0;
+    background: rgb(0 0 0 / 0.2);
+  }
+
+  .try {
+    display: grid;
+    gap: 16px;
+    align-items: center;
+  }
+
+  @media (min-width: 620px) {
+    .try {
+      grid-template-columns: 140px 1fr;
+    }
+  }
+
+  .try :global(.try-art) {
+    width: 140px;
+    margin-inline: auto;
+  }
+
+  .try h2 {
+    margin-top: 0;
+  }
+
+  .side {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .more {
+    padding: 20px;
+  }
+
+  .more ul {
+    list-style: none;
+    margin: 14px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 10px;
+  }
+
+  .more li a {
+    display: block;
+    padding: 10px 12px;
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    background: rgb(0 0 0 / 0.18);
+    color: var(--text);
+    text-decoration: none;
+    transition: border-color 0.15s;
+  }
+
+  .more li a:hover {
+    border-color: var(--cyan);
+  }
+
+  .more strong {
+    display: block;
+    font-family: var(--font-display-stack);
+    font-weight: 400;
+    font-size: 1.05rem;
+  }
+
+  .more span {
+    display: block;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    color: var(--muted);
+  }
+
+  .all {
+    margin: 14px 0 0;
+    font-weight: 800;
+  }
+</style>

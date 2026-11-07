@@ -1,0 +1,69 @@
+---
+import InfoPage from '../../layouts/InfoPage.astro';
+import { guides, guideHref } from '../../data/guides.js';
+import { tools } from '../../data/tools.js';
+
+// Group guides by topic, keeping the order they appear in src/data/guides.js.
+const topics = [...new Set(guides.map((g) => g.topic))].map((topic) => ({
+  topic,
+  items: guides.filter((g) => g.topic === topic),
+}));
+const toolFor = (id) => tools.find((t) => t.id === id);
+---
+
+<InfoPage
+  title="Party Game Guides: Tambola, Secret Santa and Giveaways | winisland"
+  description="Free guides to tambola (housie) rules and calls, kitty party games, Secret Santa rules and gift ideas, and running a fair online giveaway."
+  kicker="Guides"
+  heading="Party game guides"
+  intro="Rules, ideas and tips for hosting games that everyone enjoys. Each guide links to a free tool you can use straight away."
+>
+  {
+    topics.map(({ topic, items }) => (
+      <section class="panel">
+        <h2>{topic}</h2>
+        <ul class="guide-list">
+          {items.map((g) => (
+            <li>
+              <a href={guideHref(g.slug)}>{g.title}</a>
+              <p>{g.blurb}</p>
+              <p class="small">
+                {g.minutes} min read · Tool: <a href={toolFor(g.tool).href}>{toolFor(g.tool).name}</a>
+              </p>
+            </li>
+          ))}
+        </ul>
+      </section>
+    ))
+  }
+</InfoPage>
+
+<style>
+  .guide-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 18px;
+  }
+
+  .guide-list li {
+    margin: 0;
+  }
+
+  .guide-list > li > a {
+    font-family: var(--font-display-stack);
+    font-size: 1.2rem;
+    line-height: 1.25;
+  }
+
+  .guide-list p {
+    margin: 4px 0 0;
+  }
+
+  .small {
+    color: var(--muted);
+    font-size: 0.9rem;
+    font-weight: 700;
+  }
+</style>

@@ -1,9 +1,11 @@
 ---
 import Logo from './Logo.astro';
 import { tools } from '../data/tools.js';
+import { guides, guideHref } from '../data/guides.js';
 
 const year = new Date().getFullYear();
 const siteLinks = [
+  { href: '/guides/', name: 'All guides' },
   { href: '/about/', name: 'About us' },
   { href: '/contact/', name: 'Contact' },
   { href: '/privacy-policy/', name: 'Privacy Policy' },
@@ -30,6 +32,18 @@ const siteLinks = [
           tools.map((tool) => (
             <li>
               <a href={tool.href}>{tool.name}</a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+    <nav aria-label="Guides">
+      <p class="col-title">Guides</p>
+      <ul>
+        {
+          guides.map((g) => (
+            <li>
+              <a href={guideHref(g.slug)}>{g.short}</a>
             </li>
           ))
         }
@@ -71,9 +85,9 @@ const siteLinks = [
     grid-column: 1 / -1;
   }
 
-  @media (min-width: 720px) {
+  @media (min-width: 900px) {
     .footer-grid {
-      grid-template-columns: 2fr 1fr 1fr;
+      grid-template-columns: 2fr 1fr 1fr 1fr;
     }
 
     .about {

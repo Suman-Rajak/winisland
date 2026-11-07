@@ -3,6 +3,7 @@ import Base from '../layouts/Base.astro';
 import AdSlot from '../components/AdSlot.astro';
 import Island from '../components/Island.astro';
 import { comingSoon, tools } from '../data/tools.js';
+import { guides, guideHref } from '../data/guides.js';
 ---
 
 <Base
@@ -108,6 +109,27 @@ import { comingSoon, tools } from '../data/tools.js';
           <p>Big buttons, bold text and sound effects, built for a phone in one hand at a noisy party.</p>
         </li>
       </ul>
+    </section>
+
+    <section class="guides" aria-labelledby="guides-title">
+      <div class="section-head">
+        <h2 id="guides-title">Party game guides</h2>
+        <p>Rules, ideas and tips for hosting games everyone enjoys.</p>
+      </div>
+      <ul class="guide-grid">
+        {
+          guides.map((g) => (
+            <li class="panel">
+              <p class="card-kicker">{g.topic}</p>
+              <h3>
+                <a href={guideHref(g.slug)}>{g.title}</a>
+              </h3>
+              <p>{g.blurb}</p>
+            </li>
+          ))
+        }
+      </ul>
+      <p class="all-guides"><a class="btn" href="/guides/">All guides</a></p>
     </section>
   </div>
 </Base>
@@ -406,5 +428,60 @@ import { comingSoon, tools } from '../data/tools.js';
   .why-grid p {
     margin: 0;
     color: var(--muted);
+  }
+
+  /* ---- Guides ---- */
+  .guides {
+    margin-top: 48px;
+  }
+
+  .guide-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .guide-grid li {
+    position: relative;
+    padding: 22px;
+  }
+
+  .guide-grid li:hover {
+    border-color: var(--cyan);
+  }
+
+  .guide-grid h3 {
+    font-size: 1.25rem;
+    line-height: 1.25;
+  }
+
+  .guide-grid h3 a {
+    color: var(--text);
+    text-decoration: none;
+  }
+
+  /* Whole card is clickable. */
+  .guide-grid h3 a::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+  }
+
+  .guide-grid p {
+    margin: 0;
+    color: var(--muted);
+  }
+
+  .guide-grid .card-kicker {
+    margin-bottom: 6px;
+  }
+
+  .all-guides {
+    margin: 22px 0 0;
+    text-align: center;
   }
 </style>
